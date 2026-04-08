@@ -108,4 +108,11 @@ export class AuthService {
         : null,
     };
   }
+
+  async signOut() {
+    const { error } = await this.supabase.auth.signOut();
+    if (error) {
+      throw new InternalServerErrorException('Failed to sign out');
+    }
+  }
 }

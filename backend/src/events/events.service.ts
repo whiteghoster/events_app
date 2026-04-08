@@ -543,7 +543,8 @@ export class EventsService {
     const summaryMap: Record<string, Record<string, number>> = {};
 
     for (const row of data ?? []) {
-      const categoryName = row.product?.categories?.name || 'Uncategorized';
+      const product = row.product as any;
+      const categoryName = product?.category?.name || product?.categories?.name || 'Uncategorized';
       const unit = row.unit || 'unit';
       const qty = Number(row.quantity || 0);
 
