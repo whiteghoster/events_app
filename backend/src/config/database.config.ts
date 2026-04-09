@@ -1,16 +1,23 @@
-import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
 
 export const supabaseConfig = {
-  url: 'https://mgziyqjhkoqhyzjgwcbp.supabase.co',
-  anonKey: 'sb_publishable_MtrDFhVwQzUrb4oPDE5Cbw_n_h81kaz',
-  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkYXRpbmFubWUiLCJyb2xlIjoic3VwcmF0IiwiZXhwIjoic3VwcmF0LXNlc3Npb24iLCJpYXQiOiJkZjYwMjQ2MTQ4NzY3NzYzMjQyLCJleHAiOiI2NzQ2ODA5MzY3NzMzMjQyLCJhbGciOiJIUzI1NiIsInR5cCI6IkpvaWNhbW4ifQ==', // Temporary for testing
+  url: process.env.SUPABASE_URL,
+  anonKey: process.env.SUPABASE_ANON_KEY,
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
+
+if (!supabaseConfig.url || !supabaseConfig.serviceRoleKey) {
+  throw new Error(
+    'Missing required Supabase environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set',
+  );
+}
 
 export const createSupabaseClient = (useServiceRole = false) => {
   return createClient(
-    supabaseConfig.url || '',
-    useServiceRole ? supabaseConfig.serviceRoleKey || '' : supabaseConfig.anonKey || ''
+    supabaseConfig.url as string,
+    useServiceRole
+      ? (supabaseConfig.serviceRoleKey as string)
+      : (supabaseConfig.anonKey || supabaseConfig.serviceRoleKey) as string,
   );
 };
 

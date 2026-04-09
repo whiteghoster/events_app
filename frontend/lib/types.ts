@@ -9,6 +9,11 @@ export interface User {
   avatar?: string
 }
 
+export interface AuthResponse {
+  access_token: string
+  user: User
+}
+
 export type OccasionType = 'Wedding' | 'Birthday' | 'Pooja' | 'Corporate' | 'Festival' | 'Other'
 
 export type EventStatus = 'Live' | 'Hold' | 'Finished'
@@ -24,7 +29,8 @@ export interface Event {
   contactPhone?: string
   notes?: string
   status: EventStatus
-  closedBy?: string
+  closedAt?: string | null
+  closedBy?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -59,6 +65,13 @@ export interface EventProduct {
   quantity: number
   unit: string
   price?: number
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 export type AuditAction = 'Created' | 'Updated' | 'Deleted'

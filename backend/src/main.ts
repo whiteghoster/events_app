@@ -1,12 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+  const logger = new Logger('Bootstrap');
+
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -16,6 +17,16 @@ async function bootstrap() {
 
   // Global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Request logging middleware
+  app.use((req: any, res: any, next: any) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.log(`${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`);
+    });
+    next();
+  });
 
   // CORS configuration
   app.enableCors({
@@ -27,6 +38,6 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3001;
   
   await app.listen(port);
-  console.log(`🚀 Event Management API running on port ${port}`);
+  logger.log(`🚀 Event Management API running on port ${port}`);
 }
 bootstrap();

@@ -16,6 +16,7 @@ import {
   UpdateEventDto,
   CreateEventProductDto,
   UpdateEventProductDto,
+  PaginationDto,
 } from './events.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
@@ -190,12 +191,17 @@ export class EventsController {
   }
 
   @Get(':id/products')
-  async findEventProducts(@Param('id') eventId: string) {
+  async findEventProducts(
+    @Param('id') eventId: string,
+    @Query() pagination: PaginationDto,
+  ) {
     try {
-      return {
-        success: true,
-        data: await this.eventsService.findEventProducts(eventId),
-      };
+      const { data, total, page, pageSize } = await this.eventsService.findEventProducts(
+        eventId,
+        pagination.page ?? 1,
+        pagination.pageSize ?? 20,
+      );
+      return { success: true, data, total, page, pageSize };
     } catch (error: any) {
       throw new HttpException(
         error.message || 'Failed to fetch event products',

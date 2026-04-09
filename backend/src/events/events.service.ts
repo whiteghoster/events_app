@@ -16,6 +16,7 @@ import {
   IsEnum,
   IsUUID,
   IsNumber,
+  IsInt,
   Min,
   IsNotEmpty,
 } from 'class-validator';
@@ -27,15 +28,7 @@ export class CreateEventDto {
 
   @IsOptional()
   @IsEnum(OccasionType)
-  occasionType?: OccasionType;
-
-  @IsOptional()
-  @IsEnum(OccasionType)
   occasion_type?: OccasionType;
-
-  @IsOptional()
-  @IsDateString()
-  eventDate?: string;
 
   @IsOptional()
   @IsDateString()
@@ -43,15 +36,7 @@ export class CreateEventDto {
 
   @IsOptional()
   @IsString()
-  venueName?: string;
-
-  @IsOptional()
-  @IsString()
   venue_name?: string;
-
-  @IsOptional()
-  @IsString()
-  venueAddress?: string;
 
   @IsOptional()
   @IsString()
@@ -59,15 +44,7 @@ export class CreateEventDto {
 
   @IsOptional()
   @IsString()
-  contactName?: string;
-
-  @IsOptional()
-  @IsString()
   contact_person?: string;
-
-  @IsOptional()
-  @IsString()
-  contactPhone?: string;
 
   @IsOptional()
   @IsString()
@@ -85,15 +62,7 @@ export class UpdateEventDto {
 
   @IsOptional()
   @IsEnum(OccasionType)
-  occasionType?: OccasionType;
-
-  @IsOptional()
-  @IsEnum(OccasionType)
   occasion_type?: OccasionType;
-
-  @IsOptional()
-  @IsDateString()
-  eventDate?: string;
 
   @IsOptional()
   @IsDateString()
@@ -101,15 +70,7 @@ export class UpdateEventDto {
 
   @IsOptional()
   @IsString()
-  venueName?: string;
-
-  @IsOptional()
-  @IsString()
   venue_name?: string;
-
-  @IsOptional()
-  @IsString()
-  venueAddress?: string;
 
   @IsOptional()
   @IsString()
@@ -117,15 +78,7 @@ export class UpdateEventDto {
 
   @IsOptional()
   @IsString()
-  contactName?: string;
-
-  @IsOptional()
-  @IsString()
   contact_person?: string;
-
-  @IsOptional()
-  @IsString()
-  contactPhone?: string;
 
   @IsOptional()
   @IsString()
@@ -175,6 +128,18 @@ export class UpdateEventProductDto {
   price?: number;
 }
 
+export class PaginationDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+}
+
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   [EventStatus.LIVE]: [EventStatus.HOLD],
   [EventStatus.HOLD]: [EventStatus.FINISHED],
@@ -192,12 +157,12 @@ export class EventsService {
   private normalizeEventDto(dto: CreateEventDto | UpdateEventDto) {
     return {
       name: (dto as any).name,
-      occasion_type: (dto as any).occasionType || (dto as any).occasion_type,
-      date: (dto as any).eventDate || (dto as any).date,
-      venue_name: (dto as any).venueName || (dto as any).venue_name,
-      venue_address: (dto as any).venueAddress || (dto as any).venue_address,
-      contact_person: (dto as any).contactName || (dto as any).contact_person,
-      contact_phone: (dto as any).contactPhone || (dto as any).contact_phone,
+      occasion_type: (dto as any).occasion_type,
+      date: (dto as any).date,
+      venue_name: (dto as any).venue_name,
+      venue_address: (dto as any).venue_address,
+      contact_person: (dto as any).contact_person,
+      contact_phone: (dto as any).contact_phone,
       notes: (dto as any).notes,
     };
   }
@@ -412,10 +377,12 @@ export class EventsService {
     return data;
   }
 
-  async findEventProducts(eventId: string) {
+  async findEventProducts(eventId: string, page = 1, pageSize = 20) {
     await this.getEventOrThrow(eventId);
 
-    const { data, error } = await this.supabase
+    const offset = (page - 1) * pageSize;
+
+    const { data, count, error } = await this.supabase
       .from('event_products')
       .select(`
         *,
@@ -429,15 +396,21 @@ export class EventsService {
             name
           )
         )
-      `)
+      `, { count: 'exact' })
       .eq('event_id', eventId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .range(offset, offset + pageSize - 1);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch event products: ${error.message}`);
     }
 
-    return data ?? [];
+    return {
+      data: data ?? [],
+      total: count ?? 0,
+      page,
+      pageSize,
+    };
   }
 
   async updateEventProduct(
