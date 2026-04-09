@@ -6,9 +6,11 @@ ALTER DATABASE postgres SET "app.jwt_claims" = '{"role": "admin"}';
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY, -- Foreign key to auth.users.id
     email TEXT NOT NULL UNIQUE,
+    name TEXT,
     role TEXT NOT NULL CHECK (role IN ('admin', 'staff', 'staff_member')),
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

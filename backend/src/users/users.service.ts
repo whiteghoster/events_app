@@ -4,7 +4,9 @@ import { UserRole } from '../auth/enums/user-role.enum';
 
 export class CreateUserDto {
   email: string;
+  password: string;   // required so the user can actually log in
   role: UserRole;
+  name?: string;
 }
 
 export class UpdateUserDto {
@@ -19,11 +21,15 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const supabase = this.databaseService.getClient();
 
-    // First create user in Supabase Auth
+    // Create user in Supabase Auth with the supplied password
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: createUserDto.email,
-      password: Math.random().toString(36).substring(2), // Random password
+      password: createUserDto.password,
       email_confirm: true,
+      user_metadata: {
+        role: createUserDto.role,
+        name: createUserDto.name || createUserDto.email.split('@')[0],
+      },
     });
 
     if (authError) {
@@ -36,7 +42,9 @@ export class UsersService {
       .insert({
         id: authData.user.id,
         email: createUserDto.email,
+        name: createUserDto.name || createUserDto.email.split('@')[0],
         role: createUserDto.role,
+        is_active: true,
         created_at: new Date().toISOString(),
       })
       .select()

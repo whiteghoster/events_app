@@ -125,10 +125,9 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {/* Demo hint */}
         <div className="mt-6 pt-6 border-t border-border">
           <p className="text-muted-foreground text-xs text-center">
-            Demo: Use any email from the system (e.g., flora@company.com)
+            Sign in with your FloraIndia account credentials
           </p>
         </div>
       </div>

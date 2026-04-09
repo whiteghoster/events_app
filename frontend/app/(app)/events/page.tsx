@@ -1,59 +1,81 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Lock } from 'lucide-react'
+import { Plus, Search, Lock, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { EventCard } from '@/components/event-card'
 import { StatusBadge } from '@/components/status-badge'
 import { EmptyState, FlowerIcon } from '@/components/empty-state'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
-import { events, eventProducts } from '@/lib/mock-data'
+import { events as demoEvents, eventProducts } from '@/lib/mock-data'
+import { eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import type { OccasionType, EventStatus } from '@/lib/types'
+import type { OccasionType, Event } from '@/lib/types'
 
 const occasions: (OccasionType | 'All')[] = ['All', 'Wedding', 'Birthday', 'Pooja', 'Corporate', 'Festival', 'Other']
 
 export default function EventsPage() {
   const { user } = useAuth()
+  const [apiEvents, setApiEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'live' | 'over'>('live')
   const [overSubTab, setOverSubTab] = useState<'Hold' | 'Finished'>('Hold')
   const [search, setSearch] = useState('')
   const [occasionFilter, setOccasionFilter] = useState<OccasionType | 'All'>('All')
 
-  const liveEvents = useMemo(() => {
-    return events
-      .filter(e => e.status === 'Live')
-      .filter(e => {
-        const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase())
-        const matchesOccasion = occasionFilter === 'All' || e.occasionType === occasionFilter
-        return matchesSearch && matchesOccasion
-      })
-      .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
-  }, [search, occasionFilter])
+  // Fetch real events from backend on mount
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      const data = await eventsApi.getEvents()
+      if (!cancelled) {
+        setApiEvents(data)
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
-  const overEvents = useMemo(() => {
-    return events
-      .filter(e => e.status === overSubTab)
-      .filter(e => {
-        const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase())
-        const matchesOccasion = occasionFilter === 'All' || e.occasionType === occasionFilter
-        return matchesSearch && matchesOccasion
-      })
-      .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
-  }, [overSubTab, search, occasionFilter])
+  // Merge: real DB events first, then demo events (demo IDs won't clash with UUIDs)
+  const allEvents = useMemo<Event[]>(() => {
+    const realIds = new Set(apiEvents.map(e => e.id))
+    // Filter out any demo events whose id already exists in DB (shouldn't happen, but safe)
+    const filteredDemo = demoEvents.filter(e => !realIds.has(e.id))
+    return [...apiEvents, ...filteredDemo]
+  }, [apiEvents])
 
-  const liveCount = events.filter(e => e.status === 'Live').length
-  const holdCount = events.filter(e => e.status === 'Hold').length
-  const finishedCount = events.filter(e => e.status === 'Finished').length
+  const filterAndSort = (events: Event[], asc = true) =>
+    events
+      .filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(e => occasionFilter === 'All' || e.occasionType === occasionFilter)
+      .sort((a, b) =>
+        asc
+          ? new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
+          : new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
+      )
 
-  const getProductsForEvent = (eventId: string) => {
-    return eventProducts.filter(p => p.eventId === eventId)
-  }
+  const liveEvents = useMemo(
+    () => filterAndSort(allEvents.filter(e => e.status === 'Live')),
+    [allEvents, search, occasionFilter],
+  )
+
+  const overEvents = useMemo(
+    () => filterAndSort(allEvents.filter(e => e.status === overSubTab), false),
+    [allEvents, overSubTab, search, occasionFilter],
+  )
+
+  const liveCount = allEvents.filter(e => e.status === 'Live').length
+  const holdCount = allEvents.filter(e => e.status === 'Hold').length
+  const finishedCount = allEvents.filter(e => e.status === 'Finished').length
+
+  const getProductsForEvent = (eventId: string) =>
+    eventProducts.filter(p => p.eventId === eventId)
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -139,7 +161,12 @@ export default function EventsPage() {
       {/* Live Tab Content */}
       {activeTab === 'live' && (
         <div className="animate-in fade-in duration-150">
-          {liveEvents.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-7 h-7 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground text-sm">Loading events…</span>
+            </div>
+          ) : liveEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {liveEvents.map(event => (
                 <EventCard
@@ -153,8 +180,8 @@ export default function EventsPage() {
             <EmptyState
               icon={<FlowerIcon className="w-16 h-16" />}
               title="No live events found"
-              description={search || occasionFilter !== 'All' 
-                ? "No events match your search criteria" 
+              description={search || occasionFilter !== 'All'
+                ? "No events match your search criteria"
                 : "Create your first event to get started"}
               action={
                 user && canCreateEvent(user.role) && !search && occasionFilter === 'All' && (
@@ -180,8 +207,8 @@ export default function EventsPage() {
               onClick={() => setOverSubTab('Hold')}
               className={cn(
                 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                overSubTab === 'Hold' 
-                  ? 'bg-primary/10 text-primary' 
+                overSubTab === 'Hold'
+                  ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -191,8 +218,8 @@ export default function EventsPage() {
               onClick={() => setOverSubTab('Finished')}
               className={cn(
                 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                overSubTab === 'Finished' 
-                  ? 'bg-primary/10 text-primary' 
+                overSubTab === 'Finished'
+                  ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >

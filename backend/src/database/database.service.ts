@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { supabaseConfig } from '../config/database.config';
 
 @Injectable()
 export class DatabaseService {
   private supabase: SupabaseClient;
 
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     this.supabase = createClient(
-      supabaseConfig.url || '',
-      supabaseConfig.serviceRoleKey || ''
+      this.configService.get<string>('SUPABASE_URL') || '',
+      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || ''
     );
   }
 

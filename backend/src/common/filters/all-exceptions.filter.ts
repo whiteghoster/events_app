@@ -26,7 +26,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // Phase 4: Session expiry (401) clears cookie
       if (status === HttpStatus.UNAUTHORIZED) {
         response.clearCookie('access_token'); // Typical Supabase token cookie
-        message = 'Session expired or unauthorised';
+        // Only set default message if none is provided
+        if (!message || message === 'Unauthorized') {
+          message = 'Session expired or unauthorised';
+        }
       }
 
     } else if (exception instanceof Error) {

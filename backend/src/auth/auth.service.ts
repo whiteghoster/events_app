@@ -9,6 +9,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { supabaseConfig } from '../config/database.config';
 import { DatabaseService } from '../database/database.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { UserRole } from './enums/user-role.enum';
 
 @Injectable()
 export class AuthService {
@@ -19,8 +21,8 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
   ) {
     this.supabaseAdmin = createClient(
-      supabaseConfig.url || '',
-      supabaseConfig.serviceRoleKey || '',
+      this.configService.get<string>('SUPABASE_URL') || '',
+      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || '',
     );
   }
 
@@ -114,5 +116,55 @@ export class AuthService {
     if (error) {
       throw new InternalServerErrorException('Failed to sign out');
     }
+  }
+
+  async register(registerDto: RegisterDto) {
+    // Only allow Admin registration via this public endpoint.
+    // Staff and Staff Members must be created via the protected /users API.
+    if (registerDto.role && registerDto.role !== UserRole.ADMIN) {
+      throw new BadRequestException(
+        'Only Admin registration is allowed through this endpoint. ' +
+        'Staff and Staff Members must be created by an Admin using a token.',
+      );
+    }
+
+    const role = UserRole.ADMIN;
+
+    // 1. Create user in Supabase Auth via Admin client
+    const { data: authData, error: authError } = await this.supabaseAdmin.auth.admin.createUser({
+      email: registerDto.email,
+      password: registerDto.password,
+      email_confirm: true,
+      user_metadata: {
+        role: role,
+        name: registerDto.name,
+      },
+    });
+
+    if (authError) {
+      throw new BadRequestException(`Auth registration failed: ${authError.message}`);
+    }
+
+    // 2. Create user record in our users table
+    const { data: user, error: userError } = await this.supabaseAdmin
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email: registerDto.email,
+        name: registerDto.name,
+        role: role,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      })
+      .select('id, email, name, role, is_active')
+      .single();
+
+    if (userError) {
+      // Rollback: try to delete the auth user if DB insert fails
+      await this.supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      throw new InternalServerErrorException(`Database user creation failed: ${userError.message}`);
+    }
+
+    return user;
   }
 }

@@ -1,45 +1,91 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from 'react'
 import type { User, UserRole } from './types'
-import { users } from './mock-data'
+import { authApi } from './api'
 
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
-  switchRole: (role: UserRole) => void
+  switchRole: (role: UserRole) => void  // kept for dev convenience
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Map backend role strings → frontend UserRole type
+function normalizeRole(role: string): UserRole {
+  if (!role) return 'Staff'
+  const r = role.toLowerCase()
+  if (r === 'admin') return 'Admin'
+  if (r === 'staff_member' || r === 'staff member') return 'Staff Member'
+  return 'Staff'
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
 
-  const login = useCallback(async (email: string, _password: string): Promise<boolean> => {
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase())
-    if (foundUser) {
-      setUser(foundUser)
-      return true
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const token = localStorage.getItem('access_token')
+    const stored = localStorage.getItem('flora_user')
+    if (token && stored) {
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        localStorage.removeItem('flora_user')
+        localStorage.removeItem('access_token')
+      }
     }
-    return false
   }, [])
 
-  const logout = useCallback(() => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      const data = await authApi.login(email, password)
+
+      const loggedInUser: User = {
+        id: data.user.id,
+        name: data.user.email.split('@')[0], // derive display name from email
+        email: data.user.email,
+        role: normalizeRole(data.user.role),
+        createdAt: new Date().toISOString(),
+      }
+
+      // Persist token and user profile
+      localStorage.setItem('access_token', data.access_token)
+      localStorage.setItem('flora_user', JSON.stringify(loggedInUser))
+
+      setUser(loggedInUser)
+      return true
+    } catch (err) {
+      console.error('Login failed:', err)
+      return false
+    }
+  }, [])
+
+  const logout = useCallback(async () => {
+    await authApi.logout()
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('flora_user')
     setUser(null)
   }, [])
 
-  // Dev helper to switch roles
+  // Dev helper: re-login with a different role (only works if user is already logged in)
   const switchRole = useCallback((role: UserRole) => {
-    const userWithRole = users.find(u => u.role === role)
-    if (userWithRole) {
-      setUser(userWithRole)
+    if (user) {
+      const updated = { ...user, role }
+      setUser(updated)
+      localStorage.setItem('flora_user', JSON.stringify(updated))
     }
-  }, [])
+  }, [user])
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, switchRole }}>
@@ -56,7 +102,7 @@ export function useAuth() {
   return context
 }
 
-// Permission helpers
+// Permission helpers (unchanged)
 export function canCreateEvent(role: UserRole): boolean {
   return role === 'Admin'
 }

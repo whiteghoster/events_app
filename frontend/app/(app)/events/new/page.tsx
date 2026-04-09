@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
 import { events } from '@/lib/mock-data'
+import { eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -71,11 +72,24 @@ export default function NewEventPage() {
     if (!validate()) return
 
     setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    toast.success('Event created successfully')
-    router.push('/events')
+    try {
+      await eventsApi.createEvent({
+        name: formData.name,
+        occasionType: formData.occasionType as OccasionType,
+        eventDate: formData.eventDate,
+        venueName: formData.venueName,
+        venueAddress: formData.venueAddress,
+        contactName: formData.contactName,
+        contactPhone: formData.contactPhone,
+        notes: formData.notes,
+      })
+      toast.success('Event created successfully')
+      router.push('/events')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create event')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
