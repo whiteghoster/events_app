@@ -4,11 +4,13 @@ import {
   Post,
   Put,
   Delete,
+  Patch,
   Body,
   Param,
   HttpException,
   HttpStatus,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   EventsService,
@@ -16,15 +18,15 @@ import {
   UpdateEventDto,
   CreateEventProductDto,
   UpdateEventProductDto,
+  CloseEventDto,
 } from './events.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
-import { EventStatus } from '../auth/enums/event-status.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(private readonly eventsService: EventsService) { }
 
   // =========================
   // EVENTS
@@ -124,17 +126,17 @@ export class EventsController {
     }
   }
 
-  @Put(':id/close')
+  @Patch(':id/close')
   @Roles(UserRole.ADMIN)
   async closeEvent(
     @Param('id') id: string,
-    @Body() body: { status: EventStatus },
+    @Body() closeEventDto: CloseEventDto,
     @CurrentUser() user: any,
   ) {
     try {
       const event = await this.eventsService.closeEvent(
         id,
-        body.status,
+        closeEventDto.status,
         user.sub || user.id,
         user.role,
       );
@@ -142,7 +144,7 @@ export class EventsController {
       return {
         success: true,
         data: event,
-        message: `Event moved to ${body.status} successfully`,
+        message: `Event moved to ${closeEventDto.status} successfully`,
       };
     } catch (error: any) {
       if (error.message.includes('Forbidden')) {
@@ -190,11 +192,22 @@ export class EventsController {
   }
 
   @Get(':id/products')
-  async findEventProducts(@Param('id') eventId: string) {
+  async findEventProducts(
+    @Param('id') eventId: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('pageSize', new ParseIntPipe({ optional: true })) pageSize: number = 20,
+  ) {
     try {
+      const result = await this.eventsService.findEventProducts(eventId, page, pageSize);
       return {
         success: true,
-        data: await this.eventsService.findEventProducts(eventId),
+        data: result.data,
+        pagination: {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
       };
     } catch (error: any) {
       throw new HttpException(

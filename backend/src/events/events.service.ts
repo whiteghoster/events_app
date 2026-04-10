@@ -175,6 +175,12 @@ export class UpdateEventProductDto {
   price?: number;
 }
 
+export class CloseEventDto {
+  @IsEnum(EventStatus)
+  @IsNotEmpty()
+  status: EventStatus;
+}
+
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   [EventStatus.LIVE]: [EventStatus.HOLD],
   [EventStatus.HOLD]: [EventStatus.FINISHED],
