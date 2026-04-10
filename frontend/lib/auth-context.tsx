@@ -61,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Persist token and user profile
       localStorage.setItem('access_token', data.access_token)
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token)
+      }
       localStorage.setItem('flora_user', JSON.stringify(loggedInUser))
 
       setUser(loggedInUser)
@@ -74,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await authApi.logout()
     localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
     localStorage.removeItem('flora_user')
     setUser(null)
   }, [])

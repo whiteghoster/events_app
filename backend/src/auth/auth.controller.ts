@@ -1,8 +1,9 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -10,54 +11,49 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {
-    try {
-      const result = await this.authService.login(loginDto);
+    const result = await this.authService.login(loginDto);
 
-      return {
-        success: true,
-        data: {
-          user: result.user,
-          access_token: result.access_token,
-        },
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Login failed',
-        HttpStatus.UNAUTHORIZED
-      );
-    }
+    return {
+      success: true,
+      data: {
+        user: result.user,
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
+        expires_at: result.expires_at,
+      },
+    };
   }
 
   @Public()
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    try {
-      const user = await this.authService.register(registerDto);
+    const user = await this.authService.register(registerDto);
 
-      return {
-        success: true,
-        data: user,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Registration failed',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      success: true,
+      data: user,
+    };
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    const result = await this.authService.refreshToken(refreshTokenDto.refresh_token);
+
+    return {
+      success: true,
+      data: result,
+    };
   }
 
   @Public()
   @Post('logout')
+  @HttpCode(HttpStatus.OK)
   async logout() {
-    try {
-      await this.authService.signOut();
-      return { success: true };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Logout failed',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+    await this.authService.signOut();
+    return { success: true };
   }
 }

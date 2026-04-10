@@ -1,32 +1,12 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../auth/enums/user-role.enum';
+import { EventStatus } from '../auth/enums/event-status.enum';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
-export class CreateCategoryDto {
-  name: string;
-}
-
-export class UpdateCategoryDto {
-  name?: string;
-}
-
-export class CreateProductDto {
-  name: string;
-  category_id: string;
-  default_unit: string;
-  price?: number;
-  description?: string;
-}
-
-export class UpdateProductDto {
-  name?: string;
-  category_id?: string;
-  default_unit?: string;
-  price?: number;
-  description?: string;
-  is_active?: boolean;
-}
+export { CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto };
 
 @Injectable()
 export class CatalogService {
@@ -35,8 +15,6 @@ export class CatalogService {
   // CATEGORIES
   async createCategory(createCategoryDto: CreateCategoryDto, userId: string) {
     const supabase = this.databaseService.getClient();
-    
-    await this.databaseService.setUserId(userId);
     
     const { data, error } = await supabase
       .from('categories')
@@ -47,13 +25,11 @@ export class CatalogService {
       .select()
       .single();
 
-    await this.databaseService.clearUserId();
-
     if (error) {
       if (error.code === '23505') { // Unique violation
         throw new ConflictException('Category name already exists');
       }
-      throw new Error(`Failed to create category: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to create category: ${error.message}`);
     }
 
     return data;
@@ -67,7 +43,7 @@ export class CatalogService {
       .order('name', { ascending: true });
 
     if (error) {
-      throw new Error(`Failed to fetch categories: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to fetch categories: ${error.message}`);
     }
 
     return data;
@@ -82,7 +58,7 @@ export class CatalogService {
       .single();
 
     if (error) {
-      throw new Error(`Failed to fetch category: ${error.message}`);
+      throw new NotFoundException(`Category not found`);
     }
 
     return data;
@@ -91,8 +67,6 @@ export class CatalogService {
   async updateCategory(id: string, updateCategoryDto: UpdateCategoryDto, userId: string) {
     const supabase = this.databaseService.getClient();
     
-    await this.databaseService.setUserId(userId);
-    
     const { data, error } = await supabase
       .from('categories')
       .update(updateCategoryDto)
@@ -100,50 +74,47 @@ export class CatalogService {
       .select()
       .single();
 
-    await this.databaseService.clearUserId();
-
     if (error) {
       if (error.code === '23505') { // Unique violation
         throw new ConflictException('Category name already exists');
       }
-      throw new Error(`Failed to update category: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to update category: ${error.message}`);
     }
 
     return data;
   }
 
- async deleteCategory(id: string, userId: string) {
-  const supabase = this.databaseService.getClient();
+  async deleteCategory(id: string, userId: string) {
+    const supabase = this.databaseService.getClient();
 
-  const { count, error: countError } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('category_id', id)
-    .eq('is_active', true);
+    const { count, error: countError } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('category_id', id)
+      .eq('is_active', true);
 
-  if (countError) {
-    throw new Error(`Failed to validate category deletion: ${countError.message}`);
+    if (countError) {
+      throw new InternalServerErrorException(`Failed to validate category deletion: ${countError.message}`);
+    }
+
+    if ((count || 0) > 0) {
+      throw new ConflictException(
+        `Cannot delete category. ${count} active product(s) still exist in this category.`,
+      );
+    }
+
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Failed to delete category: ${error.message}`);
+    }
+
+    return true;
   }
 
-  if ((count || 0) > 0) {
-    throw new ConflictException(
-      `Cannot delete category. ${count} active product(s) still exist in this category.`,
-    );
-  }
-
-  const { error } = await supabase.from('categories').delete().eq('id', id);
-
-  if (error) {
-    throw new Error(`Failed to delete category: ${error.message}`);
-  }
-
-  return true;
-}
   // PRODUCTS
   async createProduct(createProductDto: CreateProductDto, userId: string) {
     const supabase = this.databaseService.getClient();
-    
-    await this.databaseService.setUserId(userId);
     
     const { data, error } = await supabase
       .from('products')
@@ -159,21 +130,19 @@ export class CatalogService {
       .select()
       .single();
 
-    await this.databaseService.clearUserId();
-
     if (error) {
       if (error.code === '23505') { // Unique violation
         throw new ConflictException('Product name already exists in this category');
       }
-      throw new Error(`Failed to create product: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to create product: ${error.message}`);
     }
 
     return data;
   }
 
-  async findAllProducts() {
+  async findAllProducts(page?: number, limit?: number) {
     const supabase = this.databaseService.getClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('products')
       .select(`
         *,
@@ -181,15 +150,35 @@ export class CatalogService {
           id,
           name
         )
-      `)
+      `, { count: 'exact' })
       .eq('is_active', true)
       .order('name', { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch products: ${error.message}`);
+    if (page !== undefined && limit !== undefined) {
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
     }
 
-    return data;
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw new InternalServerErrorException(`Failed to fetch products: ${error.message}`);
+    }
+
+    if (page !== undefined && limit !== undefined) {
+      return {
+        data: data ?? [],
+        meta: {
+          total: count ?? 0,
+          page,
+          limit,
+          totalPages: Math.ceil((count ?? 0) / limit),
+        },
+      };
+    }
+
+    return { data: data ?? [] };
   }
 
   async findProductsByCategory(categoryId: string) {
@@ -202,7 +191,7 @@ export class CatalogService {
       .order('name', { ascending: true });
 
     if (error) {
-      throw new Error(`Failed to fetch products: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to fetch products: ${error.message}`);
     }
 
     return data;
@@ -223,7 +212,7 @@ export class CatalogService {
       .single();
 
     if (error) {
-      throw new Error(`Failed to fetch product: ${error.message}`);
+      throw new NotFoundException(`Product not found`);
     }
 
     return data;
@@ -232,8 +221,6 @@ export class CatalogService {
   async updateProduct(id: string, updateProductDto: UpdateProductDto, userId: string) {
     const supabase = this.databaseService.getClient();
     
-    await this.databaseService.setUserId(userId);
-    
     const { data, error } = await supabase
       .from('products')
       .update(updateProductDto)
@@ -241,59 +228,57 @@ export class CatalogService {
       .select()
       .single();
 
-    await this.databaseService.clearUserId();
-
     if (error) {
       if (error.code === '23505') { // Unique violation
         throw new ConflictException('Product name already exists in this category');
       }
-      throw new Error(`Failed to update product: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to update product: ${error.message}`);
     }
 
     return data;
   }
 
   async deactivateProduct(id: string, userId: string) {
-  const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getClient();
 
-  const { data: linkedRows, error: linkedRowsError } = await supabase
-    .from('event_products')
-    .select(`
-      id,
-      event:events (
+    const { data: linkedRows, error: linkedRowsError } = await supabase
+      .from('event_products')
+      .select(`
         id,
-        status
-      )
-    `)
-    .eq('product_id', id);
+        event:events (
+          id,
+          status
+        )
+      `)
+      .eq('product_id', id);
 
-  if (linkedRowsError) {
-    throw new Error(`Failed to validate product deactivation: ${linkedRowsError.message}`);
-  }
+    if (linkedRowsError) {
+      throw new InternalServerErrorException(`Failed to validate product deactivation: ${linkedRowsError.message}`);
+    }
 
-  const inLiveEvent = (linkedRows || []).some(
-    (row: any) => row.event?.status === 'live',
-  );
-
-  if (inLiveEvent) {
-    throw new ConflictException(
-      'Cannot deactivate product because it is currently used in a live event.',
+    const inLiveEvent = (linkedRows || []).some(
+      (row: any) => row.event?.status === EventStatus.LIVE,
     );
+
+    if (inLiveEvent) {
+      throw new ConflictException(
+        'Cannot deactivate product because it is currently used in a live event.',
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Failed to deactivate product: ${error.message}`);
+    }
+
+    return data;
   }
-
-  const { data, error } = await supabase
-    .from('products')
-    .update({ is_active: false })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to deactivate product: ${error.message}`);
-  }
-
-  return data;
-}
 
   async deleteProduct(id: string, userId: string) {
     const supabase = this.databaseService.getClient();
@@ -305,14 +290,12 @@ export class CatalogService {
       .eq('product_id', id);
 
     if (eventError) {
-      throw new Error(`Failed to check event products: ${eventError.message}`);
+      throw new InternalServerErrorException(`Failed to check event products: ${eventError.message}`);
     }
 
     if (eventProducts && eventProducts.length > 0) {
       throw new ConflictException('Cannot delete product that is currently assigned to live events');
     }
-
-    await this.databaseService.setUserId(userId);
 
     // Delete the product
     const { error } = await supabase
@@ -320,10 +303,8 @@ export class CatalogService {
       .delete()
       .eq('id', id);
 
-    await this.databaseService.clearUserId();
-
     if (error) {
-      throw new Error(`Failed to delete product: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to delete product: ${error.message}`);
     }
 
     return true;
@@ -342,8 +323,6 @@ export class CatalogService {
 
     const supabase = this.databaseService.getClient();
     
-    await this.databaseService.setUserId(userId);
-    
     for (const category of categories) {
       const { error } = await supabase
         .from('categories')
@@ -353,8 +332,6 @@ export class CatalogService {
         console.error(`Failed to seed category ${category.name}:`, error);
       }
     }
-    
-    await this.databaseService.clearUserId();
   }
 
   async seedProducts(userId: string) {
@@ -399,8 +376,6 @@ export class CatalogService {
 
     const supabase = this.databaseService.getClient();
     
-    await this.databaseService.setUserId(userId);
-    
     for (const product of products) {
       const { error } = await supabase
         .from('products')
@@ -416,7 +391,5 @@ export class CatalogService {
         console.error(`Failed to seed product ${product.name}:`, error);
       }
     }
-    
-    await this.databaseService.clearUserId();
   }
 }

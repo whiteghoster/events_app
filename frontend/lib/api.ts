@@ -1,3 +1,5 @@
+import type { EventStatus } from './types'
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
@@ -45,13 +47,13 @@ async function apiRequest<T>(
 // -------------------------------------------------------------------
 // Status / field normalisers
 // -------------------------------------------------------------------
-function normalizeStatus(status: string) {
+function normalizeStatus(status: string): EventStatus {
   if (!status) return 'Live'
   const s = String(status).toLowerCase()
   if (s === 'live') return 'Live'
   if (s === 'hold') return 'Hold'
   if (s === 'finished') return 'Finished'
-  return status
+  return 'Live'
 }
 
 function mapEventFromBackend(event: any) {
@@ -74,15 +76,104 @@ function mapEventFromBackend(event: any) {
 }
 
 // -------------------------------------------------------------------
-// Auth API  –  POST /auth/login, POST /auth/logout
+// Core request helper - full response variant (for paginated endpoints)
+// -------------------------------------------------------------------
+async function apiRequestFull<T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('access_token')
+      : null
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  })
+
+  if (!response.ok) {
+    let errorMessage = `Request failed with status ${response.status}`
+    try {
+      const errorData = await response.json()
+      errorMessage = errorData?.message || errorData?.error || errorMessage
+    } catch { }
+    throw new Error(errorMessage)
+  }
+
+  return response.json() as Promise<T>
+}
+
+// -------------------------------------------------------------------
+// Catalog API
+// -------------------------------------------------------------------
+export const catalogApi = {
+  async getCategories() {
+    try {
+      return await apiRequest<any[]>('/catalog/categories')
+    } catch (error) {
+      console.error('catalogApi.getCategories failed:', error)
+      return []
+    }
+  },
+
+  async getProducts(page?: number, limit?: number) {
+    try {
+      const params = new URLSearchParams()
+      if (page !== undefined) params.set('page', String(page))
+      if (limit !== undefined) params.set('limit', String(limit))
+      const query = params.toString() ? `?${params.toString()}` : ''
+
+      if (page !== undefined && limit !== undefined) {
+        const json = await apiRequestFull<{ success: boolean; data: any[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
+          `/catalog/products${query}`
+        )
+        return { data: json.data ?? [], meta: json.meta }
+      }
+
+      const data = await apiRequest<any[]>(`/catalog/products${query}`)
+      return { data: Array.isArray(data) ? data : [] }
+    } catch (error) {
+      console.error('catalogApi.getProducts failed:', error)
+      return { data: [] }
+    }
+  },
+
+  async getProductsByCategory(categoryId: string) {
+    try {
+      return await apiRequest<any[]>(`/catalog/products/category/${categoryId}`)
+    } catch (error) {
+      console.error('catalogApi.getProductsByCategory failed:', error)
+      return []
+    }
+  },
+}
+
+// -------------------------------------------------------------------
+// Auth API  –  POST /auth/login, POST /auth/logout, POST /auth/refresh
 // -------------------------------------------------------------------
 export const authApi = {
   async login(email: string, password: string) {
-    const data = await apiRequest<{ access_token: string; user: { id: string; email: string; role: string } }>(
+    const data = await apiRequest<{ access_token: string; refresh_token: string; expires_at: number; user: { id: string; email: string; role: string } }>(
       '/auth/login',
       {
         method: 'POST',
         body: JSON.stringify({ email, password }),
+      },
+    )
+    return data
+  },
+
+  async refresh(refreshToken: string) {
+    const data = await apiRequest<{ access_token: string; refresh_token: string; expires_at: number; user: { id: string; email: string } | null }>(
+      '/auth/refresh',
+      {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refreshToken }),
       },
     )
     return data
@@ -96,6 +187,7 @@ export const authApi = {
     } finally {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
       }
     }
   },
