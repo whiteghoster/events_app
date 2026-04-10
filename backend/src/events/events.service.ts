@@ -7,179 +7,11 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { EventStatus } from '../auth/enums/event-status.enum';
-import { OccasionType } from '../auth/enums/occasion-type.enum';
 import { UserRole } from '../auth/enums/user-role.enum';
-import {
-  IsString,
-  IsOptional,
-  IsDateString,
-  IsEnum,
-  IsUUID,
-  IsNumber,
-  Min,
-  IsNotEmpty,
-} from 'class-validator';
-
-export class CreateEventDto {
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-
-  @IsOptional()
-  @IsEnum(OccasionType)
-  occasionType?: OccasionType;
-
-  @IsOptional()
-  @IsEnum(OccasionType)
-  occasion_type?: OccasionType;
-
-  @IsOptional()
-  @IsDateString()
-  eventDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  date?: string;
-
-  @IsOptional()
-  @IsString()
-  venueName?: string;
-
-  @IsOptional()
-  @IsString()
-  venue_name?: string;
-
-  @IsOptional()
-  @IsString()
-  venueAddress?: string;
-
-  @IsOptional()
-  @IsString()
-  venue_address?: string;
-
-  @IsOptional()
-  @IsString()
-  contactName?: string;
-
-  @IsOptional()
-  @IsString()
-  contact_person?: string;
-
-  @IsOptional()
-  @IsString()
-  contactPhone?: string;
-
-  @IsOptional()
-  @IsString()
-  contact_phone?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
-}
-
-export class UpdateEventDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsEnum(OccasionType)
-  occasionType?: OccasionType;
-
-  @IsOptional()
-  @IsEnum(OccasionType)
-  occasion_type?: OccasionType;
-
-  @IsOptional()
-  @IsDateString()
-  eventDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  date?: string;
-
-  @IsOptional()
-  @IsString()
-  venueName?: string;
-
-  @IsOptional()
-  @IsString()
-  venue_name?: string;
-
-  @IsOptional()
-  @IsString()
-  venueAddress?: string;
-
-  @IsOptional()
-  @IsString()
-  venue_address?: string;
-
-  @IsOptional()
-  @IsString()
-  contactName?: string;
-
-  @IsOptional()
-  @IsString()
-  contact_person?: string;
-
-  @IsOptional()
-  @IsString()
-  contactPhone?: string;
-
-  @IsOptional()
-  @IsString()
-  contact_phone?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
-
-  @IsOptional()
-  @IsEnum(EventStatus)
-  status?: EventStatus;
-}
-
-export class CreateEventProductDto {
-  @IsUUID()
-  event_id: string;
-
-  @IsUUID()
-  product_id: string;
-
-  @IsNumber()
-  @Min(1)
-  quantity: number;
-
-  @IsString()
-  @IsNotEmpty()
-  unit: string;
-
-  @IsOptional()
-  @IsNumber()
-  price?: number;
-}
-
-export class UpdateEventProductDto {
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  quantity?: number;
-
-  @IsOptional()
-  @IsString()
-  unit?: string;
-
-  @IsOptional()
-  @IsNumber()
-  price?: number;
-}
-
-export class CloseEventDto {
-  @IsEnum(EventStatus)
-  @IsNotEmpty()
-  status: EventStatus;
-}
+import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateEventProductDto } from './dto/create-event-product.dto';
+import { UpdateEventProductDto } from './dto/update-event-product.dto';
 
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   [EventStatus.LIVE]: [EventStatus.HOLD],
@@ -189,23 +21,10 @@ const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService) { }
 
   private get supabase() {
     return this.databaseService.getClient();
-  }
-
-  private normalizeEventDto(dto: CreateEventDto | UpdateEventDto) {
-    return {
-      name: (dto as any).name,
-      occasion_type: (dto as any).occasionType || (dto as any).occasion_type,
-      date: (dto as any).eventDate || (dto as any).date,
-      venue_name: (dto as any).venueName || (dto as any).venue_name,
-      venue_address: (dto as any).venueAddress || (dto as any).venue_address,
-      contact_person: (dto as any).contactName || (dto as any).contact_person,
-      contact_phone: (dto as any).contactPhone || (dto as any).contact_phone,
-      notes: (dto as any).notes,
-    };
   }
 
   private async getEventOrThrow(eventId: string) {
@@ -239,14 +58,21 @@ export class EventsService {
     }
   }
 
-  async createEvent(createEventDto: CreateEventDto, userId: string) {
-    const payload = this.normalizeEventDto(createEventDto);
+  // ===========================
+  // EVENTS
+  // ===========================
 
-    if (!payload.name || !payload.occasion_type || !payload.date || !payload.venue_name) {
-      throw new BadRequestException(
-        'Missing required event fields: name, occasion type, date, and venue name are required',
-      );
-    }
+  async createEvent(createEventDto: CreateEventDto) {
+    const payload = {
+      name: createEventDto.name,
+      occasion_type: createEventDto.occasion_type,
+      date: createEventDto.date,
+      venue_name: createEventDto.venue_name,
+      venue_address: createEventDto.venue_address,
+      contact_person: createEventDto.contact_person,
+      contact_phone: createEventDto.contact_phone,
+      notes: createEventDto.notes,
+    };
 
     const { data, error } = await this.supabase
       .from('events')
@@ -264,8 +90,10 @@ export class EventsService {
     return data;
   }
 
-  async findEvents(tab?: string, occasionType?: string) {
-    let query = this.supabase.from('events').select('*');
+  async findEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20) {
+    const offset = Math.max(0, (page - 1) * pageSize);
+
+    let query = this.supabase.from('events').select('*', { count: 'exact' });
 
     if (tab === 'live') {
       query = query.eq('status', EventStatus.LIVE).order('date', { ascending: true });
@@ -281,13 +109,19 @@ export class EventsService {
       query = query.eq('occasion_type', occasionType);
     }
 
-    const { data, error } = await query;
+    const { data, count, error } = await query.range(offset, offset + pageSize - 1);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch events: ${error.message}`);
     }
 
-    return data ?? [];
+    return {
+      data: data ?? [],
+      total: count ?? 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count ?? 0) / pageSize),
+    };
   }
 
   async findEventById(id: string) {
@@ -304,7 +138,7 @@ export class EventsService {
     return data;
   }
 
-  async updateEvent(id: string, updateEventDto: UpdateEventDto, userId: string, role: UserRole) {
+  async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole) {
     const event = await this.getEventOrThrow(id);
     this.enforceEventEditPermission(event, role);
 
@@ -312,10 +146,19 @@ export class EventsService {
       throw new BadRequestException('Use /events/:id/close for status transitions');
     }
 
-    const payload = this.normalizeEventDto(updateEventDto);
+    const payload = {
+      name: updateEventDto.name,
+      occasion_type: updateEventDto.occasion_type,
+      date: updateEventDto.date,
+      venue_name: updateEventDto.venue_name,
+      venue_address: updateEventDto.venue_address,
+      contact_person: updateEventDto.contact_person,
+      contact_phone: updateEventDto.contact_phone,
+      notes: updateEventDto.notes,
+    };
 
     const cleanPayload = Object.fromEntries(
-      Object.entries(payload).filter(([_, value]) => value !== undefined),
+      Object.entries(payload).filter(([_, value]) => value !== undefined)
     );
 
     this.ensurePayloadNotEmpty(cleanPayload, 'No valid event fields provided for update');
@@ -334,7 +177,7 @@ export class EventsService {
     return data;
   }
 
-  async closeEvent(id: string, newStatus: EventStatus, userId: string, role: UserRole) {
+  async closeEvent(id: string, newStatus: EventStatus, role: UserRole) {
     if (role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admin can move event status');
     }
@@ -344,11 +187,11 @@ export class EventsService {
     const allowed = ALLOWED_TRANSITIONS[event.status as EventStatus] || [];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(
-        `Invalid status transition from ${event.status} to ${newStatus}`,
+        `Invalid status transition from ${event.status} to ${newStatus}`
       );
     }
 
-    // live -> hold requires at least one product row
+    // LIVE -> HOLD requires at least one product row
     if (event.status === EventStatus.LIVE && newStatus === EventStatus.HOLD) {
       const { count, error: countError } = await this.supabase
         .from('event_products')
@@ -361,7 +204,7 @@ export class EventsService {
 
       if (!count || count < 1) {
         throw new ConflictException(
-          'Cannot move event to hold without at least one product row',
+          'Cannot move event to hold without at least one product row'
         );
       }
     }
@@ -383,11 +226,11 @@ export class EventsService {
     return data;
   }
 
-  async createEventProduct(
-    createEventProductDto: CreateEventProductDto,
-    userId: string,
-    role: UserRole,
-  ) {
+  // ===========================
+  // EVENT PRODUCTS
+  // ===========================
+
+  async createEventProduct(createEventProductDto: CreateEventProductDto, role: UserRole) {
     const event = await this.getEventOrThrow(createEventProductDto.event_id);
     this.enforceEventEditPermission(event, role);
 
@@ -418,39 +261,47 @@ export class EventsService {
     return data;
   }
 
-  async findEventProducts(eventId: string) {
+  async findEventProducts(eventId: string, page: number = 1, pageSize: number = 20) {
     await this.getEventOrThrow(eventId);
 
-    const { data, error } = await this.supabase
+    const offset = Math.max(0, (page - 1) * pageSize);
+
+    const { data, count, error } = await this.supabase
       .from('event_products')
-      .select(`
+      .select(
+        `
         *,
-        product:products (
+        product:products(
           id,
           name,
           default_unit,
           is_active,
-          category:categories (
-            id,
-            name
-          )
+          category:categories(id, name)
         )
-      `)
+      `,
+        { count: 'exact' }
+      )
       .eq('event_id', eventId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .range(offset, offset + pageSize - 1);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch event products: ${error.message}`);
     }
 
-    return data ?? [];
+    return {
+      data: data ?? [],
+      total: count ?? 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count ?? 0) / pageSize),
+    };
   }
 
   async updateEventProduct(
     rowId: string,
     updateEventProductDto: UpdateEventProductDto,
-    userId: string,
-    role: UserRole,
+    role: UserRole
   ) {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
@@ -466,11 +317,12 @@ export class EventsService {
     this.enforceEventEditPermission(event, role);
 
     const cleanPayload = Object.fromEntries(
-      Object.entries(updateEventProductDto).filter(([_, value]) => value !== undefined),
+      Object.entries(updateEventProductDto).filter(([_, value]) => value !== undefined)
     );
 
     this.ensurePayloadNotEmpty(cleanPayload, 'No valid event product fields provided for update');
 
+    // Staff members can only update quantity and unit
     if (role === UserRole.STAFF_MEMBER) {
       const allowedKeys = ['quantity', 'unit'];
       const attemptedKeys = Object.keys(cleanPayload);
@@ -478,7 +330,7 @@ export class EventsService {
 
       if (invalidKeys.length > 0) {
         throw new ForbiddenException(
-          'Staff Members can only update quantity and unit',
+          `Staff Members can only update ${allowedKeys.join(', ')}. You attempted: ${invalidKeys.join(', ')}`
         );
       }
     }
@@ -497,7 +349,7 @@ export class EventsService {
     return data;
   }
 
-  async deleteEventProduct(rowId: string, userId: string, role: UserRole) {
+  async deleteEventProduct(rowId: string, role: UserRole) {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
       .select('*')
@@ -520,7 +372,7 @@ export class EventsService {
       throw new BadRequestException(`Failed to delete event product: ${error.message}`);
     }
 
-    return true;
+    return { message: 'Event product deleted successfully' };
   }
 
   async getCategorySummary(eventId: string) {
@@ -531,13 +383,10 @@ export class EventsService {
       .select(`
         quantity,
         unit,
-        product:products (
+        product:products(
           id,
           name,
-          category:categories (
-            id,
-            name
-          )
+          category:categories(id, name)
         )
       `)
       .eq('event_id', eventId);
@@ -550,7 +399,7 @@ export class EventsService {
 
     for (const row of data ?? []) {
       const product = row.product as any;
-      const categoryName = product?.category?.name || product?.categories?.name || 'Uncategorized';
+      const categoryName = product?.category?.name || 'Uncategorized';
       const unit = row.unit || 'unit';
       const qty = Number(row.quantity || 0);
 

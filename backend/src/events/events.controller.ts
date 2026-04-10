@@ -14,12 +14,12 @@ import {
 } from '@nestjs/common';
 import {
   EventsService,
-  CreateEventDto,
-  UpdateEventDto,
-  CreateEventProductDto,
-  UpdateEventProductDto,
-  CloseEventDto,
 } from './events.service';
+import { CreateEventDto } from './dto/create-event.dto';
+import { UpdateEventDto } from './dto/update-event.dto';
+import { CreateEventProductDto } from './dto/create-event-product.dto';
+import { UpdateEventProductDto } from './dto/update-event-product.dto';
+import { CloseEventDto } from './dto/close-event.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -41,7 +41,6 @@ export class EventsController {
     try {
       const result = await this.eventsService.createEvent(
         createEventDto,
-        user.sub || user.id,
       );
 
       return {
@@ -107,7 +106,6 @@ export class EventsController {
       const event = await this.eventsService.updateEvent(
         id,
         updateEventDto,
-        user.sub || user.id,
         user.role,
       );
 
@@ -137,7 +135,6 @@ export class EventsController {
       const event = await this.eventsService.closeEvent(
         id,
         closeEventDto.status,
-        user.sub || user.id,
         user.role,
       );
 
@@ -179,7 +176,6 @@ export class EventsController {
             ...createEventProductDto,
             event_id: eventId,
           },
-          user.sub || user.id,
           user.role,
         ),
       };
@@ -229,7 +225,6 @@ export class EventsController {
       const product = await this.eventsService.updateEventProduct(
         rowId,
         updateEventProductDto,
-        user.sub || user.id,
         user.role,
       );
 
@@ -256,7 +251,7 @@ export class EventsController {
     @CurrentUser() user: any,
   ) {
     try {
-      await this.eventsService.deleteEventProduct(rowId, user.sub || user.id, user.role);
+      await this.eventsService.deleteEventProduct(rowId, user.role);
 
       return {
         success: true,

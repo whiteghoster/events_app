@@ -11,7 +11,13 @@ import {
   Query,
   ConflictException,
 } from '@nestjs/common';
-import { CatalogService, CreateCategoryDto, UpdateCategoryDto, CreateProductDto, UpdateProductDto } from './catalog.service';
+import {
+  CatalogService,
+} from './catalog.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -23,11 +29,11 @@ export class CatalogController {
   // CATEGORIES
   @Post('categories')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createCategory(@Body() createCategoryDto: CreateCategoryDto, @CurrentUser() user: any) {
+  async createCategory(@Body() createCategoryDto: CreateCategoryDto) {
     try {
       return {
         success: true,
-        data: await this.catalogService.createCategory(createCategoryDto, user.sub || user.id),
+        data: await this.catalogService.createCategory(createCategoryDto),
       };
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -35,7 +41,7 @@ export class CatalogController {
       }
       throw new HttpException(
         error.message || 'Failed to create category',
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -50,7 +56,7 @@ export class CatalogController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to fetch categories',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -69,16 +75,22 @@ export class CatalogController {
     } catch (error) {
       throw new HttpException(
         error.message || 'Failed to fetch category',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Put('categories/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async updateCategory(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto, @CurrentUser() user: any) {
+  async updateCategory(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: UpdateCategoryDto,
+  ) {
     try {
-      const category = await this.catalogService.updateCategory(id, updateCategoryDto, user.sub || user.id);
+      const category = await this.catalogService.updateCategory(
+        id,
+        updateCategoryDto,
+      );
       return {
         success: true,
         data: category,
@@ -89,16 +101,16 @@ export class CatalogController {
       }
       throw new HttpException(
         error.message || 'Failed to update category',
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
 
   @Delete('categories/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteCategory(@Param('id') id: string, @CurrentUser() user: any) {
+  async deleteCategory(@Param('id') id: string) {
     try {
-      await this.catalogService.deleteCategory(id, user.sub || user.id);
+      await this.catalogService.deleteCategory(id);
       return {
         success: true,
         message: 'Category deleted successfully',
@@ -109,7 +121,7 @@ export class CatalogController {
       }
       throw new HttpException(
         error.message || 'Failed to delete category',
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
@@ -117,11 +129,11 @@ export class CatalogController {
   // PRODUCTS
   @Post('products')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createProduct(@Body() createProductDto: CreateProductDto, @CurrentUser() user: any) {
+  async createProduct(@Body() createProductDto: CreateProductDto) {
     try {
       return {
         success: true,
-        data: await this.catalogService.createProduct(createProductDto, user.sub || user.id),
+        data: await this.catalogService.createProduct(createProductDto),
       };
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -129,10 +141,11 @@ export class CatalogController {
       }
       throw new HttpException(
         error.message || 'Failed to create product',
-        HttpStatus.BAD_REQUEST
+        HttpStatus.BAD_REQUEST,
       );
     }
   }
+
 
   @Get('products')
   async findAllProducts() {
@@ -185,9 +198,9 @@ export class CatalogController {
 
   @Put('products/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async updateProduct(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto, @CurrentUser() user: any) {
+  async updateProduct(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     try {
-      const product = await this.catalogService.updateProduct(id, updateProductDto, user.sub || user.id);
+      const product = await this.catalogService.updateProduct(id, updateProductDto);
       return {
         success: true,
         data: product,
@@ -205,9 +218,9 @@ export class CatalogController {
 
   @Post('products/:id/deactivate')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deactivateProduct(@Param('id') id: string, @CurrentUser() user: any) {
+  async deactivateProduct(@Param('id') id: string) {
     try {
-      const product = await this.catalogService.deactivateProduct(id, user.sub || user.id);
+      const product = await this.catalogService.deactivateProduct(id);
       return {
         success: true,
         data: product,
@@ -226,9 +239,9 @@ export class CatalogController {
 
   @Delete('products/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteProduct(@Param('id') id: string, @CurrentUser() user: any) {
+  async deleteProduct(@Param('id') id: string) {
     try {
-      await this.catalogService.deleteProduct(id, user.sub || user.id);
+      await this.catalogService.deleteProduct(id);
       return {
         success: true,
         message: 'Product deleted successfully',
@@ -247,9 +260,9 @@ export class CatalogController {
   // SEED ENDPOINTS
   @Post('seed/categories')
   @Roles(UserRole.ADMIN)
-  async seedCategories(@CurrentUser() user: any) {
+  async seedCategories() {
     try {
-      await this.catalogService.seedCategories(user.sub || user.id);
+      await this.catalogService.seedCategories();
       return {
         success: true,
         message: 'Categories seeded successfully',
@@ -264,9 +277,9 @@ export class CatalogController {
 
   @Post('seed/products')
   @Roles(UserRole.ADMIN)
-  async seedProducts(@CurrentUser() user: any) {
+  async seedProducts() {
     try {
-      await this.catalogService.seedProducts(user.sub || user.id);
+      await this.catalogService.seedProducts();
       return {
         success: true,
         message: 'Products seeded successfully',
