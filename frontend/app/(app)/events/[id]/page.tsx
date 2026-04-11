@@ -57,7 +57,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     )
   }
 
-  const isEditable = event.status === 'Live' || (event.status === 'Hold' && user?.role === 'Admin')
+  const isEditable = event.status === 'Live' || (event.status === 'Hold' && user?.role === 'admin')
   const canEdit = user && (canEditProductRow(user.role) || canEditQuantityOnly(user.role))
   const quantityOnly = user && canEditQuantityOnly(user.role)
 

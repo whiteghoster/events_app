@@ -15,14 +15,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { User, UserRole } from '@/lib/types'
+import { userRoleLabel, type User, type UserRole } from '@/lib/types'
 
-const roles: UserRole[] = ['Admin', 'Staff', 'Staff Member']
+const roles: UserRole[] = ['admin', 'staff', 'staff_member']
 
 const roleColors: Record<UserRole, string> = {
-  'Admin': 'bg-primary text-primary-foreground',
-  'Staff': 'bg-info text-foreground',
-  'Staff Member': 'bg-finished text-foreground',
+  admin: 'bg-primary text-primary-foreground',
+  staff: 'bg-info text-foreground',
+  staff_member: 'bg-finished text-foreground',
 }
 
 export default function UsersPage() {
@@ -37,7 +37,7 @@ export default function UsersPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Staff' as UserRole,
+    role: 'staff' as UserRole,
   })
 
   if (!currentUser || !canViewUsers(currentUser.role)) {
@@ -58,7 +58,7 @@ export default function UsersPage() {
       setFormData({
         name: '',
         email: '',
-        role: 'Staff',
+        role: 'staff',
       })
     }
     setDialogOpen(true)
@@ -135,7 +135,7 @@ export default function UsersPage() {
                 <TableCell className="text-muted-foreground">{user.email}</TableCell>
                 <TableCell>
                   <Badge className={cn('text-xs', roleColors[user.role])}>
-                    {user.role}
+                    {userRoleLabel[user.role]}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground hidden sm:table-cell">
@@ -209,7 +209,7 @@ export default function UsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map(r => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                    <SelectItem key={r} value={r}>{userRoleLabel[r]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

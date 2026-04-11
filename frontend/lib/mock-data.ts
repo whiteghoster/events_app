@@ -1,9 +1,9 @@
 import type { User, Event, Category, Product, EventProduct, AuditEntry } from './types'
 
 export const users: User[] = [
-  { id: '1', name: 'Riya Agarwal', email: 'flora@company.com', role: 'Admin', createdAt: '2026-01-15' },
-  { id: '2', name: 'Suresh Kumar', email: 'suresh@company.com', role: 'Staff', createdAt: '2026-02-10' },
-  { id: '3', name: 'Priya Mehta', email: 'member@company.com', role: 'Staff Member', createdAt: '2026-03-05' },
+  { id: '1', name: 'Riya Agarwal', email: 'flora@company.com', role: 'admin', createdAt: '2026-01-15' },
+  { id: '2', name: 'Suresh Kumar', email: 'suresh@company.com', role: 'staff', createdAt: '2026-02-10' },
+  { id: '3', name: 'Priya Mehta', email: 'member@company.com', role: 'staff_member', createdAt: '2026-03-05' },
 ]
 
 export const categories: Category[] = [

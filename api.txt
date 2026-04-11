@@ -7,7 +7,7 @@ curl -X POST http://localhost:3001/auth/register \
     "name": "John User"
   }'
 
-# Response: { success: true, user: { role: "Staff" } }
+# Response: { success: true, user: { role: "staff" } }
 
 # 2. ADMIN CREATES STAFF USER
 curl -X POST http://localhost:3001/users \
@@ -17,7 +17,7 @@ curl -X POST http://localhost:3001/users \
     "email": "staff@example.com",
     "password": "password123",
     "name": "Jane Staff",
-    "role": "Staff"
+    "role": "staff"
   }'
 
 # 3. CREATE STAFF MEMBER USER
@@ -28,7 +28,7 @@ curl -X POST http://localhost:3001/users \
     "email": "member@example.com",
     "password": "password123",
     "name": "Bob Member",
-    "role": "Staff Member"
+    "role": "staff_member"
   }'
 
 # 4. LOGIN

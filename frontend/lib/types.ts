@@ -1,4 +1,10 @@
-export type UserRole = 'Admin' | 'Staff' | 'Staff Member'
+export type UserRole = 'admin' | 'staff' | 'staff_member'
+
+export const userRoleLabel: Record<UserRole, string> = {
+  admin: 'Admin',
+  staff: 'Staff',
+  staff_member: 'Staff Member',
+}
 
 export interface User {
   id: string

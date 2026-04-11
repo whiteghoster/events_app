@@ -24,7 +24,7 @@ Header: `Authorization: Bearer <your_jwt_token>`
 {
   "success": true,
   "data": {
-    "user": { "id": "uuid", "email": "...", "role": "Admin" },
+    "user": { "id": "uuid", "email": "...", "role": "admin" },
     "access_token": "jwt_string",
     "refresh_token": "refresh_token_string",
     "expires_at": 123456789
@@ -62,7 +62,7 @@ Header: `Authorization: Bearer <your_jwt_token>`
   "email": "user@example.com",
   "password": "password123",
   "name": "User Name",
-  "role": "Staff"
+  "role": "staff"
 }
 ```
 

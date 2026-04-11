@@ -8,6 +8,7 @@ import { useAuth, canViewCatalog, canViewUsers, canViewAudit } from '@/lib/auth-
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
+import { userRoleLabel, type UserRole } from '@/lib/types'
 
 const navItems = [
   { href: '/events', label: 'Events', icon: Calendar, permission: () => true },
@@ -16,10 +17,10 @@ const navItems = [
   { href: '/audit', label: 'Audit Log', icon: FileText, permission: canViewAudit },
 ]
 
-const roleColors = {
-  'Admin': 'bg-primary text-primary-foreground',
-  'Staff': 'bg-info text-foreground',
-  'Staff Member': 'bg-finished text-foreground',
+const roleColors: Record<UserRole, string> = {
+  admin: 'bg-primary text-primary-foreground',
+  staff: 'bg-info text-foreground',
+  staff_member: 'bg-finished text-foreground',
 }
 
 export function AppSidebar() {
@@ -100,7 +101,7 @@ export function AppSidebar() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
                 <Badge variant="secondary" className={cn('text-xs mt-0.5', roleColors[user.role])}>
-                  {user.role}
+                  {userRoleLabel[user.role]}
                 </Badge>
               </div>
             )}

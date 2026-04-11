@@ -56,7 +56,7 @@ export class AuthService {
       throw new BadRequestException('User with this email already exists');
     }
 
-    // Default role for public registration (always 'Staff' for regular users)
+    // Default role for public registration (always 'staff' for regular users)
     const defaultRole = UserRole.STAFF;
 
     try {

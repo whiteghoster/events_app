@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: data.user.id,
           name: data.user.email,
           email: data.user.email,
-          role: data.user.role || 'Staff',
+          role: data.user.role || 'staff',
           createdAt: new Date().toISOString(),
         }
 
@@ -164,37 +164,37 @@ export function useAuth() {
 
 // Permission helpers
 export function canCreateEvent(role: UserRole): boolean {
-  return role === 'Admin'
+  return role === 'admin'
 }
 
 export function canEditEvent(role: UserRole): boolean {
-  return role === 'Admin'
+  return role === 'admin'
 }
 
 export function canCloseEvent(role: UserRole): boolean {
-  return role === 'Admin'
+  return role === 'admin'
 }
 
 export function canManageProducts(role: UserRole): boolean {
-  return role === 'Admin' || role === 'Staff'
+  return role === 'admin' || role === 'staff'
 }
 
 export function canEditProductRow(role: UserRole): boolean {
-  return role === 'Admin' || role === 'Staff'
+  return role === 'admin' || role === 'staff'
 }
 
 export function canEditQuantityOnly(role: UserRole): boolean {
-  return role === 'Staff Member'
+  return role === 'staff_member'
 }
 
 export function canViewCatalog(role: UserRole): boolean {
-  return role === 'Admin' || role === 'Staff'
+  return role === 'admin' || role === 'staff'
 }
 
 export function canViewUsers(role: UserRole): boolean {
-  return role === 'Admin'
+  return role === 'admin'
 }
 
 export function canViewAudit(role: UserRole): boolean {
-  return role === 'Admin'
+  return role === 'admin'
 }
