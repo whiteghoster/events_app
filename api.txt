@@ -1,0 +1,46 @@
+# 1. PUBLIC REGISTRATION
+curl -X POST http://localhost:3001/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123",
+    "name": "John User"
+  }'
+
+# Response: { success: true, user: { role: "Staff" } }
+
+# 2. ADMIN CREATES STAFF USER
+curl -X POST http://localhost:3001/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -d '{
+    "email": "staff@example.com",
+    "password": "password123",
+    "name": "Jane Staff",
+    "role": "Staff"
+  }'
+
+# 3. CREATE STAFF MEMBER USER
+curl -X POST http://localhost:3001/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -d '{
+    "email": "member@example.com",
+    "password": "password123",
+    "name": "Bob Member",
+    "role": "Staff Member"
+  }'
+
+# 4. LOGIN
+curl -X POST http://localhost:3001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
+
+# Response: { success: true, access_token: "...", user: {...} }
+
+# 5. LIST ALL USERS (Admin only)
+curl -X GET "http://localhost:3001/users?page=1&pageSize=20" \
+  -H "Authorization: Bearer ADMIN_TOKEN"

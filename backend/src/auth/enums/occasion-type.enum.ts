@@ -1,8 +1,12 @@
+/**
+ * Occasion Type Enum
+ * Defines all types of occasions/events
+ */
 export enum OccasionType {
-  WEDDING = 'wedding',
-  BIRTHDAY = 'birthday',
-  CORPORATE = 'corporate',
-  RELIGIOUS = 'religious',
-  SOCIAL = 'social',
-  OTHER = 'other',
+  WEDDING = 'Wedding',
+  BIRTHDAY = 'Birthday',
+  POOJA = 'Pooja',
+  CORPORATE = 'Corporate',
+  FESTIVAL = 'Festival',
+  OTHER = 'Other',
 }

@@ -1,9 +1,7 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // -------------------------------------------------------------------
 // Core request helper
-// The backend wraps all responses as { success: boolean, data: T }
 // -------------------------------------------------------------------
 async function apiRequest<T>(
   endpoint: string,
@@ -28,22 +26,33 @@ async function apiRequest<T>(
     try {
       const errorData = await response.json()
       errorMessage = errorData?.message || errorData?.error || errorMessage
-    } catch { }
+    } catch {
+      // Response is not JSON
+    }
     throw new Error(errorMessage)
   }
 
-  const json = await response.json()
+  try {
+    const json = await response.json()
 
-  // Unwrap { success, data } envelope if present
-  if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
-    return json.data as T
+    // Handle paginated responses
+    if (json && typeof json === 'object' && 'data' in json && 'total' in json) {
+      return json as T
+    }
+
+    // Handle simple success wrapper
+    if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
+      return json.data as T
+    }
+
+    return json as T
+  } catch (error) {
+    throw new Error('Failed to parse response')
   }
-
-  return json as T
 }
 
 // -------------------------------------------------------------------
-// Status / field normalisers
+// Status / field normalizers
 // -------------------------------------------------------------------
 function normalizeStatus(status: string) {
   if (!status) return 'Live'
@@ -74,54 +83,79 @@ function mapEventFromBackend(event: any) {
 }
 
 // -------------------------------------------------------------------
-// Auth API  –  POST /auth/login, POST /auth/logout
+// Auth API
 // -------------------------------------------------------------------
 export const authApi = {
   async login(email: string, password: string) {
-    const data = await apiRequest<{ access_token: string; user: { id: string; email: string; role: string } }>(
-      '/auth/login',
-      {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      },
-    )
-    return data
+    const response = await apiRequest<{
+      access_token: string
+      refresh_token: string
+      user: { id: string; email: string; role: string }
+    }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+    return response
   },
 
   async logout() {
     try {
       await apiRequest('/auth/logout', { method: 'POST' })
     } catch {
-      // always clear token even if API call fails
-    } finally {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('access_token')
-      }
+      // Always clear token even if API call fails
     }
+  },
+
+  async refreshToken(refreshToken: string) {
+    return await apiRequest<{
+      access_token: string
+      refresh_token: string
+    }>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
   },
 }
 
 // -------------------------------------------------------------------
-// Events API  –  GET /events  |  POST /events
+// Events API
 // -------------------------------------------------------------------
 export const eventsApi = {
-  /** Fetches real events from the backend */
-  async getEvents(tab?: string, occasionType?: string) {
+  async getEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20) {
     try {
       const params = new URLSearchParams()
       if (tab) params.set('tab', tab)
       if (occasionType) params.set('occasionType', occasionType)
-      const query = params.toString() ? `?${params.toString()}` : ''
+      params.set('page', page.toString())
+      params.set('pageSize', pageSize.toString())
+      const query = `?${params.toString()}`
 
-      const data = await apiRequest<any[]>(`/events${query}`)
-      return Array.isArray(data) ? data.map(mapEventFromBackend) : []
+      const response = await apiRequest<{
+        data: any[]
+        total: number
+        page: number
+        pageSize: number
+        totalPages: number
+      }>(`/events${query}`)
+
+      return {
+        events: (response?.data || []).map(mapEventFromBackend),
+        pagination: {
+          page: response?.page || 1,
+          pageSize: response?.pageSize || 20,
+          total: response?.total || 0,
+          totalPages: response?.totalPages || 0,
+        },
+      }
     } catch (error) {
       console.error('eventsApi.getEvents failed:', error)
-      return []
+      return {
+        events: [],
+        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+      }
     }
   },
 
-  /** Creates a new event via the backend */
   async createEvent(payload: {
     name: string
     occasionType?: string
@@ -148,7 +182,6 @@ export const eventsApi = {
     return mapEventFromBackend(data)
   },
 
-  /** Fetch single event by id */
   async getEventById(id: string) {
     const data = await apiRequest<any>(`/events/${id}`)
     return mapEventFromBackend(data)

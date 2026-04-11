@@ -1,17 +1,66 @@
-import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * Supabase Configuration
+ * All values MUST come from environment variables
+ * NEVER hardcode production URLs or keys
+ */
 export const supabaseConfig = {
-  url: process.env.SUPABASE_URL || 'https://mgziyqjhkoqhyzjgwcbp.supabase.co',
-  anonKey: process.env.SUPABASE_ANON_KEY || '',
-  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  url: process.env.SUPABASE_URL,
+  anonKey: process.env.SUPABASE_ANON_KEY,
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
 
+/**
+ * Validate required Supabase configuration on application startup
+ * Fails fast if environment variables are missing
+ */
+export function validateSupabaseConfig() {
+  const { url, serviceRoleKey, anonKey } = supabaseConfig;
+
+  if (!url) {
+    throw new Error(
+      '❌ SUPABASE_URL environment variable is not set.\n' +
+      'Please add it to your .env file.\n' +
+      'Get it from: https://app.supabase.com/project/_/settings/api',
+    );
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error(
+      '❌ SUPABASE_SERVICE_ROLE_KEY environment variable is not set.\n' +
+      'This is required for authenticated backend operations.\n' +
+      'Get it from: https://app.supabase.com/project/_/settings/api',
+    );
+  }
+
+  if (!anonKey) {
+    throw new Error(
+      '❌ SUPABASE_ANON_KEY environment variable is not set.\n' +
+      'This is required for public API operations.\n' +
+      'Get it from: https://app.supabase.com/project/_/settings/api',
+    );
+  }
+}
+
+/**
+ * Create Supabase client with specified authentication level
+ * @param useServiceRole - If true, use service role key (full access), otherwise use anon key
+ */
 export const createSupabaseClient = (useServiceRole = false) => {
-  return createClient(
-    supabaseConfig.url || '',
-    useServiceRole ? supabaseConfig.serviceRoleKey || '' : supabaseConfig.anonKey || ''
-  );
+  const key = useServiceRole ? supabaseConfig.serviceRoleKey : supabaseConfig.anonKey;
+
+  if (!supabaseConfig.url || !key) {
+    throw new Error(
+      '❌ Supabase configuration incomplete. ' +
+      'Make sure all required environment variables are set.',
+    );
+  }
+
+  return createClient(supabaseConfig.url, key);
 };
 
+/**
+ * Get admin Supabase client with full access (service role key)
+ */
 export const getSupabaseAdmin = () => createSupabaseClient(true);

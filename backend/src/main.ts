@@ -1,32 +1,61 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { validateSupabaseConfig } from './config/database.config';
+
+const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  
-  // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+  try {
+    // Validate Supabase configuration before creating app
+    validateSupabaseConfig();
+    logger.log('✅ Supabase configuration validated');
 
-  // Global exception filter
-  app.useGlobalFilters(new AllExceptionsFilter());
+    const app = await NestFactory.create(AppModule);
 
-  // CORS configuration
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true,
-  });
+    // Global validation pipe with transformer
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
+      }),
+    );
+    logger.log('✅ Global validation pipe configured');
 
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') || 3001;
-  
-  await app.listen(port);
-  console.log(`🚀 Event Management API running on port ${port}`);
+    // Global exception filter
+    app.useGlobalFilters(new AllExceptionsFilter());
+    logger.log('✅ Global exception filter configured');
+
+    // CORS configuration
+    const corsOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+    app.enableCors({
+      origin: corsOrigin,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
+    logger.log(`✅ CORS enabled for: ${corsOrigin}`);
+
+    const configService = app.get(ConfigService);
+    const port = configService.get<number>('PORT') || 3001;
+    const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+
+    await app.listen(port);
+
+    logger.log(`🚀 Event Management API listening on port ${port}`);
+    logger.log(`📡 Environment: ${nodeEnv}`);
+    logger.log(`🔐 CORS Origin: ${corsOrigin}`);
+  } catch (error) {
+    logger.error('❌ Application startup failed:');
+    logger.error((error as Error).message);
+    process.exit(1);
+  }
 }
+
 bootstrap();

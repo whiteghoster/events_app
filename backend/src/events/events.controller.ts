@@ -2,19 +2,14 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Put,
   Delete,
-  Patch,
   Body,
   Param,
-  HttpException,
-  HttpStatus,
   Query,
-  ParseIntPipe,
 } from '@nestjs/common';
-import {
-  EventsService,
-} from './events.service';
+import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
@@ -28,9 +23,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 export class EventsController {
   constructor(private readonly eventsService: EventsService) { }
 
-  // =========================
-  // EVENTS
-  // =========================
+  // ========== EVENTS ==========
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -38,61 +31,37 @@ export class EventsController {
     @Body() createEventDto: CreateEventDto,
     @CurrentUser() user: any,
   ) {
-    try {
-      const result = await this.eventsService.createEvent(
-        createEventDto,
-      );
-
-      return {
-        success: true,
-        data: result,
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        error.message || 'Failed to create event',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      success: true,
+      data: await this.eventsService.createEvent(createEventDto),
+    };
   }
 
   @Get()
   async findAllEvents(
     @Query('tab') tab?: string,
     @Query('occasionType') occasionType?: string,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '20',
   ) {
-    try {
-      const events = await this.eventsService.findEvents(tab, occasionType);
-
-      return {
-        success: true,
-        data: events,
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        error.message || 'Failed to fetch events',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const result = await this.eventsService.findEvents(
+      tab,
+      occasionType,
+      parseInt(page, 10),
+      parseInt(pageSize, 10),
+    );
+    return {
+      success: true,
+      ...result,
+    };
   }
 
   @Get(':id')
   async findEventById(@Param('id') id: string) {
-    try {
-      const event = await this.eventsService.findEventById(id);
-      if (!event) {
-        throw new HttpException('Event not found', HttpStatus.NOT_FOUND);
-      }
-
-      return {
-        success: true,
-        data: event,
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        error.message || 'Failed to fetch event',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      data: await this.eventsService.findEventById(id),
+    };
   }
 
   @Put(':id')
@@ -102,26 +71,10 @@ export class EventsController {
     @Body() updateEventDto: UpdateEventDto,
     @CurrentUser() user: any,
   ) {
-    try {
-      const event = await this.eventsService.updateEvent(
-        id,
-        updateEventDto,
-        user.role,
-      );
-
-      return {
-        success: true,
-        data: event,
-      };
-    } catch (error: any) {
-      if (error.message.includes('Forbidden')) {
-        throw new HttpException(error.message, HttpStatus.FORBIDDEN);
-      }
-      throw new HttpException(
-        error.message || 'Failed to update event',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      success: true,
+      data: await this.eventsService.updateEvent(id, updateEventDto, user.role),
+    };
   }
 
   @Patch(':id/close')
@@ -131,35 +84,14 @@ export class EventsController {
     @Body() closeEventDto: CloseEventDto,
     @CurrentUser() user: any,
   ) {
-    try {
-      const event = await this.eventsService.closeEvent(
-        id,
-        closeEventDto.status,
-        user.role,
-      );
-
-      return {
-        success: true,
-        data: event,
-        message: `Event moved to ${closeEventDto.status} successfully`,
-      };
-    } catch (error: any) {
-      if (error.message.includes('Forbidden')) {
-        throw new HttpException(error.message, HttpStatus.FORBIDDEN);
-      }
-      if (error.message.includes('Cannot move event')) {
-        throw new HttpException(error.message, HttpStatus.CONFLICT);
-      }
-      throw new HttpException(
-        error.message || 'Failed to close event',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      success: true,
+      data: await this.eventsService.closeEvent(id, closeEventDto.status, user.role),
+      message: `Event moved to ${closeEventDto.status} successfully`,
+    };
   }
 
-  // =========================
-  // EVENT PRODUCTS
-  // =========================
+  // ========== EVENT PRODUCTS ==========
 
   @Post(':id/products')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
@@ -168,49 +100,33 @@ export class EventsController {
     @Body() createEventProductDto: CreateEventProductDto,
     @CurrentUser() user: any,
   ) {
-    try {
-      return {
-        success: true,
-        data: await this.eventsService.createEventProduct(
-          {
-            ...createEventProductDto,
-            event_id: eventId,
-          },
-          user.role,
-        ),
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        error.message || 'Failed to create event product',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    return {
+      success: true,
+      data: await this.eventsService.createEventProduct(
+        {
+          ...createEventProductDto,
+          event_id: eventId,
+        },
+        user.role,
+      ),
+    };
   }
 
   @Get(':id/products')
   async findEventProducts(
     @Param('id') eventId: string,
-    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('pageSize', new ParseIntPipe({ optional: true })) pageSize: number = 20,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '20',
   ) {
-    try {
-      const result = await this.eventsService.findEventProducts(eventId, page, pageSize);
-      return {
-        success: true,
-        data: result.data,
-        pagination: {
-          page: result.page,
-          pageSize: result.pageSize,
-          total: result.total,
-          totalPages: result.totalPages,
-        },
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        error.message || 'Failed to fetch event products',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const result = await this.eventsService.findEventProducts(
+      eventId,
+      parseInt(page, 10),
+      parseInt(pageSize, 10),
+    );
+    return {
+      success: true,
+      ...result,
+    };
   }
 
   @Put(':id/products/:rowId')
@@ -221,26 +137,14 @@ export class EventsController {
     @Body() updateEventProductDto: UpdateEventProductDto,
     @CurrentUser() user: any,
   ) {
-    try {
-      const product = await this.eventsService.updateEventProduct(
+    return {
+      success: true,
+      data: await this.eventsService.updateEventProduct(
         rowId,
         updateEventProductDto,
         user.role,
-      );
-
-      return {
-        success: true,
-        data: product,
-      };
-    } catch (error: any) {
-      if (error.message.includes('Forbidden')) {
-        throw new HttpException(error.message, HttpStatus.FORBIDDEN);
-      }
-      throw new HttpException(
-        error.message || 'Failed to update event product',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+      ),
+    };
   }
 
   @Delete(':id/products/:rowId')
@@ -250,36 +154,18 @@ export class EventsController {
     @Param('rowId') rowId: string,
     @CurrentUser() user: any,
   ) {
-    try {
-      await this.eventsService.deleteEventProduct(rowId, user.role);
-
-      return {
-        success: true,
-        message: 'Event product deleted successfully',
-      };
-    } catch (error: any) {
-      if (error.message.includes('Forbidden')) {
-        throw new HttpException(error.message, HttpStatus.FORBIDDEN);
-      }
-      throw new HttpException(
-        error.message || 'Failed to delete event product',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    await this.eventsService.deleteEventProduct(rowId, user.role);
+    return {
+      success: true,
+      message: 'Event product deleted successfully',
+    };
   }
 
   @Get(':id/category-summary')
   async getCategorySummary(@Param('id') eventId: string) {
-    try {
-      return {
-        success: true,
-        data: await this.eventsService.getCategorySummary(eventId),
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        error.message || 'Failed to fetch category summary',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      data: await this.eventsService.getCategorySummary(eventId),
+    };
   }
 }

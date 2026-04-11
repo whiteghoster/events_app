@@ -1,106 +1,111 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Put, 
-  Delete, 
-  Param, 
-  HttpException, 
-  HttpStatus,
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Delete,
+  Param,
   Query,
 } from '@nestjs/common';
 import { UsersService, CreateUserDto, UpdateUserDto } from './users.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
+  /**
+   * CREATE USER
+   * Admin only - can create Staff and Staff Member users
+   */
   @Post()
   @Roles(UserRole.ADMIN)
-  async create(@Body() createUserDto: CreateUserDto) {
-    try {
-      return {
-        success: true,
-        data: await this.usersService.create(createUserDto),
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to create user',
-        HttpStatus.BAD_REQUEST
-      );
-    }
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @CurrentUser() user: any,
+  ) {
+    const newUser = await this.usersService.create(createUserDto, user.role);
+    return {
+      success: true,
+      data: newUser,
+      message: 'User created successfully',
+    };
   }
 
+  /**
+   * LIST ALL USERS
+   * Admin only - with pagination
+   */
   @Get()
   @Roles(UserRole.ADMIN)
-  async findAll() {
-    try {
-      return {
-        success: true,
-        data: await this.usersService.findAll(),
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to fetch users',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+  async findAll(
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '20',
+    @CurrentUser() user: any,
+  ) {
+    const result = await this.usersService.findAll(
+      user.role,
+      parseInt(page, 10),
+      parseInt(pageSize, 10),
+    );
+    return {
+      success: true,
+      ...result,
+    };
   }
 
+  /**
+   * GET USER BY ID
+   * Admin only
+   */
   @Get(':id')
   @Roles(UserRole.ADMIN)
-  async findById(@Param('id') id: string) {
-    try {
-      const user = await this.usersService.findById(id);
-      if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-      }
-      return {
-        success: true,
-        data: user,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to fetch user',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+  async findById(@Param('id') id: string, @CurrentUser() user: any) {
+    const userData = await this.usersService.findById(id, user.role);
+    return {
+      success: true,
+      data: userData,
+    };
   }
 
+  /**
+   * UPDATE USER
+   * Admin only - cannot change Admin role
+   */
   @Put(':id')
   @Roles(UserRole.ADMIN)
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    try {
-      const user = await this.usersService.update(id, updateUserDto);
-      return {
-        success: true,
-        data: user,
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to update user',
-        HttpStatus.BAD_REQUEST
-      );
-    }
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() user: any,
+  ) {
+    const updatedUser = await this.usersService.update(
+      id,
+      updateUserDto,
+      user.role,
+    );
+    return {
+      success: true,
+      data: updatedUser,
+      message: 'User updated successfully',
+    };
   }
 
+  /**
+   * DEACTIVATE USER
+   * Admin only - soft delete
+   */
   @Delete(':id')
   @Roles(UserRole.ADMIN)
-  async remove(@Param('id') id: string) {
-    try {
-      await this.usersService.remove(id);
-      return {
-        success: true,
-        message: 'User deleted successfully',
-      };
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to delete user',
-        HttpStatus.BAD_REQUEST
-      );
-    }
+  async remove(@Param('id') id: string, @CurrentUser() user: any) {
+    const result = await this.usersService.remove(id, user.role);
+    return {
+      success: true,
+      data: result,
+      message: 'User deactivated successfully',
+    };
   }
 }

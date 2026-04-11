@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { JwtGuard } from './auth/guards/jwt.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { AuditInterceptor } from './auth/interceptors/audit.interceptor';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -26,6 +27,7 @@ import { HealthModule } from './health/health.module';
     HealthModule,
   ],
   providers: [
+    // Global Guards
     {
       provide: APP_GUARD,
       useClass: JwtGuard,
@@ -34,6 +36,11 @@ import { HealthModule } from './health/health.module';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
+    // Global Interceptors
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
   ],
 })
-export class AppModule {}
+export class AppModule { }

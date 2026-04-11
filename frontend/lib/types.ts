@@ -73,3 +73,29 @@ export interface AuditEntry {
   entityName: string
   change: string
 }
+
+// API Response Types
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface ApiErrorResponse {
+  statusCode: number
+  message: string
+  error: string
+}
+
+export interface AuthResponse {
+  access_token: string
+  refresh_token: string
+  expires_at: number
+  user: {
+    id: string
+    email: string
+    role: UserRole
+  }
+}

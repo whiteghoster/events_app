@@ -58,9 +58,7 @@ export class EventsService {
     }
   }
 
-  // ===========================
-  // EVENTS
-  // ===========================
+  // ========== EVENTS ==========
 
   async createEvent(createEventDto: CreateEventDto) {
     const payload = {
@@ -90,7 +88,12 @@ export class EventsService {
     return data;
   }
 
-  async findEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20) {
+  async findEvents(
+    tab?: string,
+    occasionType?: string,
+    page: number = 1,
+    pageSize: number = 20,
+  ) {
     const offset = Math.max(0, (page - 1) * pageSize);
 
     let query = this.supabase.from('events').select('*', { count: 'exact' });
@@ -125,24 +128,14 @@ export class EventsService {
   }
 
   async findEventById(id: string) {
-    const { data, error } = await this.supabase
-      .from('events')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error || !data) {
-      throw new NotFoundException('Event not found');
-    }
-
-    return data;
+    return await this.getEventOrThrow(id);
   }
 
   async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole) {
     const event = await this.getEventOrThrow(id);
     this.enforceEventEditPermission(event, role);
 
-    if (updateEventDto.status) {
+    if ((updateEventDto as any).status) {
       throw new BadRequestException('Use /events/:id/close for status transitions');
     }
 
@@ -158,7 +151,7 @@ export class EventsService {
     };
 
     const cleanPayload = Object.fromEntries(
-      Object.entries(payload).filter(([_, value]) => value !== undefined)
+      Object.entries(payload).filter(([_, value]) => value !== undefined),
     );
 
     this.ensurePayloadNotEmpty(cleanPayload, 'No valid event fields provided for update');
@@ -187,7 +180,7 @@ export class EventsService {
     const allowed = ALLOWED_TRANSITIONS[event.status as EventStatus] || [];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(
-        `Invalid status transition from ${event.status} to ${newStatus}`
+        `Invalid status transition from ${event.status} to ${newStatus}`,
       );
     }
 
@@ -204,7 +197,7 @@ export class EventsService {
 
       if (!count || count < 1) {
         throw new ConflictException(
-          'Cannot move event to hold without at least one product row'
+          'Cannot move event to hold without at least one product row',
         );
       }
     }
@@ -226,11 +219,12 @@ export class EventsService {
     return data;
   }
 
-  // ===========================
-  // EVENT PRODUCTS
-  // ===========================
+  // ========== EVENT PRODUCTS ==========
 
-  async createEventProduct(createEventProductDto: CreateEventProductDto, role: UserRole) {
+  async createEventProduct(
+    createEventProductDto: CreateEventProductDto,
+    role: UserRole,
+  ) {
     const event = await this.getEventOrThrow(createEventProductDto.event_id);
     this.enforceEventEditPermission(event, role);
 
@@ -261,7 +255,11 @@ export class EventsService {
     return data;
   }
 
-  async findEventProducts(eventId: string, page: number = 1, pageSize: number = 20) {
+  async findEventProducts(
+    eventId: string,
+    page: number = 1,
+    pageSize: number = 20,
+  ) {
     await this.getEventOrThrow(eventId);
 
     const offset = Math.max(0, (page - 1) * pageSize);
@@ -279,7 +277,7 @@ export class EventsService {
           category:categories(id, name)
         )
       `,
-        { count: 'exact' }
+        { count: 'exact' },
       )
       .eq('event_id', eventId)
       .order('created_at', { ascending: true })
@@ -301,7 +299,7 @@ export class EventsService {
   async updateEventProduct(
     rowId: string,
     updateEventProductDto: UpdateEventProductDto,
-    role: UserRole
+    role: UserRole,
   ) {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
@@ -317,10 +315,13 @@ export class EventsService {
     this.enforceEventEditPermission(event, role);
 
     const cleanPayload = Object.fromEntries(
-      Object.entries(updateEventProductDto).filter(([_, value]) => value !== undefined)
+      Object.entries(updateEventProductDto).filter(([_, value]) => value !== undefined),
     );
 
-    this.ensurePayloadNotEmpty(cleanPayload, 'No valid event product fields provided for update');
+    this.ensurePayloadNotEmpty(
+      cleanPayload,
+      'No valid event product fields provided for update',
+    );
 
     // Staff members can only update quantity and unit
     if (role === UserRole.STAFF_MEMBER) {
@@ -330,7 +331,7 @@ export class EventsService {
 
       if (invalidKeys.length > 0) {
         throw new ForbiddenException(
-          `Staff Members can only update ${allowedKeys.join(', ')}. You attempted: ${invalidKeys.join(', ')}`
+          `Staff Members can only update ${allowedKeys.join(', ')}. You attempted: ${invalidKeys.join(', ')}`,
         );
       }
     }
