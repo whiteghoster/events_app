@@ -9,13 +9,13 @@ const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   try {
-    // Validate Supabase configuration before creating app
+    // Validate Supabase configuration
     validateSupabaseConfig();
     logger.log('✅ Supabase configuration validated');
 
     const app = await NestFactory.create(AppModule);
 
-    // Global validation pipe with transformer
+    // Global validation pipe
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -43,7 +43,7 @@ async function bootstrap() {
     logger.log(`✅ CORS enabled for: ${corsOrigin}`);
 
     const configService = app.get(ConfigService);
-    const port = configService.get<number>('PORT') || 3001;
+    const port = configService.get<number>('PORT') || 3002; // ✅ Default to 3002
     const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
 
     await app.listen(port);
@@ -51,6 +51,7 @@ async function bootstrap() {
     logger.log(`🚀 Event Management API listening on port ${port}`);
     logger.log(`📡 Environment: ${nodeEnv}`);
     logger.log(`🔐 CORS Origin: ${corsOrigin}`);
+    logger.log(`📍 API: http://localhost:${port}`);
   } catch (error) {
     logger.error('❌ Application startup failed:');
     logger.error((error as Error).message);

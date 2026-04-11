@@ -1,18 +1,53 @@
-export type UserRole = 'Admin' | 'Staff' | 'Staff Member'
+/**
+ * User Roles - MUST match backend enums (lowercase)
+ */
+export type UserRole = 'admin' | 'staff' | 'staff_member'
 
+export const USER_ROLES = {
+  ADMIN: 'admin' as const,
+  STAFF: 'staff' as const,
+  STAFF_MEMBER: 'staff_member' as const,
+} as const
+
+/**
+ * Event Statuses - MUST match backend enums (lowercase)
+ */
+export type EventStatus = 'live' | 'hold' | 'finished'
+
+export const EVENT_STATUSES = {
+  LIVE: 'live' as const,
+  HOLD: 'hold' as const,
+  FINISHED: 'finished' as const,
+} as const
+
+/**
+ * Occasion Types - MUST match database constraint (lowercase)
+ */
+export type OccasionType = 'wedding' | 'birthday' | 'corporate' | 'religious' | 'social' | 'other'
+
+export const OCCASION_TYPES = {
+  WEDDING: 'wedding' as const,
+  BIRTHDAY: 'birthday' as const,
+  CORPORATE: 'corporate' as const,
+  RELIGIOUS: 'religious' as const,
+  SOCIAL: 'social' as const,
+  OTHER: 'other' as const,
+} as const
+
+/**
+ * User Model
+ */
 export interface User {
   id: string
   name: string
   email: string
   role: UserRole
   createdAt: string
-  avatar?: string
 }
 
-export type OccasionType = 'Wedding' | 'Birthday' | 'Pooja' | 'Corporate' | 'Festival' | 'Other'
-
-export type EventStatus = 'Live' | 'Hold' | 'Finished'
-
+/**
+ * Event Model
+ */
 export interface Event {
   id: string
   name: string
@@ -24,78 +59,30 @@ export interface Event {
   contactPhone?: string
   notes?: string
   status: EventStatus
-  closedBy?: string
-  createdAt: string
-  updatedAt: string
+  closedAt?: string | null
+  createdAt?: string
 }
 
-export type ProductUnit = 'kg' | 'g' | 'pcs' | 'bunch' | 'dozen' | 'box' | 'bundle' | 'set' | 'roll' | 'metre' | 'litre' | 'ml'
-
+/**
+ * Category Model
+ */
 export interface Category {
   id: string
   name: string
-  productCount: number
-  isActive: boolean
+  createdAt: string
 }
 
+/**
+ * Product Model
+ */
 export interface Product {
   id: string
   name: string
   categoryId: string
-  categoryName: string
-  defaultUnit: ProductUnit
+  category?: Category
+  defaultUnit: string
   price?: number
   description?: string
   isActive: boolean
-}
-
-export interface EventProduct {
-  id: string
-  eventId: string
-  productId: string
-  productName: string
-  categoryId: string
-  categoryName: string
-  quantity: number
-  unit: string
-  price?: number
-}
-
-export type AuditAction = 'Created' | 'Updated' | 'Deleted'
-
-export interface AuditEntry {
-  id: string
-  timestamp: string
-  userId: string
-  userName: string
-  action: AuditAction
-  entityType: 'Event' | 'Product' | 'Category' | 'Event Row' | 'User'
-  entityName: string
-  change: string
-}
-
-// API Response Types
-export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
-}
-
-export interface ApiErrorResponse {
-  statusCode: number
-  message: string
-  error: string
-}
-
-export interface AuthResponse {
-  access_token: string
-  refresh_token: string
-  expires_at: number
-  user: {
-    id: string
-    email: string
-    role: UserRole
-  }
+  createdAt: string
 }
