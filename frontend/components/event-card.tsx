@@ -6,14 +6,19 @@ import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/status-badge'
 import type { Event, EventProduct, OccasionType } from '@/lib/types'
 
-const occasionIcons: Record<OccasionType, React.ReactNode> = {
-  Wedding: <span className="text-base">💍</span>,
-  Birthday: <span className="text-base">🎂</span>,
-  Pooja: <span className="text-base">🪔</span>,
-  Corporate: <span className="text-base">🏢</span>,
-  Festival: <span className="text-base">🎉</span>,
-  Other: <span className="text-base">📋</span>,
+const occasionIcons: Record<string, React.ReactNode> = {
+  haldi: <span className="text-base">🟡</span>,
+  bhaat: <span className="text-base">🍚</span>,
+  mehendi: <span className="text-base">🌿</span>,
+  wedding: <span className="text-base">💍</span>,
+  reception: <span className="text-base">🥂</span>,
+  cocktail: <span className="text-base">🍸</span>,
+  after_party: <span className="text-base">🎇</span>,
+  other: <span className="text-base">📋</span>,
 }
+
+
+
 
 interface EventCardProps {
   event: Event
@@ -61,7 +66,9 @@ export function EventCard({ event, products = [] }: EventCardProps) {
         <div className="flex items-start justify-between mb-3">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
             {occasionIcons[event.occasionType]}
-            {event.occasionType}
+            {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
+
+
           </span>
         </div>
 

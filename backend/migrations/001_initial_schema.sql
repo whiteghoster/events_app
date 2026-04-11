@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    occasion_type TEXT NOT NULL CHECK (occasion_type IN ('wedding', 'birthday', 'corporate', 'religious', 'social', 'other')),
+    occasion_type TEXT NOT NULL CHECK (occasion_type IN ('haldi', 'bhaat', 'mehendi', 'wedding', 'reception', 'cocktail', 'after_party', 'others')),
+
     date DATE NOT NULL,
     venue_name TEXT NOT NULL,
     venue_address TEXT,

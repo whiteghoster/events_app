@@ -15,7 +15,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import type { OccasionType } from '@/lib/types'
 
-const occasions: OccasionType[] = ['Wedding', 'Birthday', 'Pooja', 'Corporate', 'Festival', 'Other']
+const occasions: { value: OccasionType; label: string }[] = [
+  { value: 'haldi', label: 'Haldi' },
+  { value: 'bhaat', label: 'Bhaat' },
+  { value: 'mehandi', label: 'Mehandi' },
+  { value: 'wedding', label: 'Wedding' },
+  { value: 'reception', label: 'Reception' },
+  { value: 'cocktail', label: 'Cocktail' },
+  { value: 'after_party', label: 'After Party' },
+  { value: 'other', label: 'Other' },
+]
+
+
 
 export default function NewEventPage() {
   const router = useRouter()
@@ -132,9 +143,10 @@ export default function NewEventPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {occasions.map(o => (
-                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                   ))}
                 </SelectContent>
+
               </Select>
               {errors.occasionType && <p className="text-destructive text-sm">{errors.occasionType}</p>}
             </div>

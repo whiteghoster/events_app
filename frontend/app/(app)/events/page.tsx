@@ -17,14 +17,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import type { OccasionType, Event } from '@/lib/types'
 
-const occasions: (OccasionType | 'All')[] = ['All', 'Wedding', 'Birthday', 'Pooja', 'Corporate', 'Festival', 'Other']
+const occasions: { value: OccasionType | 'All'; label: string }[] = [
+  { value: 'All', label: 'All Occasions' },
+  { value: 'haldi', label: 'Haldi' },
+  { value: 'bhaat', label: 'Bhaat' },
+  { value: 'mehandi', label: 'Mehandi' },
+  { value: 'wedding', label: 'Wedding' },
+  { value: 'reception', label: 'Reception' },
+  { value: 'cocktail', label: 'Cocktail' },
+  { value: 'after_party', label: 'After Party' },
+  { value: 'other', label: 'Other' },
+]
+
+
 
 export default function EventsPage() {
   const { user } = useAuth()
   const [apiEvents, setApiEvents] = useState<Event[]>([])
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'live' | 'over'>('live')
-  const [overSubTab, setOverSubTab] = useState<'Hold' | 'Finished'>('Hold')
+  const [overSubTab, setOverSubTab] = useState<'hold' | 'finished'>('hold')
+
   const [search, setSearch] = useState('')
   const [occasionFilter, setOccasionFilter] = useState<OccasionType | 'All'>('All')
 
@@ -32,9 +46,10 @@ export default function EventsPage() {
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      const data = await eventsApi.getEvents()
+      const response = await eventsApi.getEvents()
       if (!cancelled) {
-        setApiEvents(data)
+        setApiEvents(response.events)
+        setPagination(response.pagination)
         setLoading(false)
       }
     }
@@ -44,11 +59,9 @@ export default function EventsPage() {
 
   // Merge: real DB events first, then demo events (demo IDs won't clash with UUIDs)
   const allEvents = useMemo<Event[]>(() => {
-    const realIds = new Set(apiEvents.map(e => e.id))
-    // Filter out any demo events whose id already exists in DB (shouldn't happen, but safe)
-    const filteredDemo = demoEvents.filter(e => !realIds.has(e.id))
-    return [...apiEvents, ...filteredDemo]
+    return apiEvents
   }, [apiEvents])
+
 
   const filterAndSort = (events: Event[], asc = true) =>
     events
@@ -61,18 +74,20 @@ export default function EventsPage() {
       )
 
   const liveEvents = useMemo(
-    () => filterAndSort(allEvents.filter(e => e.status === 'Live')),
+    () => filterAndSort(allEvents.filter(e => e.status === 'live')),
     [allEvents, search, occasionFilter],
   )
+
 
   const overEvents = useMemo(
     () => filterAndSort(allEvents.filter(e => e.status === overSubTab), false),
     [allEvents, overSubTab, search, occasionFilter],
   )
 
-  const liveCount = allEvents.filter(e => e.status === 'Live').length
-  const holdCount = allEvents.filter(e => e.status === 'Hold').length
-  const finishedCount = allEvents.filter(e => e.status === 'Finished').length
+  const liveCount = allEvents.filter(e => e.status === 'live').length
+  const holdCount = allEvents.filter(e => e.status === 'hold').length
+  const finishedCount = allEvents.filter(e => e.status === 'finished').length
+
 
   const getProductsForEvent = (eventId: string) =>
     eventProducts.filter(p => p.eventId === eventId)
@@ -150,11 +165,12 @@ export default function EventsPage() {
           </SelectTrigger>
           <SelectContent>
             {occasions.map(o => (
-              <SelectItem key={o} value={o}>
-                {o === 'All' ? 'All Occasions' : o}
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
               </SelectItem>
             ))}
           </SelectContent>
+
         </Select>
       </div>
 
@@ -204,10 +220,10 @@ export default function EventsPage() {
           {/* Sub-tabs */}
           <div className="flex gap-4 mb-4">
             <button
-              onClick={() => setOverSubTab('Hold')}
+              onClick={() => setOverSubTab('hold')}
               className={cn(
                 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                overSubTab === 'Hold'
+                overSubTab === 'hold'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
@@ -215,10 +231,10 @@ export default function EventsPage() {
               Hold ({holdCount})
             </button>
             <button
-              onClick={() => setOverSubTab('Finished')}
+              onClick={() => setOverSubTab('finished')}
               className={cn(
                 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                overSubTab === 'Finished'
+                overSubTab === 'finished'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
@@ -226,6 +242,7 @@ export default function EventsPage() {
               Finished ({finishedCount})
             </button>
           </div>
+
 
           {overEvents.length > 0 ? (
             <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -246,17 +263,21 @@ export default function EventsPage() {
                       key={event.id}
                       className={cn(
                         'border-border cursor-pointer transition-colors',
-                        event.status === 'Finished' && 'opacity-70'
+                        event.status === 'finished' && 'opacity-70'
                       )}
                       onClick={() => window.location.href = `/events/${event.id}`}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          {event.status === 'Finished' && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+                          {event.status === 'finished' && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
                           {event.name}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">{event.occasionType}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground">
+                        {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
+
+                      </TableCell>
+
                       <TableCell className="hidden md:table-cell text-muted-foreground truncate max-w-[200px]">{event.venueName}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(event.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}

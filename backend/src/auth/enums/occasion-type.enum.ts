@@ -3,10 +3,12 @@
  * Defines all types of occasions/events
  */
 export enum OccasionType {
-  WEDDING = 'Wedding',
-  BIRTHDAY = 'Birthday',
-  POOJA = 'Pooja',
-  CORPORATE = 'Corporate',
-  FESTIVAL = 'Festival',
-  OTHER = 'Other',
+  HALDI = 'haldi',
+  BHAAT = 'bhaat',
+  MEHENDI = 'mehendi',
+  WEDDING = 'wedding',
+  RECEPTION = 'reception',
+  COCKTAIL = 'cocktail',
+  AFTER_PARTY = 'after_party',
+  OTHERS = 'others',
 }

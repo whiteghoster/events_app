@@ -23,16 +23,27 @@ export const EVENT_STATUSES = {
 /**
  * Occasion Types - MUST match database constraint (lowercase)
  */
-export type OccasionType = 'wedding' | 'birthday' | 'corporate' | 'religious' | 'social' | 'other'
+export type OccasionType = 
+  | 'haldi' 
+  | 'bhaat' 
+  | 'mehendi' 
+  | 'wedding' 
+  | 'reception' 
+  | 'cocktail' 
+  | 'after_party' 
+  | 'other'
 
 export const OCCASION_TYPES = {
+  HALDI: 'haldi' as const,
+  BHAAT: 'bhaat' as const,
+  MEHENDI: 'mehendi' as const,
   WEDDING: 'wedding' as const,
-  BIRTHDAY: 'birthday' as const,
-  CORPORATE: 'corporate' as const,
-  RELIGIOUS: 'religious' as const,
-  SOCIAL: 'social' as const,
+  RECEPTION: 'reception' as const,
+  COCKTAIL: 'cocktail' as const,
+  AFTER_PARTY: 'after_party' as const,
   OTHER: 'other' as const,
 } as const
+
 
 /**
  * User Model
@@ -60,7 +71,9 @@ export interface Event {
   notes?: string
   status: EventStatus
   closedAt?: string | null
+  closedBy?: string | null
   createdAt?: string
+  updatedAt?: string | null
 }
 
 /**
@@ -69,6 +82,8 @@ export interface Event {
 export interface Category {
   id: string
   name: string
+  isActive?: boolean
+  productCount?: number
   createdAt: string
 }
 
@@ -85,4 +100,33 @@ export interface Product {
   description?: string
   isActive: boolean
   createdAt: string
+}
+
+/**
+ * Event Product Model (Line item in an event)
+ */
+export interface EventProduct {
+  id: string
+  eventId: string
+  productId: string
+  productName: string
+  categoryId: string
+  categoryName: string
+  quantity: number
+  unit: string
+  price?: number
+}
+
+/**
+ * Audit Log Entry
+ */
+export interface AuditEntry {
+  id: string
+  timestamp: string
+  userId: string
+  userName: string
+  action: 'Created' | 'Updated' | 'Deleted'
+  entityType: string
+  entityName: string
+  change: string
 }

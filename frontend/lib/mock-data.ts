@@ -1,10 +1,11 @@
 import type { User, Event, Category, Product, EventProduct, AuditEntry } from './types'
 
 export const users: User[] = [
-  { id: '1', name: 'Riya Agarwal', email: 'flora@company.com', role: 'Admin', createdAt: '2026-01-15' },
-  { id: '2', name: 'Suresh Kumar', email: 'suresh@company.com', role: 'Staff', createdAt: '2026-02-10' },
-  { id: '3', name: 'Priya Mehta', email: 'member@company.com', role: 'Staff Member', createdAt: '2026-03-05' },
+  { id: '1', name: 'Riya Agarwal', email: 'flora@company.com', role: 'admin', createdAt: '2026-01-15' },
+  { id: '2', name: 'Suresh Kumar', email: 'suresh@company.com', role: 'staff', createdAt: '2026-02-10' },
+  { id: '3', name: 'Priya Mehta', email: 'member@company.com', role: 'staff_member', createdAt: '2026-03-05' },
 ]
+
 
 export const categories: Category[] = [
   { id: '1', name: 'Flowers', productCount: 11, isActive: true },
@@ -53,17 +54,19 @@ export const products: Product[] = [
 ]
 
 export const events: Event[] = [
-  { id: '1', name: 'Sharma Wedding', occasionType: 'Wedding', eventDate: '2026-04-14', venueName: 'The Grand Banquet Hall', venueAddress: '123 MG Road, Bangalore', contactName: 'Rahul Sharma', contactPhone: '9876543210', status: 'Live', createdAt: '2026-03-01', updatedAt: '2026-04-06' },
-  { id: '2', name: 'TechCorp Annual Day', occasionType: 'Corporate', eventDate: '2026-04-18', venueName: 'Hyatt Regency', venueAddress: 'Ring Road, Hyderabad', contactName: 'Amit Verma', contactPhone: '9123456789', status: 'Live', createdAt: '2026-02-15', updatedAt: '2026-04-05' },
-  { id: '3', name: 'Iyer Birthday Party', occasionType: 'Birthday', eventDate: '2026-04-09', venueName: 'Green Valley Resort', venueAddress: 'Outer Ring Road, Chennai', contactName: 'Lakshmi Iyer', contactPhone: '9988776655', status: 'Live', createdAt: '2026-03-20', updatedAt: '2026-04-06' },
-  { id: '4', name: 'Patel Pooja Ceremony', occasionType: 'Pooja', eventDate: '2026-04-07', venueName: 'Home Venue, Vasant Vihar', venueAddress: 'Vasant Vihar, Delhi', contactName: 'Mahesh Patel', contactPhone: '9876501234', status: 'Live', createdAt: '2026-03-25', updatedAt: '2026-04-06' },
-  { id: '5', name: 'Gupta Anniversary', occasionType: 'Other', eventDate: '2026-04-22', venueName: 'Leela Palace', venueAddress: 'Diplomatic Enclave, Delhi', contactName: 'Neha Gupta', contactPhone: '9812345678', status: 'Live', createdAt: '2026-03-10', updatedAt: '2026-04-04' },
-  { id: '6', name: 'Spring Festival', occasionType: 'Festival', eventDate: '2026-04-30', venueName: 'Community Hall', venueAddress: 'Sector 21, Gurgaon', contactName: 'Vijay Singh', contactPhone: '9654321098', status: 'Live', createdAt: '2026-03-15', updatedAt: '2026-04-01' },
-  { id: '7', name: 'Kapoor Wedding', occasionType: 'Wedding', eventDate: '2026-03-02', venueName: 'Royal Palace', venueAddress: 'Juhu Beach, Mumbai', closedBy: 'Riya Agarwal', status: 'Finished', createdAt: '2026-01-20', updatedAt: '2026-03-03' },
-  { id: '8', name: 'XYZ Corp Annual Day', occasionType: 'Corporate', eventDate: '2026-02-28', venueName: 'Taj Hotel', venueAddress: 'Colaba, Mumbai', closedBy: 'Riya Agarwal', status: 'Hold', createdAt: '2026-01-10', updatedAt: '2026-03-01' },
-  { id: '9', name: 'Reddy Birthday', occasionType: 'Birthday', eventDate: '2026-02-15', venueName: 'Marriott Hotel', venueAddress: 'Whitefield, Bangalore', closedBy: 'Riya Agarwal', status: 'Finished', createdAt: '2026-01-05', updatedAt: '2026-02-16' },
-  { id: '10', name: 'Diwali Celebration', occasionType: 'Festival', eventDate: '2026-03-15', venueName: 'City Convention Center', venueAddress: 'MG Road, Pune', closedBy: 'Suresh Kumar', status: 'Hold', createdAt: '2026-02-01', updatedAt: '2026-03-16' },
+  { id: '1', name: 'Sharma Wedding', occasionType: 'wedding', eventDate: '2026-04-14', venueName: 'The Grand Banquet Hall', venueAddress: '123 MG Road, Bangalore', contactName: 'Rahul Sharma', contactPhone: '9876543210', status: 'live', createdAt: '2026-03-01', updatedAt: '2026-04-06' },
+  { id: '2', name: 'The Golden Cocktail', occasionType: 'cocktail', eventDate: '2026-04-18', venueName: 'Hyatt Regency', venueAddress: 'Ring Road, Hyderabad', contactName: 'Amit Verma', contactPhone: '9123456789', status: 'live', createdAt: '2026-02-15', updatedAt: '2026-04-05' },
+  { id: '3', name: 'Iyer Bhaat Ceremony', occasionType: 'bhaat', eventDate: '2026-04-09', venueName: 'Green Valley Resort', venueAddress: 'Outer Ring Road, Chennai', contactName: 'Lakshmi Iyer', contactPhone: '9988776655', status: 'live', createdAt: '2026-03-20', updatedAt: '2026-04-06' },
+  { id: '4', name: 'Patel Pooja', occasionType: 'other', eventDate: '2026-04-07', venueName: 'Home Venue, Vasant Vihar', venueAddress: 'Vasant Vihar, Delhi', contactName: 'Mahesh Patel', contactPhone: '9876501234', status: 'live', createdAt: '2026-03-25', updatedAt: '2026-04-06' },
+  { id: '5', name: 'Gupta Haldi', occasionType: 'haldi', eventDate: '2026-04-22', venueName: 'Leela Palace', venueAddress: 'Diplomatic Enclave, Delhi', contactName: 'Neha Gupta', contactPhone: '9812345678', status: 'live', createdAt: '2026-03-10', updatedAt: '2026-04-04' },
+  { id: '6', name: 'Kapoor Mehandi', occasionType: 'mehandi', eventDate: '2026-04-30', venueName: 'Community Hall', venueAddress: 'Sector 21, Gurgaon', contactName: 'Vijay Singh', contactPhone: '9654321098', status: 'live', createdAt: '2026-03-15', updatedAt: '2026-04-01' },
+  { id: '7', name: 'Malhotra Wedding', occasionType: 'wedding', eventDate: '2026-03-02', venueName: 'Royal Palace', venueAddress: 'Juhu Beach, Mumbai', closedBy: 'Riya Agarwal', status: 'finished', createdAt: '2026-01-20', updatedAt: '2026-03-03' },
+  { id: '8', name: 'Grand After Party', occasionType: 'after_party', eventDate: '2026-02-28', venueName: 'Taj Hotel', venueAddress: 'Colaba, Mumbai', closedBy: 'Riya Agarwal', status: 'hold', createdAt: '2026-01-10', updatedAt: '2026-03-01' },
+  { id: '9', name: 'Reddy Reception', occasionType: 'reception', eventDate: '2026-02-15', venueName: 'Marriott Hotel', venueAddress: 'Whitefield, Bangalore', closedBy: 'Riya Agarwal', status: 'finished', createdAt: '2026-01-05', updatedAt: '2026-02-16' },
+  { id: '10', name: 'Diwali Night', occasionType: 'other', eventDate: '2026-03-15', venueName: 'City Convention Center', venueAddress: 'MG Road, Pune', closedBy: 'Suresh Kumar', status: 'hold', createdAt: '2026-02-01', updatedAt: '2026-03-16' },
 ]
+
+
 
 export const eventProducts: EventProduct[] = [
   { id: '1', eventId: '1', productId: '1', productName: 'Roses', categoryId: '1', categoryName: 'Flowers', quantity: 50, unit: 'bunch', price: 500 },

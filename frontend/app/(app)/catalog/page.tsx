@@ -333,7 +333,8 @@ export default function CatalogPage() {
                         {product.price ? `₹${product.price}` : '-'}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={product.isActive ? 'Active' : 'Inactive'} />
+                        <StatusBadge status={product.isActive ? 'active' : 'inactive'} />
+
                       </TableCell>
                       {canManage && (
                         <TableCell>

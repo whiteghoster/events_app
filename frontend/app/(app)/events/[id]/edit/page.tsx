@@ -1,43 +1,73 @@
 'use client'
 
-import { useState, use } from 'react'
+import { useState, use, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canEditEvent } from '@/lib/auth-context'
-import { events } from '@/lib/mock-data'
+import { eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import type { OccasionType } from '@/lib/types'
-
-const occasions: OccasionType[] = ['Wedding', 'Birthday', 'Pooja', 'Corporate', 'Festival', 'Other']
+import { OCCASION_TYPES } from '@/lib/types'
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const { user } = useAuth()
-  const event = events.find(e => e.id === id)
   
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPageLoading, setIsPageLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState({
-    name: event?.name || '',
-    occasionType: event?.occasionType || '' as OccasionType | '',
-    eventDate: event?.eventDate || '',
-    venueName: event?.venueName || '',
-    venueAddress: event?.venueAddress || '',
-    contactName: event?.contactName || '',
-    contactPhone: event?.contactPhone || '',
-    notes: event?.notes || '',
+    name: '',
+    occasionType: '',
+    eventDate: '',
+    venueName: '',
+    venueAddress: '',
+    contactName: '',
+    contactPhone: '',
+    notes: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  if (!event || !user || !canEditEvent(user.role)) {
-    router.replace('/events')
-    return null
+  const loadEvent = useCallback(async () => {
+    try {
+      const data = await eventsApi.getEventById(id)
+      setFormData({
+        name: data.name,
+        occasionType: data.occasionType,
+        eventDate: data.eventDate,
+        venueName: data.venueName,
+        venueAddress: data.venueAddress,
+        contactName: data.contactName,
+        contactPhone: data.contactPhone,
+        notes: data.notes || '',
+      })
+    } catch (err) {
+      toast.error('Failed to load event details')
+      router.push('/events')
+    } finally {
+      setIsPageLoading(false)
+    }
+  }, [id, router])
+
+  useEffect(() => {
+    if (user && !canEditEvent(user.role)) {
+      router.replace('/events')
+      return
+    }
+    loadEvent()
+  }, [user, loadEvent, router])
+
+  if (isPageLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   const handleChange = (field: string, value: string) => {
@@ -61,11 +91,25 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     e.preventDefault()
     if (!validate()) return
 
-    setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    toast.success('Event updated successfully')
-    router.push(`/events/${id}`)
+    setIsSaving(true)
+    try {
+      await eventsApi.updateEvent(id, {
+        name: formData.name,
+        occasionType: formData.occasionType,
+        eventDate: formData.eventDate,
+        venueName: formData.venueName,
+        venueAddress: formData.venueAddress,
+        contactName: formData.contactName,
+        contactPhone: formData.contactPhone,
+        notes: formData.notes,
+      })
+      toast.success('Event updated successfully')
+      router.push(`/events/${id}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update event')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -74,12 +118,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         title="Edit Event"
         breadcrumbs={[
           { label: 'Events', href: '/events' },
-          { label: event.name, href: `/events/${id}` },
+          { label: formData.name || 'Edit Event', href: `/events/${id}` },
           { label: 'Edit' },
         ]}
       />
 
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
+      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto pb-10">
         <div className="bg-card rounded-xl border border-border p-6 space-y-8">
           {/* Section 1: Event Identity */}
           <section className="space-y-4">
@@ -107,8 +151,10 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   <SelectValue placeholder="Select occasion type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {occasions.map(o => (
-                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  {Object.values(OCCASION_TYPES).map(o => (
+                    <SelectItem key={o} value={o} className="capitalize">
+                      {o.replace('_', ' ')}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -210,8 +256,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           <Button type="button" variant="ghost" onClick={() => router.push(`/events/${id}`)}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          <Button type="submit" disabled={isSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Save Changes
           </Button>
         </div>

@@ -8,31 +8,31 @@ interface StatusBadgeProps {
 }
 
 const statusConfig = {
-  Live: {
+  live: {
     dot: 'bg-success',
     text: 'text-success',
     border: 'border-success/30',
     bg: 'bg-success/10',
   },
-  Hold: {
+  hold: {
     dot: 'bg-warning',
     text: 'text-warning',
     border: 'border-warning/30',
     bg: 'bg-warning/10',
   },
-  Finished: {
+  finished: {
     dot: 'bg-finished',
     text: 'text-finished',
     border: 'border-finished/30',
     bg: 'bg-finished/10',
   },
-  Active: {
+  active: {
     dot: 'bg-success',
     text: 'text-success',
     border: 'border-transparent',
     bg: 'bg-transparent',
   },
-  Inactive: {
+  inactive: {
     dot: 'bg-finished',
     text: 'text-finished',
     border: 'border-transparent',
@@ -40,9 +40,14 @@ const statusConfig = {
   },
 }
 
+
 export function StatusBadge({ status, size = 'sm', className }: StatusBadgeProps) {
-  const config = statusConfig[status]
+  // Defensive check for case-mismatch or unknown statuses
+  const normalizedStatus = (status || 'live').toLowerCase() as keyof typeof statusConfig
+  const config = statusConfig[normalizedStatus] || statusConfig.live
   
+  const displayStatus = String(status).toUpperCase()
+
   return (
     <span
       className={cn(
@@ -55,7 +60,8 @@ export function StatusBadge({ status, size = 'sm', className }: StatusBadgeProps
       )}
     >
       <span className={cn('w-1.5 h-1.5 rounded-full', config.dot)} />
-      {status.toUpperCase()}
+      {displayStatus}
     </span>
   )
 }
+

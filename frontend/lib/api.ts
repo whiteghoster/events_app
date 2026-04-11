@@ -1,5 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002' // ✅ Updated default
+import type { Event, EventProduct, EventStatus, Category, Product, OccasionType } from './types'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
 // -------------------------------------------------------------------
 // Core request helper
@@ -55,20 +56,22 @@ async function apiRequest<T>(
 // -------------------------------------------------------------------
 // Status / field normalizers
 // -------------------------------------------------------------------
-function normalizeStatus(status: string) {
-  if (!status) return 'Live'
+function normalizeStatus(status: string): EventStatus {
+  if (!status) return 'live'
   const s = String(status).toLowerCase()
-  if (s === 'live') return 'Live'
-  if (s === 'hold') return 'Hold'
-  if (s === 'finished') return 'Finished'
-  return status
+  if (s === 'live' || s === 'hold' || s === 'finished') {
+    return s as EventStatus
+  }
+  return 'live'
 }
 
-function mapEventFromBackend(event: any) {
+
+function mapEventFromBackend(event: any): Event {
   return {
     id: event.id,
     name: event.name,
-    occasionType: event.occasion_type || event.occasionType || 'Other',
+    occasionType: (event.occasion_type || event.occasionType || 'other') as OccasionType,
+
     eventDate: event.date || event.eventDate || '',
     venueName: event.venue_name || event.venueName || '',
     venueAddress: event.venue_address || event.venueAddress || '',
@@ -78,7 +81,7 @@ function mapEventFromBackend(event: any) {
     status: normalizeStatus(event.status),
     closedAt: event.closed_at || event.closedAt || null,
     closedBy: event.closed_by || event.closedBy || null,
-    createdAt: event.created_at || event.createdAt || null,
+    createdAt: event.created_at || event.createdAt || undefined,
     updatedAt: event.updated_at || event.updatedAt || null,
   }
 }
@@ -88,7 +91,7 @@ function mapEventFromBackend(event: any) {
 // -------------------------------------------------------------------
 export const authApi = {
   async login(email: string, password: string) {
-    const response = await apiRequest<{
+    return await apiRequest<{
       access_token: string
       refresh_token: string
       user: { id: string; email: string; role: string }
@@ -96,7 +99,6 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
-    return response
   },
 
   async logout() {
@@ -119,10 +121,43 @@ export const authApi = {
 }
 
 // -------------------------------------------------------------------
+// Catalog API
+// -------------------------------------------------------------------
+export const catalogApi = {
+  async getCategories(): Promise<Category[]> {
+    return await apiRequest<any[]>('/catalog/categories')
+  },
+
+  async getProducts(params?: { categoryId?: string; page?: number; pageSize?: number }): Promise<{
+    data: Product[]
+    total: number
+  }> {
+    const q = new URLSearchParams()
+    if (params?.categoryId) q.set('categoryId', params.categoryId)
+    if (params?.page) q.set('page', params.page.toString())
+    if (params?.pageSize) q.set('pageSize', params.pageSize.toString())
+    
+    return await apiRequest<{
+      data: Product[]
+      total: number
+    }>(`/catalog/products?${q.toString()}`)
+  },
+}
+
+
+// -------------------------------------------------------------------
 // Events API
 // -------------------------------------------------------------------
 export const eventsApi = {
-  async getEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20) {
+  async getEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20): Promise<{
+    events: Event[]
+    pagination: {
+      page: number
+      pageSize: number
+      total: number
+      totalPages: number
+    }
+  }> {
     try {
       const params = new URLSearchParams()
       if (tab) params.set('tab', tab)
@@ -166,7 +201,7 @@ export const eventsApi = {
     contactName?: string
     contactPhone?: string
     notes?: string
-  }) {
+  }): Promise<Event> {
     const data = await apiRequest<any>('/events', {
       method: 'POST',
       body: JSON.stringify({
@@ -183,8 +218,96 @@ export const eventsApi = {
     return mapEventFromBackend(data)
   },
 
-  async getEventById(id: string) {
+  async updateEvent(id: string, payload: {
+    name?: string
+    occasionType?: string
+    eventDate?: string
+    venueName?: string
+    venueAddress?: string
+    contactName?: string
+    contactPhone?: string
+    notes?: string
+  }): Promise<Event> {
+    const data = await apiRequest<any>(`/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name: payload.name,
+        occasion_type: payload.occasionType,
+        date: payload.eventDate,
+        venue_name: payload.venueName,
+        venue_address: payload.venueAddress,
+        contact_person: payload.contactName,
+        contact_phone: payload.contactPhone,
+        notes: payload.notes,
+      }),
+    })
+    return mapEventFromBackend(data)
+  },
+
+  async getEventById(id: string): Promise<Event> {
     const data = await apiRequest<any>(`/events/${id}`)
     return mapEventFromBackend(data)
+  },
+
+  async getEventProducts(eventId: string): Promise<EventProduct[]> {
+    const response = await apiRequest<{
+      data: any[]
+      total: number
+    }>(`/events/${eventId}/products`)
+    
+    return (response?.data || []).map(item => ({
+      id: item.id,
+      eventId: item.event_id || eventId,
+      productId: item.product_id,
+      productName: item.product?.name || 'Unknown Product',
+      categoryId: item.product?.category?.id || '',
+      categoryName: item.product?.category?.name || 'Unknown Category',
+      quantity: item.quantity,
+      unit: item.unit,
+      price: item.price,
+    }))
+  },
+
+  async addEventProduct(eventId: string, payload: {
+    productId: string
+    quantity: number
+    unit: string
+    price?: number
+  }): Promise<void> {
+    await apiRequest(`/events/${eventId}/products`, {
+      method: 'POST',
+      body: JSON.stringify({
+        product_id: payload.productId,
+        quantity: payload.quantity,
+        unit: payload.unit,
+        price: payload.price,
+      }),
+    })
+  },
+
+  async updateEventProduct(eventId: string, rowId: string, payload: {
+    product_id?: string
+    quantity?: number
+    unit?: string
+    price?: number
+  }): Promise<void> {
+    await apiRequest(`/events/${eventId}/products/${rowId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  async deleteEventProduct(eventId: string, rowId: string): Promise<void> {
+    await apiRequest(`/events/${eventId}/products/${rowId}`, {
+      method: 'DELETE',
+    })
+  },
+
+
+  async closeEvent(id: string, status: string): Promise<void> {
+    await apiRequest(`/events/${id}/close`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
   },
 }

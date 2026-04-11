@@ -56,8 +56,8 @@ export class AuthService {
       throw new BadRequestException('User with this email already exists');
     }
 
-    // Default role for public registration (always 'Staff' for regular users)
-    const defaultRole = UserRole.STAFF;
+    // Role from request body
+    const role = registerDto.role;
 
     try {
       // 1. Create user in Supabase Auth
@@ -66,7 +66,7 @@ export class AuthService {
         password: registerDto.password,
         email_confirm: true,
         user_metadata: {
-          role: defaultRole,
+          role: role,
           name: registerDto.name || registerDto.email.split('@')[0],
         },
       });
@@ -82,7 +82,7 @@ export class AuthService {
           id: authData.user.id,
           email: registerDto.email,
           name: registerDto.name || registerDto.email.split('@')[0],
-          role: defaultRole,
+          role: role,
           is_active: true,
           created_at: new Date().toISOString(),
         })

@@ -1,13 +1,18 @@
+
 'use client'
 
-import { useState, useMemo, use } from 'react'
+import { useState, useMemo, use, useEffect, useCallback } from 'react'
+
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, Plus, Pencil, Trash2, Check, X, MapPin, Calendar, User, FileText } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
 import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canViewAudit } from '@/lib/auth-context'
-import { events, eventProducts, products, categories, auditLog } from '@/lib/mock-data'
+import { auditLog } from '@/lib/mock-data'
+import { eventsApi, catalogApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+
+
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -15,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { EventProduct, EventStatus } from '@/lib/types'
+import type { Event, EventProduct, EventStatus, Category, Product } from '@/lib/types'
 
 const units = ['kg', 'g', 'pcs', 'bunch', 'dozen', 'box', 'bundle', 'set', 'roll', 'metre', 'litre', 'ml']
 
@@ -23,17 +28,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params)
   const router = useRouter()
   const { user } = useAuth()
-  
-  const event = events.find(e => e.id === id)
-  const [eventProductsList, setEventProductsList] = useState<EventProduct[]>(
-    eventProducts.filter(p => p.eventId === id)
-  )
-  
+
+  const [event, setEvent] = useState<Event | null>(null)
+  const [eventProductsList, setEventProductsList] = useState<EventProduct[]>([])
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
   const [infoExpanded, setInfoExpanded] = useState(false)
   const [auditExpanded, setAuditExpanded] = useState(false)
   const [closeModalOpen, setCloseModalOpen] = useState(false)
-  const [closeStatus, setCloseStatus] = useState<'Hold' | 'Finished'>('Hold')
-  
+  const [closeStatus, setCloseStatus] = useState<'hold' | 'finished'>('hold')
+
   const [editingRow, setEditingRow] = useState<string | null>(null)
   const [editingData, setEditingData] = useState<Partial<EventProduct>>({})
   const [addingNew, setAddingNew] = useState(false)
@@ -45,23 +51,58 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     price: '',
   })
 
+  const loadData = useCallback(async () => {
+    try {
+      const [eventData, productsData, catData, prodData] = await Promise.all([
+        eventsApi.getEventById(id),
+        eventsApi.getEventProducts(id),
+        catalogApi.getCategories(),
+        catalogApi.getProducts({ pageSize: 1000 })
+      ])
+
+      setEvent(eventData)
+      setEventProductsList(productsData)
+
+      setAllCategories((catData as any[]).map(c => ({
+        id: c.id,
+        name: c.name,
+        isActive: c.is_active,
+        createdAt: c.created_at
+      })))
+
+      setAllProducts((prodData.data as any[]).map(p => ({
+        id: p.id,
+        name: p.name,
+        categoryId: p.category_id,
+        defaultUnit: p.default_unit,
+        price: p.price,
+        description: p.description,
+        isActive: p.is_active,
+        createdAt: p.created_at
+      })))
+    } catch (err) {
+      console.error('Failed to load event data:', err)
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('Event not found')) {
+        toast.error('This event does not exist in the database. Please create a new event.')
+      } else {
+        toast.error('Failed to load event details')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+
   const eventAuditLog = useMemo(() => {
+    // In a real app, this would be fetched from API
     return auditLog.filter(a => a.entityName === event?.name).slice(0, 10)
   }, [event?.name])
 
-  if (!event) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Event not found</p>
-      </div>
-    )
-  }
-
-  const isEditable = event.status === 'Live' || (event.status === 'Hold' && user?.role === 'Admin')
-  const canEdit = user && (canEditProductRow(user.role) || canEditQuantityOnly(user.role))
-  const quantityOnly = user && canEditQuantityOnly(user.role)
-
-  // Category summary calculation
   const categorySummary = useMemo(() => {
     const summary: Record<string, { quantities: Record<string, number> }> = {}
     eventProductsList.forEach(p => {
@@ -69,32 +110,67 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         summary[p.categoryName] = { quantities: {} }
       }
       const key = p.unit
-      summary[p.categoryName].quantities[key] = (summary[p.categoryName].quantities[key] || 0) + p.quantity
+      summary[p.categoryName].quantities[key] = (summary[p.categoryName].quantities[key] || 0) + (p.quantity || 0)
     })
     return summary
   }, [eventProductsList])
 
   const filteredProducts = useMemo(() => {
     if (!newProductData.categoryId) return []
-    return products.filter(p => p.categoryId === newProductData.categoryId && p.isActive)
-  }, [newProductData.categoryId])
+    return allProducts.filter(p => p.categoryId === newProductData.categoryId && p.isActive)
+  }, [allProducts, newProductData.categoryId])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!event) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-muted-foreground">Event not found in database.</p>
+        <Button variant="outline" onClick={() => router.push('/events')}>Back to Events</Button>
+      </div>
+    )
+  }
+
+  const isEditable = event.status === 'live' || (event.status === 'hold' && user?.role === 'admin')
+
+  const canEdit = user && (canEditProductRow(user.role) || canEditQuantityOnly(user.role))
+  const quantityOnly = user && canEditQuantityOnly(user.role)
 
   const handleStartEdit = (product: EventProduct) => {
     setEditingRow(product.id)
-    setEditingData({ ...product })
+    setEditingData({
+      ...product,
+      categoryId: product.categoryId,
+      productId: product.productId
+    })
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingData.quantity || editingData.quantity <= 0) {
       toast.error('Quantity must be greater than 0')
       return
     }
-    setEventProductsList(prev => 
-      prev.map(p => p.id === editingRow ? { ...p, ...editingData } as EventProduct : p)
-    )
-    toast.success('Product updated')
-    setEditingRow(null)
-    setEditingData({})
+
+    try {
+      await eventsApi.updateEventProduct(id, editingRow!, {
+        product_id: editingData.productId,
+        quantity: editingData.quantity,
+        unit: editingData.unit,
+        price: editingData.price,
+      })
+      toast.success('Product updated')
+      setEditingRow(null)
+      setEditingData({})
+      loadData() // Reload to reflect changes
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Update failed')
+    }
   }
 
   const handleCancelEdit = () => {
@@ -102,12 +178,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     setEditingData({})
   }
 
-  const handleDelete = (productId: string) => {
-    setEventProductsList(prev => prev.filter(p => p.id !== productId))
-    toast.success('Product removed from event')
+  const handleDelete = async (rowId: string) => {
+    try {
+      await eventsApi.deleteEventProduct(id, rowId)
+      toast.success('Product removed from event')
+      loadData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed')
+    }
   }
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!newProductData.categoryId || !newProductData.productId || !newProductData.quantity || !newProductData.unit) {
       toast.error('Please fill all required fields')
       return
@@ -117,32 +198,36 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       toast.error('Quantity must be greater than 0')
       return
     }
-    const selectedProduct = products.find(p => p.id === newProductData.productId)
-    const selectedCategory = categories.find(c => c.id === newProductData.categoryId)
-    if (!selectedProduct || !selectedCategory) return
 
-    const newProduct: EventProduct = {
-      id: `new-${Date.now()}`,
-      eventId: id,
-      productId: newProductData.productId,
-      productName: selectedProduct.name,
-      categoryId: newProductData.categoryId,
-      categoryName: selectedCategory.name,
-      quantity: qty,
-      unit: newProductData.unit,
-      price: newProductData.price ? parseFloat(newProductData.price) : undefined,
+    try {
+      await eventsApi.addEventProduct(id, {
+        productId: newProductData.productId,
+        quantity: qty,
+        unit: newProductData.unit,
+        price: newProductData.price ? parseFloat(newProductData.price) : undefined,
+      })
+
+      setAddingNew(false)
+      setNewProductData({ categoryId: '', productId: '', quantity: '', unit: '', price: '' })
+      toast.success('Product added')
+      loadData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add product')
     }
-    setEventProductsList(prev => [...prev, newProduct])
-    setAddingNew(false)
-    setNewProductData({ categoryId: '', productId: '', quantity: '', unit: '', price: '' })
-    toast.success('Product added')
   }
 
-  const handleCloseEvent = () => {
-    toast.success(`Event moved to ${closeStatus}`)
-    setCloseModalOpen(false)
-    router.push('/events')
+
+  const handleCloseEvent = async () => {
+    try {
+      await eventsApi.closeEvent(id, closeStatus)
+      toast.success(`Event moved to ${closeStatus}`)
+      setCloseModalOpen(false)
+      router.push('/events')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to close event')
+    }
   }
+
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -162,7 +247,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </Button>
             )}
             {user && canCloseEvent(user.role) && event.status === 'Live' && eventProductsList.length > 0 && (
-              <Button 
+              <Button
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => setCloseModalOpen(true)}
               >
@@ -193,7 +278,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <div className="px-4 pb-4 pt-2 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-label mb-1">Occasion</p>
-                <p className="text-foreground">{event.occasionType}</p>
+                <p className="text-foreground">
+                  {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
+                </p>
+
               </div>
               <div>
                 <p className="text-label mb-1">Date</p>
@@ -249,16 +337,57 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </TableHeader>
             <TableBody>
               {eventProductsList.map((product, index) => (
-                <TableRow 
-                  key={product.id} 
+                <TableRow
+                  key={product.id}
                   className={cn(
                     'border-border',
                     editingRow === product.id && 'bg-primary/5 border-l-2 border-l-primary'
                   )}
                 >
                   <TableCell className="text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="text-muted-foreground">{product.categoryName}</TableCell>
-                  <TableCell className="font-medium">{product.productName}</TableCell>
+                  <TableCell>
+                    {editingRow === product.id && !quantityOnly ? (
+                      <Select
+                        value={editingData.categoryId}
+                        onValueChange={(v) => setEditingData(prev => ({ ...prev, categoryId: v, productId: '' }))}
+                      >
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allCategories.filter(c => c.isActive).map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      product.categoryName
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {editingRow === product.id && !quantityOnly ? (
+                      <Select
+                        value={editingData.productId}
+                        onValueChange={(v) => {
+                          const prod = allProducts.find(p => p.id === v)
+                          setEditingData(prev => ({ ...prev, productId: v, unit: prod?.defaultUnit || prev.unit }))
+                        }}
+                      >
+                        <SelectTrigger className="w-40 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allProducts
+                            .filter(p => p.categoryId === editingData.categoryId && p.isActive)
+                            .map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      product.productName
+                    )}
+                  </TableCell>
                   <TableCell>
                     {editingRow === product.id ? (
                       <Input
@@ -273,16 +402,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     )}
                   </TableCell>
                   <TableCell>
-                    {editingRow === product.id && !quantityOnly ? (
-                      <Select value={editingData.unit} onValueChange={(v) => setEditingData(prev => ({ ...prev, unit: v }))}>
-                        <SelectTrigger className="w-24 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    ) : editingRow === product.id && quantityOnly ? (
+                    {editingRow === product.id ? (
                       <Select value={editingData.unit} onValueChange={(v) => setEditingData(prev => ({ ...prev, unit: v }))}>
                         <SelectTrigger className="w-24 h-8">
                           <SelectValue />
@@ -310,6 +430,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       )}
                     </TableCell>
                   )}
+
                   {canEdit && isEditable && (
                     <TableCell>
                       {editingRow === product.id ? (
@@ -348,7 +469,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.filter(c => c.isActive).map(c => (
+                        {allCategories.filter(c => c.isActive).map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -356,7 +477,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   </TableCell>
                   <TableCell>
                     <Select value={newProductData.productId} onValueChange={(v) => {
-                      const prod = products.find(p => p.id === v)
+                      const prod = allProducts.find(p => p.id === v)
                       setNewProductData(prev => ({ ...prev, productId: v, unit: prod?.defaultUnit || '' }))
                     }}>
                       <SelectTrigger className="w-40 h-8">
@@ -511,9 +632,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <input
                   type="radio"
                   name="closeStatus"
-                  value="Hold"
-                  checked={closeStatus === 'Hold'}
-                  onChange={() => setCloseStatus('Hold')}
+                  value="hold"
+                  checked={closeStatus === 'hold'}
+                  onChange={() => setCloseStatus('hold')}
                   className="accent-primary"
                 />
                 <div>
@@ -525,9 +646,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <input
                   type="radio"
                   name="closeStatus"
-                  value="Finished"
-                  checked={closeStatus === 'Finished'}
-                  onChange={() => setCloseStatus('Finished')}
+                  value="finished"
+                  checked={closeStatus === 'finished'}
+                  onChange={() => setCloseStatus('finished')}
                   className="accent-primary"
                 />
                 <div>
@@ -535,6 +656,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <p className="text-sm text-muted-foreground">Permanently read-only</p>
                 </div>
               </label>
+
             </div>
           </div>
           <DialogFooter>

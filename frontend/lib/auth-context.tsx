@@ -62,7 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error(errorData.message || 'Login failed')
         }
 
-        const data = await response.json()
+        const json = await response.json()
+        const data = json.data // ✅ Access nested data
 
         // Store tokens
         if (data.access_token) {
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
+
 
         return true
       } catch (err) {
@@ -139,4 +141,58 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+}
+
+/**
+ * RBAC Helper Functions
+ */
+
+export function canCreateEvent(role: UserRole | undefined): boolean {
+  if (!role) return false
+  return role === 'admin' || role === 'staff'
+}
+
+export function canManageUsers(role: UserRole | undefined): boolean {
+  return role === 'admin'
+}
+
+export function canDeactivateUser(role: UserRole | undefined): boolean {
+  return role === 'admin'
+}
+
+export function canCloseEvent(role: UserRole | undefined): boolean {
+  if (!role) return false
+  return role === 'admin' || role === 'staff'
+}
+
+export function canViewCatalog(role: UserRole | undefined): boolean {
+  if (!role) return false
+  return role === 'admin' || role === 'staff' || role === 'staff_member'
+}
+
+export function canViewUsers(role: UserRole | undefined): boolean {
+  return role === 'admin'
+}
+
+export function canViewAudit(role: UserRole | undefined): boolean {
+  return role === 'admin'
+}
+
+export function canEditEvent(role: UserRole | undefined): boolean {
+  if (!role) return false
+  return role === 'admin' || role === 'staff'
+}
+
+export function canEditProductRow(role: UserRole | undefined): boolean {
+  if (!role) return false
+  return role === 'admin' || role === 'staff'
+}
+
+export function canEditQuantityOnly(role: UserRole | undefined): boolean {
+  return role === 'staff_member'
+}
+
+export function canManageProducts(role: UserRole | undefined): boolean {
+  if (!role) return false
+  return role === 'admin' || role === 'staff'
 }

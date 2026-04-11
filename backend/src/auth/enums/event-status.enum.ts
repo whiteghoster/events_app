@@ -3,7 +3,7 @@
  * Defines all possible states of an event
  */
 export enum EventStatus {
-  LIVE = 'Live',
-  HOLD = 'Hold',
-  FINISHED = 'Finished',
+  LIVE = 'live',
+  HOLD = 'hold',
+  FINISHED = 'finished',
 }
