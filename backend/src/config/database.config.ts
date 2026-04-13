@@ -1,20 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Supabase Configuration
- * All values MUST come from environment variables
- * NEVER hardcode production URLs or keys
- */
 export const supabaseConfig = {
   url: process.env.SUPABASE_URL,
   anonKey: process.env.SUPABASE_ANON_KEY,
   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 };
-
-/**
- * Validate required Supabase configuration on application startup
- * Fails fast if environment variables are missing
- */
 export function validateSupabaseConfig() {
   const { url, serviceRoleKey, anonKey } = supabaseConfig;
 
