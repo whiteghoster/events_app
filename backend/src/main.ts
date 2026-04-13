@@ -32,8 +32,10 @@ async function bootstrap() {
     app.useGlobalFilters(new AllExceptionsFilter());
     logger.log('✅ Global exception filter configured');
 
-    // CORS configuration
-    const corsOrigin = process.env.FRONTEND_URL || 'https://events-app-seven-flax.vercel.app/' || 'http://localhost:3000';
+    // CORS configuration — allow both local dev and production
+    const corsOrigin = process.env.FRONTEND_URL
+      ? [process.env.FRONTEND_URL, 'http://localhost:3000']
+      : ['https://events-app-seven-flax.vercel.app', 'http://localhost:3000'];
     app.enableCors({
       origin: corsOrigin,
       credentials: true,
