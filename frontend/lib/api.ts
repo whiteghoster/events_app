@@ -3,11 +3,42 @@ import type { Event, EventProduct, EventStatus, Category, Product, OccasionType 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
 // -------------------------------------------------------------------
-// Core request helper
+// Token refresh helper (mirrors auth-context logic, for use outside React)
+// -------------------------------------------------------------------
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken =
+    typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null
+  if (!refreshToken) return null
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    if (!res.ok) return null
+
+    const json = await res.json()
+    const data = json.data ?? json
+    if (!data?.access_token) return null
+
+    localStorage.setItem('access_token', data.access_token)
+    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+    if (data.expires_at) localStorage.setItem('expires_at', String(data.expires_at))
+
+    return data.access_token
+  } catch {
+    return null
+  }
+}
+
+// -------------------------------------------------------------------
+// Core request helper — auto-refreshes on 401 and retries once
 // -------------------------------------------------------------------
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
+  _retry = true,
 ): Promise<T> {
   const token =
     typeof window !== 'undefined'
@@ -22,6 +53,23 @@ async function apiRequest<T>(
       ...(options.headers || {}),
     },
   })
+
+  // On 401: try to refresh the token once, then retry the original request
+  if (response.status === 401 && _retry) {
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      return apiRequest<T>(endpoint, options, false) // retry with fresh token
+    }
+    // Refresh failed — clear session and redirect to login
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('expires_at')
+      localStorage.removeItem('user')
+      window.location.href = '/auth/login'
+    }
+    throw new Error('Session expired. Please log in again.')
+  }
 
   if (!response.ok) {
     let errorMessage = `Request failed with status ${response.status}`
@@ -136,7 +184,7 @@ export const catalogApi = {
     if (params?.categoryId) q.set('categoryId', params.categoryId)
     if (params?.page) q.set('page', params.page.toString())
     if (params?.pageSize) q.set('pageSize', params.pageSize.toString())
-    
+
     return await apiRequest<{
       data: Product[]
       total: number
@@ -254,7 +302,7 @@ export const eventsApi = {
       data: any[]
       total: number
     }>(`/events/${eventId}/products`)
-    
+
     return (response?.data || []).map(item => ({
       id: item.id,
       eventId: item.event_id || eventId,

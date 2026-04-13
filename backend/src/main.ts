@@ -35,7 +35,7 @@ async function bootstrap() {
     // CORS configuration — allow both local dev and production
     const corsOrigin = process.env.FRONTEND_URL
       ? [process.env.FRONTEND_URL, 'http://localhost:3000']
-      : ['https://events-app-seven-flax.vercel.app', 'http://localhost:3000'];
+      : ['https://events-app-7r2c.vercel.app', 'http://localhost:3000'];
     app.enableCors({
       origin: corsOrigin,
       credentials: true,
