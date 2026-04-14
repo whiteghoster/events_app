@@ -30,7 +30,7 @@ async function tryRefreshToken(): Promise<string | null> {
   if (!refreshToken) return null
 
   try {
-    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    const res = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),

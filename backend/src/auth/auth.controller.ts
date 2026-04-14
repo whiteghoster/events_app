@@ -16,7 +16,6 @@ export class AuthController {
   async login(@Body() loginDto: LoginDto) {
     const result = await this.authService.login(loginDto);
     return {
-      success: true,
       data: {
         user: result.user,
         access_token: result.access_token,
@@ -27,11 +26,10 @@ export class AuthController {
   }
 
   @Public()
-  @Post('refresh')
+  @Post('token/refresh')
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     const result = await this.authService.refreshToken(refreshTokenDto.refresh_token);
     return {
-      success: true,
       data: {
         access_token: result.access_token,
         refresh_token: result.refresh_token,
@@ -43,13 +41,13 @@ export class AuthController {
   @Public()
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    const user = await this.authService.register(registerDto);
-    return { success: true, data: user };
+    const data = await this.authService.register(registerDto);
+    return { data };
   }
 
   @Post('logout')
   async logout(@CurrentUser() user: AuthenticatedUser) {
     await this.authService.signOut(user.id);
-    return { success: true };
+    return { data: null };
   }
 }

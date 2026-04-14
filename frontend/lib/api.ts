@@ -11,7 +11,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null
 
   try {
-    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    const res = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -69,13 +69,16 @@ async function apiRequest<T>(
     throw new Error(errorMessage)
   }
 
+  // 204 No Content
+  if (response.status === 204) {
+    return undefined as T
+  }
+
   try {
     const json = await response.json()
-    // Handle success wrapper common in NestJS
-    if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
-      // If it's a paginated response (detected by pagination keys at the top level),
-      // return the whole object so the caller has access to 'total', 'page', etc.
-      if ('total' in json || 'page' in json || 'pagination' in json) {
+    if (json && typeof json === 'object' && 'data' in json) {
+      // Paginated response — return full object so caller gets meta
+      if ('meta' in json) {
         return json as T
       }
       return json.data as T
@@ -87,7 +90,7 @@ async function apiRequest<T>(
 }
 
 // -------------------------------------------------------------------
-// 2. MAPPERS & NORMALIZERS
+// 2. MAPPERS
 // -------------------------------------------------------------------
 
 function normalizeStatus(status: string): EventStatus {
@@ -154,7 +157,7 @@ function mapAuditEntryFromBackend(log: any): AuditEntry {
 }
 
 // -------------------------------------------------------------------
-// 3. AUTH MODULE
+// 3. AUTH
 // -------------------------------------------------------------------
 
 export const authApi = {
@@ -186,7 +189,7 @@ export const authApi = {
     return await apiRequest<{
       access_token: string
       refresh_token: string
-    }>('/auth/refresh', {
+    }>('/auth/token/refresh', {
       method: 'POST',
       body: JSON.stringify({ refresh_token: refreshToken }),
     })
@@ -194,32 +197,31 @@ export const authApi = {
 }
 
 // -------------------------------------------------------------------
-// 4. EVENTS MODULE
+// 4. EVENTS
 // -------------------------------------------------------------------
 
 export const eventsApi = {
-  async getEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20): Promise<{
+  async getEvents(status?: string, occasionType?: string, page: number = 1, pageSize: number = 20): Promise<{
     events: Event[]
     pagination: { page: number; pageSize: number; total: number; totalPages: number }
   }> {
     const params = new URLSearchParams()
-    if (tab) params.set('tab', tab)
-    if (occasionType) params.set('occasionType', occasionType)
+    if (status) params.set('status', status)
+    if (occasionType) params.set('occasion_type', occasionType)
     params.set('page', page.toString())
-    params.set('pageSize', pageSize.toString())
+    params.set('page_size', pageSize.toString())
 
     const res = await apiRequest<any>(`/events?${params.toString()}`)
-    
-    // Now res is the full object { success, data: [...], total, ... }
+
     const events = Array.isArray(res.data) ? res.data : (res.events || [])
-    
+
     return {
       events: events.map(mapEventFromBackend),
       pagination: {
-        page: res.page || 1,
-        pageSize: res.pageSize || 20,
-        total: res.total || 0,
-        totalPages: res.totalPages || 0,
+        page: res.meta?.page || 1,
+        pageSize: res.meta?.page_size || 20,
+        total: res.meta?.total || 0,
+        totalPages: res.meta?.total_pages || 0,
       },
     }
   },
@@ -260,7 +262,7 @@ export const eventsApi = {
   async updateEvent(id: string, payload: Partial<Event>): Promise<Event> {
     const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, assignedTo, status, ...rest } = payload
     const data = await apiRequest<any>(`/events/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify({
         ...rest,
         occasion_type: occasionType,
@@ -276,7 +278,7 @@ export const eventsApi = {
   },
 
   async closeEvent(id: string, status: string): Promise<void> {
-    await apiRequest(`/events/${id}/close`, {
+    await apiRequest(`/events/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     })
@@ -286,11 +288,9 @@ export const eventsApi = {
     await apiRequest(`/events/${id}`, { method: 'DELETE' })
   },
 
-  // Event Products logic
+  // Event Products
   async getEventProducts(eventId: string): Promise<EventProduct[]> {
     const res = await apiRequest<any>(`/events/${eventId}/products`)
-    // apiRequest already unwraps { success, data } — so res IS the data array.
-    // But in case the response includes pagination fields (object), handle both.
     const items: any[] = Array.isArray(res) ? res : (res?.data || res || [])
     return items.map((item: any) => ({
       id: item.id,
@@ -321,7 +321,7 @@ export const eventsApi = {
 
   async updateEventProduct(eventId: string, rowId: string, payload: any): Promise<void> {
     await apiRequest(`/events/${eventId}/products/${rowId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(payload),
     })
   },
@@ -331,22 +331,19 @@ export const eventsApi = {
   },
 
   async getCategorySummary(eventId: string): Promise<any[]> {
-    const res = await apiRequest<any[]>(`/events/${eventId}/category-summary`)
-    // Backend returns [{ category: string, totals: [{ unit, quantity }] }]
-    // Flatten it for simple display if needed, or keep for complex UI
-    return res
+    return await apiRequest<any[]>(`/events/${eventId}/products/summary`)
   },
 }
 
 // -------------------------------------------------------------------
-// 5. CATALOG MODULE
+// 5. CATEGORIES
 // -------------------------------------------------------------------
 
 export const catalogApi = {
   async getCategories(): Promise<Category[]> {
-    const res = await apiRequest<any>('/catalog/categories')
+    const res = await apiRequest<any>('/categories')
     const categories = Array.isArray(res) ? res : (res.data || [])
-    
+
     return categories.map((c: any) => ({
       id: c.id,
       name: c.name,
@@ -356,34 +353,34 @@ export const catalogApi = {
   },
 
   async createCategory(name: string): Promise<Category> {
-    return await apiRequest<any>('/catalog/categories', {
+    return await apiRequest<any>('/categories', {
       method: 'POST',
       body: JSON.stringify({ name }),
     })
   },
 
   async updateCategory(id: string, name: string): Promise<Category> {
-    return await apiRequest<any>(`/catalog/categories/${id}`, {
-      method: 'PUT',
+    return await apiRequest<any>(`/categories/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify({ name }),
     })
   },
 
   async deleteCategory(id: string): Promise<void> {
-    await apiRequest(`/catalog/categories/${id}`, { method: 'DELETE' })
+    await apiRequest(`/categories/${id}`, { method: 'DELETE' })
   },
 
   async getProducts(params?: { categoryId?: string; page?: number; pageSize?: number }): Promise<{
     data: Product[]; total: number
   }> {
     const q = new URLSearchParams()
-    if (params?.categoryId) q.set('categoryId', params.categoryId)
+    if (params?.categoryId) q.set('category_id', params.categoryId)
     if (params?.page) q.set('page', params.page.toString())
-    if (params?.pageSize) q.set('pageSize', params.pageSize.toString())
+    if (params?.pageSize) q.set('page_size', params.pageSize.toString())
 
-    const res = await apiRequest<any>(`/catalog/products?${q.toString()}`)
+    const res = await apiRequest<any>(`/products?${q.toString()}`)
     const products = Array.isArray(res.data) ? res.data : (res.products || [])
-    
+
     return {
       data: products.map((p: any) => ({
         id: p.id,
@@ -396,13 +393,13 @@ export const catalogApi = {
         isActive: p.is_active !== false,
         createdAt: p.created_at
       })),
-      total: res.total || 0
+      total: res.meta?.total || 0
     }
   },
 
   async createProduct(payload: any): Promise<Product> {
     const { categoryId, defaultUnit, ...rest } = payload
-    return await apiRequest<any>('/catalog/products', {
+    return await apiRequest<any>('/products', {
       method: 'POST',
       body: JSON.stringify({
         ...rest,
@@ -414,8 +411,8 @@ export const catalogApi = {
 
   async updateProduct(id: string, payload: any): Promise<Product> {
     const { categoryId, defaultUnit, isActive, ...rest } = payload
-    return await apiRequest<any>(`/catalog/products/${id}`, {
-      method: 'PUT',
+    return await apiRequest<any>(`/products/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify({
         ...rest,
         category_id: categoryId,
@@ -426,29 +423,31 @@ export const catalogApi = {
   },
 
   async deactivateProduct(id: string): Promise<void> {
-    await apiRequest(`/catalog/products/${id}/deactivate`, { method: 'POST' })
+    await apiRequest(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: false }),
+    })
   },
 
   async seedCategories(): Promise<void> {
-    await apiRequest('/catalog/seed/categories', { method: 'POST' })
+    await apiRequest('/categories/seed', { method: 'POST' })
   },
 
   async seedProducts(): Promise<void> {
-    await apiRequest('/catalog/seed/products', { method: 'POST' })
+    await apiRequest('/products/seed', { method: 'POST' })
   },
 }
 
 // -------------------------------------------------------------------
-// 6. USERS MODULE
+// 6. USERS
 // -------------------------------------------------------------------
 
 export const usersApi = {
   async getUsers(page: number = 1, pageSize: number = 50): Promise<{ data: User[]; total: number }> {
-    const res = await apiRequest<any>(`/users?page=${page}&pageSize=${pageSize}`)
-    // After refactor, res is { success: true, data: [...], total: X }
+    const res = await apiRequest<any>(`/users?page=${page}&page_size=${pageSize}`)
     return {
       data: (Array.isArray(res.data) ? res.data : []).map(mapUserFromBackend),
-      total: res.total || 0
+      total: res.meta?.total || 0
     }
   },
 
@@ -465,7 +464,7 @@ export const usersApi = {
 
   async updateUser(id: string, payload: any): Promise<User> {
     const data = await apiRequest<any>(`/users/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify({
         ...payload,
         role: payload.role ? payload.role.toLowerCase().replace(' ', '_') : undefined,
@@ -479,21 +478,20 @@ export const usersApi = {
   },
 
   async activateUser(id: string): Promise<User> {
-    const data = await apiRequest<any>(`/users/${id}/activate`, {
-      method: 'POST',
+    const data = await apiRequest<any>(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: true }),
     })
     return mapUserFromBackend(data)
   },
 
   async permanentlyDeleteUser(id: string): Promise<void> {
-    await apiRequest(`/users/${id}/permanent`, {
-      method: 'DELETE',
-    })
+    await apiRequest(`/users/${id}?permanent=true`, { method: 'DELETE' })
   },
 }
 
 // -------------------------------------------------------------------
-// 7. AUDIT MODULE
+// 7. AUDIT
 // -------------------------------------------------------------------
 
 export const auditApi = {
@@ -510,15 +508,17 @@ export const auditApi = {
 
     return {
       data: logs.map(mapAuditEntryFromBackend),
-      pagination: res.pagination || { page: 1, limit: 50, total: 0, hasMore: false },
+      pagination: res.meta || { page: 1, limit: 50, total: 0, hasMore: false },
     }
   },
 
   async exportAuditLogs(filters: any): Promise<{ data: any[]; filename: string }> {
-    const res = await apiRequest<any>('/audit/export', {
-      method: 'POST',
-      body: JSON.stringify(filters),
-    })
+    const q = new URLSearchParams()
+    if (filters?.entity_type) q.set('entity_type', filters.entity_type)
+    if (filters?.action) q.set('action', filters.action)
+    q.set('format', 'csv')
+
+    const res = await apiRequest<any>(`/audit?${q.toString()}`)
     return {
       data: res.data || [],
       filename: res.filename || 'audit_export.csv'

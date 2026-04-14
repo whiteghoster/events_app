@@ -40,4 +40,8 @@ export class FindAuditLogsDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  format?: string;
 }

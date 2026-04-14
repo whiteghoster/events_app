@@ -4,7 +4,7 @@ Base URL: `http://localhost:3002`
 
 ## Authentication
 
-All endpoints except those marked **Public** require a Bearer token.
+All endpoints except **Public** require a Bearer token.
 
 ```
 Authorization: Bearer <access_token>
@@ -30,7 +30,6 @@ Authorization: Bearer <access_token>
 
 // Response
 {
-  "success": true,
   "data": {
     "user": { "id": "uuid", "email": "admin@example.com", "name": "Admin", "role": "admin" },
     "access_token": "eyJ...",
@@ -47,24 +46,24 @@ Authorization: Bearer <access_token>
 { "email": "staff@example.com", "password": "password123", "name": "Staff User", "role": "staff" }
 
 // Response
-{ "success": true, "data": { "id": "uuid", "email": "staff@example.com", "name": "Staff User", "role": "staff" } }
+{ "data": { "id": "uuid", "email": "staff@example.com", "name": "Staff User", "role": "staff" } }
 ```
 
-### POST /auth/refresh (Public)
+### POST /auth/token/refresh (Public)
 
 ```json
 // Request
 { "refresh_token": "eyJ..." }
 
 // Response
-{ "success": true, "data": { "access_token": "eyJ...", "refresh_token": "eyJ...", "expires_at": 1713100000 } }
+{ "data": { "access_token": "eyJ...", "refresh_token": "eyJ...", "expires_at": 1713100000 } }
 ```
 
-### POST /auth/logout (Public)
+### POST /auth/logout
 
 ```json
 // Response
-{ "success": true }
+{ "data": null }
 ```
 
 ---
@@ -87,35 +86,38 @@ Authorization: Bearer <access_token>
   "assigned_to": "user-uuid"
 }
 
-// Response
-{ "success": true, "data": { "id": "uuid", "display_id": "EVT-48201", "name": "Wedding Reception", "status": "live", ... } }
+// Response 201
+{ "data": { "id": "uuid", "display_id": "EVT-48201", "name": "Wedding Reception", "status": "live", ... } }
 ```
 
-### GET /events?tab=live&occasionType=wedding&page=1&pageSize=20 (All)
+### GET /events?status=live&occasion_type=wedding&page=1&page_size=20 (All)
 
 ```json
 // Response
-{ "success": true, "data": [...], "total": 15, "page": 1, "pageSize": 20, "totalPages": 1 }
+{
+  "data": [...],
+  "meta": { "page": 1, "page_size": 20, "total": 15, "total_pages": 1 }
+}
 ```
 
-Tab values: `live` (default), `hold`, `finished`, `over`
+Status values: `live` (default), `hold`, `finished`, `over`
 
 ### GET /events/:id (All)
 
 Accepts UUID or display ID (e.g. `EVT-48201`).
 
-### PUT /events/:id (Admin)
+### PATCH /events/:id (Admin)
 
-### PATCH /events/:id/close (Admin)
+Updates event fields and/or status. Status transitions: `live` → `hold`/`finished`, `hold` → `live`/`finished`.
 
 ```json
-// Request
+// Request (fields or status or both)
 { "status": "hold" }
 ```
 
-Valid transitions: `live` -> `hold`/`finished`, `hold` -> `live`/`finished`
-
 ### DELETE /events/:id (Admin)
+
+Returns `204 No Content`.
 
 ---
 
@@ -128,25 +130,21 @@ Valid transitions: `live` -> `hold`/`finished`, `hold` -> `live`/`finished`
 { "product_id": "uuid", "quantity": 10, "unit": "bunch", "price": 500 }
 ```
 
-### GET /events/:id/products?page=1&pageSize=20 (All)
+### GET /events/:id/products?page=1&page_size=20 (All)
 
-### PUT /events/:id/products/:eventProductId (Admin, Staff, Staff Member)
+### PATCH /events/:id/products/:eventProductId (Admin, Staff, Staff Member)
 
 Staff Member can only update `quantity` and `unit`.
 
-```json
-// Request
-{ "quantity": 15, "unit": "kg" }
-```
-
 ### DELETE /events/:id/products/:eventProductId (Admin, Staff)
 
-### GET /events/:id/category-summary (All)
+Returns `204 No Content`.
+
+### GET /events/:id/products/summary (All)
 
 ```json
 // Response
 {
-  "success": true,
   "data": [
     { "category": "Flowers", "totals": [{ "unit": "bunch", "quantity": 25 }] },
     { "category": "Lighting", "totals": [{ "unit": "set", "quantity": 4 }] }
@@ -156,51 +154,47 @@ Staff Member can only update `quantity` and `unit`.
 
 ---
 
-## Catalog
+## Categories
 
-### POST /catalog/categories (Admin, Staff)
+### POST /categories (Admin, Staff)
 
 ```json
 // Request
 { "name": "Flowers" }
 ```
 
-### GET /catalog/categories?page=1&pageSize=20 (All)
+### GET /categories?page=1&page_size=20 (All)
 
-### GET /catalog/categories/:id (All)
+### PATCH /categories/:id (Admin, Staff)
 
-### PUT /catalog/categories/:id (Admin, Staff)
+### DELETE /categories/:id (Admin, Staff)
 
-### DELETE /catalog/categories/:id (Admin, Staff)
+Returns `204 No Content`. Fails if active products exist in category.
 
-Fails if active products exist in category.
+### POST /categories/seed (Admin)
 
-### POST /catalog/products (Admin, Staff)
+Seeds default categories. Disabled in production.
+
+---
+
+## Products
+
+### POST /products (Admin, Staff)
 
 ```json
 // Request
 { "name": "Roses", "category_id": "uuid", "default_unit": "bunch", "price": 500, "description": "Red roses" }
 ```
 
-### GET /catalog/products?page=1&pageSize=20 (All)
+### GET /products?category_id=uuid&page=1&page_size=20 (All)
 
-### GET /catalog/products/category/:categoryId?page=1&pageSize=20 (All)
+### PATCH /products/:id (Admin, Staff)
 
-### GET /catalog/products/:id (All)
+Use `{ "is_active": false }` to deactivate. Fails if product is in a live event.
 
-### PUT /catalog/products/:id (Admin, Staff)
+### POST /products/seed (Admin)
 
-### POST /catalog/products/:id/deactivate (Admin, Staff)
-
-Fails if product is in a live event.
-
-### DELETE /catalog/products/:id (Admin, Staff)
-
-Hard delete. Fails if product is in any event.
-
-### POST /catalog/seed/categories (Admin)
-
-### POST /catalog/seed/products (Admin)
+Seeds default products. Disabled in production.
 
 ---
 
@@ -215,46 +209,34 @@ Hard delete. Fails if product is in any event.
 
 Cannot create admin users.
 
-### GET /users?page=1&pageSize=20 (Admin)
+### GET /users?page=1&page_size=20 (Admin)
 
 ### GET /users/:id (Admin)
 
-### PUT /users/:id (Admin)
+### PATCH /users/:id (Admin)
 
 ```json
 // Request
-{ "name": "Updated Name", "role": "staff_member" }
+{ "name": "Updated Name", "role": "staff_member", "is_active": true }
 ```
 
-Cannot change admin role.
+Use `{ "is_active": true/false }` to activate/deactivate.
 
 ### DELETE /users/:id (Admin)
 
-Soft delete (deactivate).
+Soft delete (deactivate). Add `?permanent=true` for hard delete from auth and database. Cannot delete yourself.
 
-### POST /users/:id/activate (Admin)
-
-### DELETE /users/:id/permanent (Admin)
-
-Hard delete from auth and database. Cannot delete yourself.
+Returns `204 No Content`.
 
 ---
 
 ## Audit
 
-### GET /audit?entity_type=Event&action=create&user_id=uuid&date_from=2025-01-01&date_to=2025-12-31&page=1&limit=50 (Admin)
+### GET /audit?entity_type=Event&action=create&page=1&limit=50 (Admin)
+
+Add `&format=csv` to export as CSV.
 
 ### GET /audit/:id (Admin)
-
-### POST /audit/export (Admin)
-
-```json
-// Request (filters, all optional)
-{ "entity_type": "Event", "action": "create" }
-
-// Response
-{ "success": true, "data": [...], "filename": "audit_logs_2025-06-15.csv" }
-```
 
 ---
 
@@ -275,41 +257,32 @@ Hard delete from auth and database. Cannot delete yourself.
 |--------|------|------|-------------|
 | POST | /auth/login | Public | Login |
 | POST | /auth/register | Public | Register |
-| POST | /auth/refresh | Public | Refresh token |
-| POST | /auth/logout | Public | Logout |
+| POST | /auth/token/refresh | Public | Refresh token |
+| POST | /auth/logout | Auth | Logout |
 | POST | /events | Admin | Create event |
 | GET | /events | All | List events |
 | GET | /events/:id | All | Get event |
-| PUT | /events/:id | Admin | Update event |
-| PATCH | /events/:id/close | Admin | Change event status |
+| PATCH | /events/:id | Admin | Update event / change status |
 | DELETE | /events/:id | Admin | Delete event |
 | POST | /events/:id/products | Admin, Staff | Add product to event |
 | GET | /events/:id/products | All | List event products |
-| PUT | /events/:id/products/:eventProductId | Admin, Staff, SM | Update event product |
-| DELETE | /events/:id/products/:eventProductId | Admin, Staff | Remove event product |
-| GET | /events/:id/category-summary | All | Category totals |
-| POST | /catalog/categories | Admin, Staff | Create category |
-| GET | /catalog/categories | All | List categories |
-| GET | /catalog/categories/:id | All | Get category |
-| PUT | /catalog/categories/:id | Admin, Staff | Update category |
-| DELETE | /catalog/categories/:id | Admin, Staff | Delete category |
-| POST | /catalog/products | Admin, Staff | Create product |
-| GET | /catalog/products | All | List products |
-| GET | /catalog/products/category/:categoryId | All | Products by category |
-| GET | /catalog/products/:id | All | Get product |
-| PUT | /catalog/products/:id | Admin, Staff | Update product |
-| POST | /catalog/products/:id/deactivate | Admin, Staff | Deactivate product |
-| DELETE | /catalog/products/:id | Admin, Staff | Hard delete product |
-| POST | /catalog/seed/categories | Admin | Seed categories |
-| POST | /catalog/seed/products | Admin | Seed products |
+| PATCH | /events/:id/products/:pid | All roles | Update event product |
+| DELETE | /events/:id/products/:pid | Admin, Staff | Remove event product |
+| GET | /events/:id/products/summary | All | Category totals |
+| POST | /categories | Admin, Staff | Create category |
+| GET | /categories | All | List categories |
+| PATCH | /categories/:id | Admin, Staff | Update category |
+| DELETE | /categories/:id | Admin, Staff | Delete category |
+| POST | /categories/seed | Admin | Seed categories |
+| POST | /products | Admin, Staff | Create product |
+| GET | /products | All | List products |
+| PATCH | /products/:id | Admin, Staff | Update / deactivate product |
+| POST | /products/seed | Admin | Seed products |
 | POST | /users | Admin | Create user |
 | GET | /users | Admin | List users |
 | GET | /users/:id | Admin | Get user |
-| PUT | /users/:id | Admin | Update user |
-| DELETE | /users/:id | Admin | Deactivate user |
-| POST | /users/:id/activate | Admin | Re-activate user |
-| DELETE | /users/:id/permanent | Admin | Permanently delete user |
-| GET | /audit | Admin | List audit logs |
+| PATCH | /users/:id | Admin | Update user / activate / deactivate |
+| DELETE | /users/:id | Admin | Delete user (soft or ?permanent=true) |
+| GET | /audit | Admin | List audit logs (or ?format=csv to export) |
 | GET | /audit/:id | Admin | Get audit log |
-| POST | /audit/export | Admin | Export audit logs CSV |
 | GET | /health | Public | Health check |

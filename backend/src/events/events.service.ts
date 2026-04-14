@@ -114,19 +114,19 @@ export class EventsService {
   }
 
   async findEvents(
-    tab?: string,
+    status?: string,
     occasionType?: string,
     page: number = 1,
     pageSize: number = 20,
   ) {
     const offset = paginationOffset(page, pageSize);
-    const normalizedTab = (tab || 'live').toLowerCase();
+    const normalizedStatus = (status || 'live').toLowerCase();
 
     let query = this.supabase
       .from('events')
       .select('*, assigned_staff:users(name)', { count: 'exact' });
 
-    switch (normalizedTab) {
+    switch (normalizedStatus) {
       case 'hold':
         query = query.eq('status', EventStatus.HOLD).order('closed_at', { ascending: false });
         break;
@@ -161,9 +161,20 @@ export class EventsService {
 
   async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole, actorId: string) {
     const event = await this.getEventOrThrow(id);
-    this.enforceEventEditPermission(event, role);
 
-    const cleanPayload = stripUndefined({
+    // Handle status transition if status is in the payload
+    if (updateEventDto.status) {
+      const allowed = ALLOWED_TRANSITIONS[event.status as EventStatus] || [];
+      if (!allowed.includes(updateEventDto.status)) {
+        throw new BadRequestException(
+          `Invalid status transition from ${event.status} to ${updateEventDto.status}`,
+        );
+      }
+    } else {
+      this.enforceEventEditPermission(event, role);
+    }
+
+    const fieldPayload = stripUndefined({
       name: updateEventDto.name,
       occasion_type: updateEventDto.occasion_type,
       date: updateEventDto.date,
@@ -175,13 +186,23 @@ export class EventsService {
       assigned_to: updateEventDto.assigned_to,
     });
 
-    if (Object.keys(cleanPayload).length === 0) {
-      throw new BadRequestException('No valid event fields provided for update');
+    // Build the final update payload
+    const updatePayload: Record<string, any> = { ...fieldPayload };
+
+    if (updateEventDto.status) {
+      updatePayload.status = updateEventDto.status;
+      updatePayload.closed_at = updateEventDto.status === EventStatus.LIVE
+        ? null
+        : new Date().toISOString();
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      throw new BadRequestException('No valid fields provided for update');
     }
 
     const { data, error } = await this.supabase
       .from('events')
-      .update(cleanPayload)
+      .update(updatePayload)
       .eq('id', event.id)
       .select()
       .single();
@@ -195,43 +216,8 @@ export class EventsService {
       entity_id: event.id,
       action: AuditAction.UPDATE,
       user_id: actorId,
-      old_values: event,
-      new_values: data,
-    });
-
-    return data;
-  }
-
-  async transitionStatus(id: string, newStatus: EventStatus, actorId: string) {
-    const event = await this.getEventOrThrow(id);
-
-    const allowed = ALLOWED_TRANSITIONS[event.status as EventStatus] || [];
-    if (!allowed.includes(newStatus)) {
-      throw new BadRequestException(
-        `Invalid status transition from ${event.status} to ${newStatus}`,
-      );
-    }
-
-    const closedAt = newStatus === EventStatus.LIVE ? null : new Date().toISOString();
-
-    const { data, error } = await this.supabase
-      .from('events')
-      .update({ status: newStatus, closed_at: closedAt })
-      .eq('id', event.id)
-      .select()
-      .single();
-
-    if (error) {
-      throw new BadRequestException(`Failed to update event status: ${error.message}`);
-    }
-
-    await this.auditService.createLog({
-      entity_type: 'Event',
-      entity_id: event.id,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      old_values: { status: event.status },
-      new_values: { status: newStatus },
+      old_values: updateEventDto.status ? { status: event.status } : event,
+      new_values: updateEventDto.status ? { status: updateEventDto.status } : data,
     });
 
     return data;
@@ -253,7 +239,5 @@ export class EventsService {
       user_id: actorId,
       old_values: event,
     });
-
-    return { message: 'Event deleted successfully' };
   }
 }

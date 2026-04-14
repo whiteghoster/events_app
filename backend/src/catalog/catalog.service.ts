@@ -27,7 +27,7 @@ export class CatalogService {
     return this.databaseService.getClient();
   }
 
-  // CATEGORIES
+  // ── Categories ──
 
   async createCategory(createCategoryDto: CreateCategoryDto, actorId: string) {
     const { data, error } = await this.supabase
@@ -145,11 +145,9 @@ export class CatalogService {
       user_id: actorId,
       old_values: category,
     });
-
-    return { message: 'Category deleted successfully' };
   }
 
-  // PRODUCTS
+  // ── Products ──
 
   async createProduct(createProductDto: CreateProductDto, actorId: string) {
     await this.findCategoryById(createProductDto.category_id);
@@ -185,35 +183,20 @@ export class CatalogService {
     return data;
   }
 
-  async findAllProducts(page: number = 1, pageSize: number = 20) {
+  async findAllProducts(page: number = 1, pageSize: number = 20, categoryId?: string) {
     const offset = paginationOffset(page, pageSize);
 
-    const { data, count, error } = await this.supabase
+    let query = this.supabase
       .from('products')
       .select(`*, category:categories(id, name)`, { count: 'exact' })
       .eq('is_active', true)
-      .order('name', { ascending: true })
-      .range(offset, offset + pageSize - 1);
+      .order('name', { ascending: true });
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch products: ${error.message}`);
+    if (categoryId) {
+      query = query.eq('category_id', categoryId);
     }
 
-    return paginate(data, count, page, pageSize);
-  }
-
-  async findProductsByCategory(categoryId: string, page: number = 1, pageSize: number = 20) {
-    await this.findCategoryById(categoryId);
-
-    const offset = paginationOffset(page, pageSize);
-
-    const { data, count, error } = await this.supabase
-      .from('products')
-      .select('*', { count: 'exact' })
-      .eq('category_id', categoryId)
-      .eq('is_active', true)
-      .order('name', { ascending: true })
-      .range(offset, offset + pageSize - 1);
+    const { data, count, error } = await query.range(offset, offset + pageSize - 1);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch products: ${error.message}`);
@@ -243,6 +226,25 @@ export class CatalogService {
       await this.findCategoryById(updateProductDto.category_id);
     }
 
+    if (updateProductDto.is_active === false) {
+      const { data: linkedRows, error: linkedRowsError } = await this.supabase
+        .from('event_products')
+        .select(`id, event:events(id, status)`)
+        .eq('product_id', id);
+
+      if (linkedRowsError) {
+        throw new BadRequestException(`Failed to validate product deactivation: ${linkedRowsError.message}`);
+      }
+
+      const inLiveEvent = (linkedRows || []).some(
+        (row: any) => row.event?.status === EventStatus.LIVE,
+      );
+
+      if (inLiveEvent) {
+        throw new ConflictException('Cannot deactivate product currently used in a live event');
+      }
+    }
+
     const { data, error } = await this.supabase
       .from('products')
       .update(updateProductDto)
@@ -269,83 +271,7 @@ export class CatalogService {
     return data;
   }
 
-  async deactivateProduct(id: string, actorId: string) {
-    const oldProduct = await this.findProductById(id);
-
-    const { data: linkedRows, error: linkedRowsError } = await this.supabase
-      .from('event_products')
-      .select(`id, event:events(id, status)`)
-      .eq('product_id', id);
-
-    if (linkedRowsError) {
-      throw new BadRequestException(`Failed to validate product deactivation: ${linkedRowsError.message}`);
-    }
-
-    const inLiveEvent = (linkedRows || []).some(
-      (row: any) => row.event?.status === EventStatus.LIVE,
-    );
-
-    if (inLiveEvent) {
-      throw new ConflictException('Cannot deactivate product because it is currently used in a live event.');
-    }
-
-    const { data, error } = await this.supabase
-      .from('products')
-      .update({ is_active: false })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      throw new BadRequestException(`Failed to deactivate product: ${error.message}`);
-    }
-
-    await this.auditService.createLog({
-      entity_type: 'Product',
-      entity_id: id,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      old_values: oldProduct,
-      new_values: data,
-    });
-
-    return data;
-  }
-
-  async deleteProduct(id: string, actorId: string) {
-    const product = await this.findProductById(id);
-
-    const { count, error: countError } = await this.supabase
-      .from('event_products')
-      .select('*', { count: 'exact', head: true })
-      .eq('product_id', id);
-
-    if (countError) {
-      throw new BadRequestException(`Failed to check event products: ${countError.message}`);
-    }
-
-    if ((count || 0) > 0) {
-      throw new ConflictException('Cannot delete product that is currently assigned to events');
-    }
-
-    const { error } = await this.supabase.from('products').delete().eq('id', id);
-
-    if (error) {
-      throw new BadRequestException(`Failed to delete product: ${error.message}`);
-    }
-
-    await this.auditService.createLog({
-      entity_type: 'Product',
-      entity_id: id,
-      action: AuditAction.DELETE,
-      user_id: actorId,
-      old_values: product,
-    });
-
-    return { message: 'Product deleted successfully' };
-  }
-
-  // SEED DATA
+  // ── Seed Data ──
 
   private assertNonProduction() {
     if (process.env.NODE_ENV === 'production') {
@@ -367,8 +293,6 @@ export class CatalogService {
     if (error) {
       throw new BadRequestException(`Failed to seed categories: ${error.message}`);
     }
-
-    return { message: 'Categories seeded successfully' };
   }
 
   async seedProducts() {
@@ -428,7 +352,5 @@ export class CatalogService {
     if (error) {
       throw new BadRequestException(`Failed to seed products: ${error.message}`);
     }
-
-    return { message: `${rows.length} products seeded successfully` };
   }
 }

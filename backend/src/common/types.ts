@@ -36,12 +36,16 @@ export interface AuthenticatedUser {
   role: UserRole | null;
 }
 
+export interface PaginationMeta {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
 export interface PaginatedResult<T = any> {
   data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  meta: PaginationMeta;
 }
 
 export interface AuditLog {

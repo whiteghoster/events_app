@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { FindAuditLogsDto } from './dto/find-audit-logs.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -11,21 +11,19 @@ export class AuditController {
   @Get()
   @Roles(UserRole.ADMIN)
   async findAll(@Query() dto: FindAuditLogsDto) {
+    if (dto.format === 'csv') {
+      const result = await this.auditService.exportAuditLogs(dto);
+      return { data: result.logs, filename: result.filename };
+    }
+
     const result = await this.auditService.findAll(dto);
-    return { success: true, data: result.data, pagination: result.pagination };
+    return { data: result.data, meta: result.pagination };
   }
 
   @Get(':id')
   @Roles(UserRole.ADMIN)
-  async findById(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     const data = await this.auditService.findById(id);
-    return { success: true, data };
-  }
-
-  @Post('export')
-  @Roles(UserRole.ADMIN)
-  async exportAuditLogs(@Body() dto: FindAuditLogsDto) {
-    const result = await this.auditService.exportAuditLogs(dto);
-    return { success: true, data: result.logs, filename: result.filename };
+    return { data };
   }
 }

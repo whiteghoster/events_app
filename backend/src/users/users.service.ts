@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { UserRole, AuditAction } from '../common/types';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { paginate, paginationOffset } from '../common/utils';
 
 @Injectable()
 export class UsersService {
@@ -83,7 +84,7 @@ export class UsersService {
   }
 
   async findAll(page: number = 1, pageSize: number = 20) {
-    const offset = Math.max(0, (page - 1) * pageSize);
+    const offset = paginationOffset(page, pageSize);
 
     const { data, count, error } = await this.supabase
       .from('users')
@@ -95,13 +96,7 @@ export class UsersService {
       throw new BadRequestException(`Failed to fetch users: ${error.message}`);
     }
 
-    return {
-      data: data ?? [],
-      total: count ?? 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count ?? 0) / pageSize),
-    };
+    return paginate(data, count, page, pageSize);
   }
 
   async findById(id: string) {
@@ -123,15 +118,7 @@ export class UsersService {
       throw new BadRequestException('Cannot assign Admin role. Use registration instead.');
     }
 
-    const { data: existingUser } = await this.supabase
-      .from('users')
-      .select('id, role')
-      .eq('id', id)
-      .single();
-
-    if (!existingUser) {
-      throw new NotFoundException('User not found');
-    }
+    const existingUser = await this.findById(id);
 
     if (existingUser.role === UserRole.ADMIN && updateUserDto.role) {
       throw new BadRequestException('Cannot change Admin user role');
@@ -169,7 +156,14 @@ export class UsersService {
     return data;
   }
 
-  async deactivate(id: string, actorId: string) {
+  async remove(id: string, actorId: string, permanent: boolean = false) {
+    if (permanent) {
+      return this.hardDelete(id, actorId);
+    }
+    return this.softDelete(id, actorId);
+  }
+
+  private async softDelete(id: string, actorId: string) {
     const existingUser = await this.findById(id);
 
     const { data, error } = await this.supabase
@@ -195,22 +189,7 @@ export class UsersService {
     return data;
   }
 
-  async activate(id: string, actorId: string) {
-    const { data, error } = await this.supabase
-      .from('users')
-      .update({ is_active: true, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      throw new BadRequestException(`Failed to activate user: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  async hardDelete(id: string, actorId: string) {
+  private async hardDelete(id: string, actorId: string) {
     if (id === actorId) {
       throw new BadRequestException('Cannot permanently delete your own account');
     }
@@ -235,7 +214,5 @@ export class UsersService {
       action: AuditAction.DELETE,
       user_id: actorId,
     });
-
-    return { message: 'User permanently deleted' };
   }
 }

@@ -2,12 +2,14 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Put,
+  Patch,
   Delete,
+  Body,
   Param,
   Query,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -29,24 +31,23 @@ export class UsersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.usersService.create(createUserDto, user.id);
-    return { success: true, data, message: 'User created successfully' };
+    return { data };
   }
 
   @Get()
   @Roles(UserRole.ADMIN)
   async findAll(@Query() pagination: PaginationQueryDto) {
-    const result = await this.usersService.findAll(pagination.page, pagination.pageSize);
-    return { success: true, ...result };
+    return await this.usersService.findAll(pagination.page, pagination.page_size);
   }
 
   @Get(':id')
   @Roles(UserRole.ADMIN)
-  async findById(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.usersService.findById(id);
-    return { success: true, data };
+    return { data };
   }
 
-  @Put(':id')
+  @Patch(':id')
   @Roles(UserRole.ADMIN)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -54,27 +55,17 @@ export class UsersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.usersService.update(id, updateUserDto, user.id);
-    return { success: true, data, message: 'User updated successfully' };
+    return { data };
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
-  async deactivate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
-    const data = await this.usersService.deactivate(id, user.id);
-    return { success: true, data, message: 'User deactivated successfully' };
-  }
-
-  @Post(':id/activate')
-  @Roles(UserRole.ADMIN)
-  async activate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
-    const data = await this.usersService.activate(id, user.id);
-    return { success: true, data, message: 'User activated successfully' };
-  }
-
-  @Delete(':id/permanent')
-  @Roles(UserRole.ADMIN)
-  async permanentDelete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
-    await this.usersService.hardDelete(id, user.id);
-    return { success: true, message: 'User permanently deleted from system' };
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('permanent') permanent: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.usersService.remove(id, user.id, permanent === 'true');
   }
 }

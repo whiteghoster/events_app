@@ -13,5 +13,5 @@ export class PaginationQueryDto {
   @IsNumber()
   @Min(1)
   @Max(100)
-  pageSize: number = 20;
+  page_size: number = 20;
 }

@@ -15,10 +15,12 @@ export function paginate<T>(
   const total = count ?? 0;
   return {
     data: data ?? [],
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    meta: {
+      page,
+      page_size: pageSize,
+      total,
+      total_pages: Math.ceil(total / pageSize),
+    },
   };
 }
 

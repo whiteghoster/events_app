@@ -3,12 +3,13 @@ import {
   Get,
   Post,
   Patch,
-  Put,
   Delete,
   Body,
   Param,
   Query,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { EventProductsService } from './event-products.service';
@@ -16,7 +17,6 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
-import { CloseEventDto } from './dto/close-event.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -32,60 +32,57 @@ export class EventsController {
 
   @Post()
   @Roles(UserRole.ADMIN)
-  async createEvent(
+  async create(
     @Body() createEventDto: CreateEventDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.eventsService.createEvent(createEventDto, user.id);
-    return { success: true, data };
+    return { data };
   }
 
   @Get()
-  async findAllEvents(
-    @Query('tab') tab?: string,
-    @Query('occasionType') occasionType?: string,
+  async findAll(
+    @Query('status') status?: string,
+    @Query('occasion_type') occasionType?: string,
     @Query() pagination?: PaginationQueryDto,
   ) {
-    const result = await this.eventsService.findEvents(
-      tab,
+    return await this.eventsService.findEvents(
+      status,
       occasionType,
       pagination.page,
-      pagination.pageSize,
+      pagination.page_size,
     );
-    return { success: true, ...result };
   }
 
   @Get(':id')
-  async findEventById(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     const data = await this.eventsService.findEventById(id);
-    return { success: true, data };
+    return { data };
   }
 
-  @Put(':id')
+  @Patch(':id')
   @Roles(UserRole.ADMIN)
-  async updateEvent(
+  async update(
     @Param('id') id: string,
     @Body() updateEventDto: UpdateEventDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.eventsService.updateEvent(id, updateEventDto, user.role, user.id);
-    return { success: true, data };
+    return { data };
   }
 
-  @Patch(':id/status')
+  @Delete(':id')
   @Roles(UserRole.ADMIN)
-  async transitionStatus(
-    @Param('id') id: string,
-    @Body() closeEventDto: CloseEventDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    const data = await this.eventsService.transitionStatus(id, closeEventDto.status, user.id);
-    return { success: true, data, message: `Event moved to ${closeEventDto.status}` };
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    await this.eventsService.deleteEvent(id, user.id);
   }
+
+  // ── Event Products ──
 
   @Post(':id/products')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createEventProduct(
+  async addProduct(
     @Param('id') eventId: string,
     @Body() dto: CreateEventProductDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -95,53 +92,45 @@ export class EventsController {
       user.role,
       user.id,
     );
-    return { success: true, data };
+    return { data };
   }
 
   @Get(':id/products')
-  async findEventProducts(
+  async findProducts(
     @Param('id') eventId: string,
     @Query() pagination: PaginationQueryDto,
   ) {
-    const result = await this.eventProductsService.findEventProducts(
+    return await this.eventProductsService.findEventProducts(
       eventId,
       pagination.page,
-      pagination.pageSize,
+      pagination.page_size,
     );
-    return { success: true, ...result };
   }
 
-  @Put(':id/products/:eventProductId')
+  @Patch(':id/products/:eventProductId')
   @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STAFF_MEMBER)
-  async updateEventProduct(
+  async updateProduct(
     @Param('eventProductId', ParseUUIDPipe) eventProductId: string,
     @Body() dto: UpdateEventProductDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.eventProductsService.updateEventProduct(eventProductId, dto, user.role, user.id);
-    return { success: true, data };
+    return { data };
   }
 
   @Delete(':id/products/:eventProductId')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteEventProduct(
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeProduct(
     @Param('eventProductId', ParseUUIDPipe) eventProductId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     await this.eventProductsService.deleteEventProduct(eventProductId, user.role, user.id);
-    return { success: true, message: 'Event product deleted successfully' };
   }
 
-  @Get(':id/category-summary')
-  async getCategorySummary(@Param('id') eventId: string) {
+  @Get(':id/products/summary')
+  async productsSummary(@Param('id') eventId: string) {
     const data = await this.eventProductsService.getCategorySummary(eventId);
-    return { success: true, data };
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  async deleteEvent(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    const data = await this.eventsService.deleteEvent(id, user.id);
-    return { success: true, data };
+    return { data };
   }
 }
