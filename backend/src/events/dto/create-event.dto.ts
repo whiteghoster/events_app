@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsEnum, IsOptional, IsDateString, IsUUID } from 'class-validator';
-import { OccasionType } from '../../auth/enums/occasion-type.enum';
+import { OccasionType } from '../../common/types';
 
 export class CreateEventDto {
   @IsString()

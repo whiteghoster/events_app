@@ -14,22 +14,20 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../auth/enums/user-role.enum';
+import { UserRole } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../common/types';
 
 @Controller('catalog')
 export class CatalogController {
-  constructor(private catalogService: CatalogService) { }
+  constructor(private readonly catalogService: CatalogService) {}
 
-  // ========== CATEGORIES ==========
 
   @Post('categories')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createCategory(@Body() createCategoryDto: CreateCategoryDto, @CurrentUser() user: any) {
-    return {
-      success: true,
-      data: await this.catalogService.createCategory(createCategoryDto, user.id),
-    };
+  async createCategory(@Body() dto: CreateCategoryDto, @CurrentUser() user: AuthenticatedUser) {
+    const data = await this.catalogService.createCategory(dto, user.id);
+    return { success: true, data };
   }
 
   @Get('categories')
@@ -37,56 +35,40 @@ export class CatalogController {
     @Query('page') page: string = '1',
     @Query('pageSize') pageSize: string = '20',
   ) {
-    const result = await this.catalogService.findAllCategories(
-      parseInt(page, 10),
-      parseInt(pageSize, 10),
-    );
-    return {
-      success: true,
-      ...result,
-    };
+    const result = await this.catalogService.findAllCategories(parseInt(page, 10), parseInt(pageSize, 10));
+    return { success: true, ...result };
   }
 
   @Get('categories/:id')
   async findCategoryById(@Param('id') id: string) {
-    return {
-      success: true,
-      data: await this.catalogService.findCategoryById(id),
-    };
+    const data = await this.catalogService.findCategoryById(id);
+    return { success: true, data };
   }
 
   @Put('categories/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   async updateCategory(
     @Param('id') id: string,
-    @Body() updateCategoryDto: UpdateCategoryDto,
-    @CurrentUser() user: any,
+    @Body() dto: UpdateCategoryDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.catalogService.updateCategory(id, updateCategoryDto, user.id),
-    };
+    const data = await this.catalogService.updateCategory(id, dto, user.id);
+    return { success: true, data };
   }
 
   @Delete('categories/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteCategory(@Param('id') id: string, @CurrentUser() user: any) {
+  async deleteCategory(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     await this.catalogService.deleteCategory(id, user.id);
-    return {
-      success: true,
-      message: 'Category deleted successfully',
-    };
+    return { success: true, message: 'Category deleted successfully' };
   }
 
-  // ========== PRODUCTS ==========
 
   @Post('products')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createProduct(@Body() createProductDto: CreateProductDto, @CurrentUser() user: any) {
-    return {
-      success: true,
-      data: await this.catalogService.createProduct(createProductDto, user.id),
-    };
+  async createProduct(@Body() dto: CreateProductDto, @CurrentUser() user: AuthenticatedUser) {
+    const data = await this.catalogService.createProduct(dto, user.id);
+    return { success: true, data };
   }
 
   @Get('products')
@@ -94,14 +76,8 @@ export class CatalogController {
     @Query('page') page: string = '1',
     @Query('pageSize') pageSize: string = '20',
   ) {
-    const result = await this.catalogService.findAllProducts(
-      parseInt(page, 10),
-      parseInt(pageSize, 10),
-    );
-    return {
-      success: true,
-      ...result,
-    };
+    const result = await this.catalogService.findAllProducts(parseInt(page, 10), parseInt(pageSize, 10));
+    return { success: true, ...result };
   }
 
   @Get('products/category/:categoryId')
@@ -115,72 +91,52 @@ export class CatalogController {
       parseInt(page, 10),
       parseInt(pageSize, 10),
     );
-    return {
-      success: true,
-      ...result,
-    };
+    return { success: true, ...result };
   }
 
   @Get('products/:id')
   async findProductById(@Param('id') id: string) {
-    return {
-      success: true,
-      data: await this.catalogService.findProductById(id),
-    };
+    const data = await this.catalogService.findProductById(id);
+    return { success: true, data };
   }
 
   @Put('products/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   async updateProduct(
     @Param('id') id: string,
-    @Body() updateProductDto: UpdateProductDto,
-    @CurrentUser() user: any,
+    @Body() dto: UpdateProductDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.catalogService.updateProduct(id, updateProductDto, user.id),
-    };
+    const data = await this.catalogService.updateProduct(id, dto, user.id);
+    return { success: true, data };
   }
 
   @Post('products/:id/deactivate')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deactivateProduct(@Param('id') id: string, @CurrentUser() user: any) {
-    return {
-      success: true,
-      data: await this.catalogService.deactivateProduct(id, user.id),
-      message: 'Product deactivated successfully',
-    };
+  async deactivateProduct(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    const data = await this.catalogService.deactivateProduct(id, user.id);
+    return { success: true, data, message: 'Product deactivated successfully' };
   }
 
   @Delete('products/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteProduct(@Param('id') id: string, @CurrentUser() user: any) {
+  async deleteProduct(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     await this.catalogService.deleteProduct(id, user.id);
-    return {
-      success: true,
-      message: 'Product deleted successfully',
-    };
+    return { success: true, message: 'Product deleted successfully' };
   }
 
-  // ========== SEED ENDPOINTS ==========
 
   @Post('seed/categories')
   @Roles(UserRole.ADMIN)
   async seedCategories() {
-    await this.catalogService.seedCategories();
-    return {
-      success: true,
-      message: 'Categories seeded successfully',
-    };
+    const result = await this.catalogService.seedCategories();
+    return { success: true, message: result.message };
   }
 
   @Post('seed/products')
   @Roles(UserRole.ADMIN)
   async seedProducts() {
-    await this.catalogService.seedProducts();
-    return {
-      success: true,
-      message: 'Products seeded successfully',
-    };
+    const result = await this.catalogService.seedProducts();
+    return { success: true, message: result.message };
   }
 }

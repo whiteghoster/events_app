@@ -16,25 +16,22 @@ import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
 import { CloseEventDto } from './dto/close-event.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../auth/enums/user-role.enum';
+import { UserRole } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../common/types';
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) { }
-
-  // ========== EVENTS ==========
+  constructor(private readonly eventsService: EventsService) {}
 
   @Post()
   @Roles(UserRole.ADMIN)
   async createEvent(
     @Body() createEventDto: CreateEventDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.eventsService.createEvent(createEventDto, user.id),
-    };
+    const data = await this.eventsService.createEvent(createEventDto, user.id);
+    return { success: true, data };
   }
 
   @Get()
@@ -50,18 +47,13 @@ export class EventsController {
       parseInt(page, 10),
       parseInt(pageSize, 10),
     );
-    return {
-      success: true,
-      ...result,
-    };
+    return { success: true, ...result };
   }
 
   @Get(':id')
   async findEventById(@Param('id') id: string) {
-    return {
-      success: true,
-      data: await this.eventsService.findEventById(id),
-    };
+    const data = await this.eventsService.findEventById(id);
+    return { success: true, data };
   }
 
   @Put(':id')
@@ -69,12 +61,10 @@ export class EventsController {
   async updateEvent(
     @Param('id') id: string,
     @Body() updateEventDto: UpdateEventDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.eventsService.updateEvent(id, updateEventDto, user.role, user.id),
-    };
+    const data = await this.eventsService.updateEvent(id, updateEventDto, user.role, user.id);
+    return { success: true, data };
   }
 
   @Patch(':id/close')
@@ -82,35 +72,25 @@ export class EventsController {
   async closeEvent(
     @Param('id') id: string,
     @Body() closeEventDto: CloseEventDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.eventsService.closeEvent(id, closeEventDto.status, user.role, user.id),
-      message: `Event moved to ${closeEventDto.status} successfully`,
-    };
+    const data = await this.eventsService.closeEvent(id, closeEventDto.status, user.role, user.id);
+    return { success: true, data, message: `Event moved to ${closeEventDto.status}` };
   }
-
-  // ========== EVENT PRODUCTS ==========
 
   @Post(':id/products')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   async createEventProduct(
     @Param('id') eventId: string,
-    @Body() createEventProductDto: CreateEventProductDto,
-    @CurrentUser() user: any,
+    @Body() dto: CreateEventProductDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.eventsService.createEventProduct(
-        {
-          ...createEventProductDto,
-          event_id: eventId,
-        },
-        user.role,
-        user.id,
-      ),
-    };
+    const data = await this.eventsService.createEventProduct(
+      { ...dto, event_id: eventId },
+      user.role,
+      user.id,
+    );
+    return { success: true, data };
   }
 
   @Get(':id/products')
@@ -124,62 +104,40 @@ export class EventsController {
       parseInt(page, 10),
       parseInt(pageSize, 10),
     );
-    return {
-      success: true,
-      ...result,
-    };
+    return { success: true, ...result };
   }
 
-  @Put(':id/products/:rowId')
+  @Put(':id/products/:eventProductId')
   @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STAFF_MEMBER)
   async updateEventProduct(
-    @Param('id') eventId: string,
-    @Param('rowId') rowId: string,
-    @Body() updateEventProductDto: UpdateEventProductDto,
-    @CurrentUser() user: any,
+    @Param('eventProductId') eventProductId: string,
+    @Body() dto: UpdateEventProductDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return {
-      success: true,
-      data: await this.eventsService.updateEventProduct(
-        rowId,
-        updateEventProductDto,
-        user.role,
-        user.id,
-      ),
-    };
+    const data = await this.eventsService.updateEventProduct(eventProductId, dto, user.role, user.id);
+    return { success: true, data };
   }
 
-  @Delete(':id/products/:rowId')
+  @Delete(':id/products/:eventProductId')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   async deleteEventProduct(
-    @Param('id') eventId: string,
-    @Param('rowId') rowId: string,
-    @CurrentUser() user: any,
+    @Param('eventProductId') eventProductId: string,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    await this.eventsService.deleteEventProduct(rowId, user.role, user.id);
-    return {
-      success: true,
-      message: 'Event product deleted successfully',
-    };
+    await this.eventsService.deleteEventProduct(eventProductId, user.role, user.id);
+    return { success: true, message: 'Event product deleted successfully' };
   }
 
   @Get(':id/category-summary')
   async getCategorySummary(@Param('id') eventId: string) {
-    return {
-      success: true,
-      data: await this.eventsService.getCategorySummary(eventId),
-    };
+    const data = await this.eventsService.getCategorySummary(eventId);
+    return { success: true, data };
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
-  async deleteEvent(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
-    return {
-      success: true,
-      data: await this.eventsService.deleteEvent(id, user.role, user.id),
-    };
+  async deleteEvent(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    const data = await this.eventsService.deleteEvent(id, user.role, user.id);
+    return { success: true, data };
   }
 }

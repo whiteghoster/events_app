@@ -1,48 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { AuditAction } from '../auth/enums/audit-action.enum';
-import { IsOptional, IsString, IsNumber, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { AuditAction } from '../common/types';
+import { FindAuditLogsDto } from './dto/find-audit-logs.dto';
 
-export class FindAuditLogsDto {
-  @IsOptional()
-  @IsString()
-  entity_type?: string;
-
-  @IsOptional()
-  @IsString()
-  entity_id?: string;
-
-  @IsOptional()
-  @IsEnum(AuditAction)
-  action?: AuditAction;
-
-  @IsOptional()
-  @IsString()
-  user_id?: string;
-
-  @IsOptional()
-  @IsString()
-  date_from?: string;
-
-  @IsOptional()
-  @IsString()
-  date_to?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  limit?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  page?: number;
-
-  @IsOptional()
-  @IsString()
-  search?: string;
-}
+const AUDIT_SELECT = `*, users (email, name, role)`;
 
 export interface AuditLogResult {
   data: any[];
@@ -56,64 +17,38 @@ export interface AuditLogResult {
 
 @Injectable()
 export class AuditService {
-  constructor(private databaseService: DatabaseService) {}
+  private readonly logger = new Logger(AuditService.name);
 
-  async findAll(findAuditLogsDto: FindAuditLogsDto = {}): Promise<AuditLogResult> {
-    const supabase = this.databaseService.getClient();
-    
-    let query = supabase
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  private get supabase() {
+    return this.databaseService.getClient();
+  }
+
+  async findAll(dto: FindAuditLogsDto = {}): Promise<AuditLogResult> {
+    let query = this.supabase
       .from('audit_log')
-      .select(`
-        *,
-        users (
-          email,
-          name,
-          role
-        )
-      `)
+      .select(AUDIT_SELECT)
       .order('created_at', { ascending: false });
 
-    // Apply filters
-    if (findAuditLogsDto.entity_type) {
-      query = query.eq('entity_type', findAuditLogsDto.entity_type);
+    if (dto.entity_type) query = query.eq('entity_type', dto.entity_type);
+    if (dto.action) query = query.eq('action', dto.action);
+    if (dto.user_id) query = query.eq('user_id', dto.user_id);
+    if (dto.entity_id) query = query.eq('entity_id', dto.entity_id);
+    if (dto.date_from) query = query.gte('created_at', dto.date_from);
+    if (dto.date_to) query = query.lte('created_at', dto.date_to);
+
+    if (dto.search) {
+      query = query.or(
+        `old_values.ilike.%${dto.search}%,new_values.ilike.%${dto.search}%,entity_type.ilike.%${dto.search}%`,
+      );
     }
 
-    if (findAuditLogsDto.action) {
-      query = query.eq('action', findAuditLogsDto.action);
-    }
-
-    if (findAuditLogsDto.user_id) {
-      query = query.eq('user_id', findAuditLogsDto.user_id);
-    }
-
-    if (findAuditLogsDto.entity_id) {
-      query = query.eq('entity_id', findAuditLogsDto.entity_id);
-    }
-
-    if (findAuditLogsDto.date_from) {
-      query = query.gte('created_at', findAuditLogsDto.date_from);
-    }
-
-    if (findAuditLogsDto.date_to) {
-      query = query.lte('created_at', findAuditLogsDto.date_to);
-    }
-
-    if (findAuditLogsDto.search) {
-      query = query.or(`old_values.ilike.%${findAuditLogsDto.search},new_values.ilike.%${findAuditLogsDto.search},entity_type.ilike.%${findAuditLogsDto.search},users.email.ilike.%${findAuditLogsDto.search}`);
-    }
-
-    // Pagination
-    const limit = Math.min(findAuditLogsDto.limit || 50, 100);
-    const page = findAuditLogsDto.page || 1;
+    const limit = Math.min(dto.limit || 50, 100);
+    const page = Math.max(dto.page || 1, 1);
     const offset = (page - 1) * limit;
 
-    if (findAuditLogsDto.limit) {
-      query = query.limit(limit);
-    }
-
-    if (page > 1) {
-      query = query.range(offset, limit);
-    }
+    query = query.range(offset, offset + limit - 1);
 
     const { data, error } = await query;
 
@@ -122,67 +57,51 @@ export class AuditService {
     }
 
     return {
-      data,
+      data: data ?? [],
       pagination: {
         page,
         limit,
-        total: data?.length || 0,
-        hasMore: data?.length === limit
-      }
+        total: data?.length ?? 0,
+        hasMore: (data?.length ?? 0) === limit,
+      },
     };
   }
 
   async findById(id: string) {
-    const supabase = this.databaseService.getClient();
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('audit_log')
-      .select(`
-        *,
-        users (
-          email,
-          name,
-          role
-        )
-      `)
+      .select(AUDIT_SELECT)
       .eq('id', id)
       .single();
 
-    if (error) {
-      throw new Error(`Failed to fetch audit log: ${error.message}`);
+    if (error || !data) {
+      throw new NotFoundException('Audit log not found');
     }
 
     return data;
   }
 
-  async exportAuditLogs(findAuditLogsDto: FindAuditLogsDto = {}) {
-    try {
-      const result = await this.findAll(findAuditLogsDto);
-      
-      // Convert to CSV format
-      const csv = this.convertToCSV(result.data);
-      
-      return {
-        success: true,
-        data: {
-          logs: result.data,
-          csv,
-          filename: `audit_logs_${new Date().toISOString().split('T')[0]}.csv`
-        }
-      };
-    } catch (error) {
-      throw new Error(`Failed to export audit logs: ${error.message}`);
-    }
+  async exportAuditLogs(dto: FindAuditLogsDto = {}) {
+    const result = await this.findAll(dto);
+    const csv = this.convertToCSV(result.data);
+
+    return {
+      logs: result.data,
+      csv,
+      filename: `audit_logs_${new Date().toISOString().split('T')[0]}.csv`,
+    };
   }
 
   private convertToCSV(logs: any[]): string {
     if (logs.length === 0) return '';
 
     const headers = [
-      'ID', 'When', 'Action', 'Entity', 'Entity ID', 'User Name', 'User Role', 'User Email', 
-      'Old Values', 'New Values'
+      'ID', 'When', 'Action', 'Entity', 'Entity ID',
+      'User Name', 'User Role', 'User Email',
+      'Old Values', 'New Values',
     ];
 
-    const csvRows = logs.map(log => [
+    const csvRows = logs.map((log) => [
       log.id,
       log.created_at,
       log.action,
@@ -197,14 +116,10 @@ export class AuditService {
 
     return [
       headers.join(','),
-      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...csvRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ].join('\n');
   }
 
-  /**
-   * CREATE LOG MANUALLY
-   * Used by services to explicitly record actions
-   */
   async createLog(params: {
     entity_type: string;
     entity_id: string;
@@ -213,9 +128,6 @@ export class AuditService {
     old_values?: any;
     new_values?: any;
   }) {
-    const supabase = this.databaseService.getClient();
-
-    // Sanitize values (exclude passwords)
     const sanitize = (obj: any) => {
       if (!obj) return null;
       const copy = { ...obj };
@@ -223,7 +135,7 @@ export class AuditService {
       return copy;
     };
 
-    const { error } = await supabase.from('audit_log').insert({
+    const { error } = await this.supabase.from('audit_log').insert({
       entity_type: params.entity_type,
       entity_id: params.entity_id,
       action: params.action,
@@ -234,7 +146,7 @@ export class AuditService {
     });
 
     if (error) {
-      console.error('Failed to create manual audit log:', error);
+      this.logger.error(`Failed to create audit log for ${params.entity_type}:${params.entity_id}: ${error.message}`);
     }
   }
 }

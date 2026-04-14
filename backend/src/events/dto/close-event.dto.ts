@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { EventStatus } from '../../auth/enums/event-status.enum';
+import { EventStatus } from '../../common/types';
 
 export class CloseEventDto {
   @IsEnum(EventStatus)

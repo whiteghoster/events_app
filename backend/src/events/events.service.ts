@@ -2,18 +2,16 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { EventStatus } from '../auth/enums/event-status.enum';
-import { UserRole } from '../auth/enums/user-role.enum';
+import { EventStatus, UserRole, AuditAction } from '../common/types';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../auth/enums/audit-action.enum';
+import { stripUndefined, paginate, paginationOffset } from '../common/utils';
 
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   [EventStatus.LIVE]: [EventStatus.HOLD, EventStatus.FINISHED],
@@ -26,7 +24,7 @@ export class EventsService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly auditService: AuditService,
-  ) { }
+  ) {}
 
   private get supabase() {
     return this.databaseService.getClient();
@@ -37,7 +35,6 @@ export class EventsService {
       .from('events')
       .select('*, assigned_staff:users(name)');
 
-    // Handle human-readable Display ID (e.g., EVT-59022) or standard UUID
     if (eventId.startsWith('EVT-')) {
       query = query.eq('display_id', eventId);
     } else {
@@ -57,25 +54,31 @@ export class EventsService {
     if (event.status === EventStatus.FINISHED) {
       throw new ForbiddenException('Finished events are read-only');
     }
-
     if (event.status === EventStatus.HOLD && role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admin can edit hold events');
     }
   }
 
-  private ensurePayloadNotEmpty(payload: Record<string, any>, message: string) {
-    const hasValues = Object.values(payload).some((value) => value !== undefined);
-    if (!hasValues) {
-      throw new BadRequestException(message);
+  private async generateDisplayId(): Promise<string> {
+    const MAX_ATTEMPTS = 5;
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const randomNum = Math.floor(10000 + Math.random() * 90000);
+      const displayId = `EVT-${randomNum}`;
+
+      const { data } = await this.supabase
+        .from('events')
+        .select('id')
+        .eq('display_id', displayId)
+        .maybeSingle();
+
+      if (!data) return displayId;
     }
+
+    const timestamp = Date.now().toString(36).toUpperCase();
+    return `EVT-${timestamp}`;
   }
 
-  private generateDisplayId(): string {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    return `EVT-${randomNum}`;
-  }
-
-  // ========== EVENTS ==========
 
   async createEvent(createEventDto: CreateEventDto, actorId: string) {
     const payload = {
@@ -88,15 +91,13 @@ export class EventsService {
       contact_phone: createEventDto.contact_phone,
       notes: createEventDto.notes,
       assigned_to: createEventDto.assigned_to,
-      display_id: this.generateDisplayId(),
+      display_id: await this.generateDisplayId(),
+      status: EventStatus.LIVE,
     };
 
     const { data, error } = await this.supabase
       .from('events')
-      .insert({
-        ...payload,
-        status: EventStatus.LIVE,
-      })
+      .insert(payload)
       .select()
       .single();
 
@@ -104,11 +105,10 @@ export class EventsService {
       throw new BadRequestException(`Failed to create event: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event',
       entity_id: data.id,
-      action: AuditAction.CREATED,
+      action: AuditAction.CREATE,
       user_id: actorId,
       new_values: data,
     });
@@ -122,24 +122,27 @@ export class EventsService {
     page: number = 1,
     pageSize: number = 20,
   ) {
-    const offset = Math.max(0, (page - 1) * pageSize);
+    const offset = paginationOffset(page, pageSize);
+    const normalizedTab = (tab || 'live').toLowerCase();
 
     let query = this.supabase
       .from('events')
       .select('*, assigned_staff:users(name)', { count: 'exact' });
 
-    if (tab === 'live' || tab === 'LIVE') {
-      query = query.eq('status', EventStatus.LIVE).order('date', { ascending: true });
-    } else if (tab === 'hold' || tab === 'HOLD') {
-      query = query.eq('status', EventStatus.HOLD).order('closed_at', { ascending: false });
-    } else if (tab === 'finished' || tab === 'FINISHED') {
-      query = query.eq('status', EventStatus.FINISHED).order('closed_at', { ascending: false });
-    } else if (tab === 'over' || tab === 'OVER') {
-      query = query
-        .in('status', [EventStatus.HOLD, EventStatus.FINISHED])
-        .order('closed_at', { ascending: false });
-    } else {
-      query = query.eq('status', EventStatus.LIVE).order('date', { ascending: true });
+    switch (normalizedTab) {
+      case 'hold':
+        query = query.eq('status', EventStatus.HOLD).order('closed_at', { ascending: false });
+        break;
+      case 'finished':
+        query = query.eq('status', EventStatus.FINISHED).order('closed_at', { ascending: false });
+        break;
+      case 'over':
+        query = query
+          .in('status', [EventStatus.HOLD, EventStatus.FINISHED])
+          .order('closed_at', { ascending: false });
+        break;
+      default:
+        query = query.eq('status', EventStatus.LIVE).order('date', { ascending: true });
     }
 
     if (occasionType) {
@@ -152,17 +155,11 @@ export class EventsService {
       throw new BadRequestException(`Failed to fetch events: ${error.message}`);
     }
 
-    return {
-      data: data ?? [],
-      total: count ?? 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count ?? 0) / pageSize),
-    };
+    return paginate(data, count, page, pageSize);
   }
 
   async findEventById(id: string) {
-    return await this.getEventOrThrow(id);
+    return this.getEventOrThrow(id);
   }
 
   async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole, actorId: string) {
@@ -173,7 +170,7 @@ export class EventsService {
       throw new BadRequestException('Use /events/:id/close for status transitions');
     }
 
-    const payload = {
+    const cleanPayload = stripUndefined({
       name: updateEventDto.name,
       occasion_type: updateEventDto.occasion_type,
       date: updateEventDto.date,
@@ -183,13 +180,11 @@ export class EventsService {
       contact_phone: updateEventDto.contact_phone,
       notes: updateEventDto.notes,
       assigned_to: updateEventDto.assigned_to,
-    };
+    });
 
-    const cleanPayload = Object.fromEntries(
-      Object.entries(payload).filter(([_, value]) => value !== undefined),
-    );
-
-    this.ensurePayloadNotEmpty(cleanPayload, 'No valid event fields provided for update');
+    if (Object.keys(cleanPayload).length === 0) {
+      throw new BadRequestException('No valid event fields provided for update');
+    }
 
     const { data, error } = await this.supabase
       .from('events')
@@ -202,11 +197,10 @@ export class EventsService {
       throw new BadRequestException(`Failed to update event: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event',
       entity_id: id,
-      action: AuditAction.UPDATED,
+      action: AuditAction.UPDATE,
       user_id: actorId,
       old_values: event,
       new_values: data,
@@ -229,22 +223,9 @@ export class EventsService {
       );
     }
 
-    /* 
-       Relaxed: No longer requiring products before HOLD. 
-       This allows users to hold events mid-setup.
-    */
-    /*
-    if (event.status === EventStatus.LIVE && newStatus === EventStatus.HOLD) {
-      ...
-    }
-    */
-
     const { data, error } = await this.supabase
       .from('events')
-      .update({
-        status: newStatus,
-        closed_at: new Date().toISOString(),
-      })
+      .update({ status: newStatus, closed_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
@@ -253,11 +234,10 @@ export class EventsService {
       throw new BadRequestException(`Failed to update event status: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event',
       entity_id: id,
-      action: 'STATUS_CHANGED',
+      action: AuditAction.UPDATE,
       user_id: actorId,
       old_values: { status: event.status },
       new_values: { status: newStatus },
@@ -266,7 +246,6 @@ export class EventsService {
     return data;
   }
 
-  // ========== EVENT PRODUCTS ==========
 
   async createEventProduct(
     createEventProductDto: CreateEventProductDto,
@@ -300,11 +279,10 @@ export class EventsService {
       throw new BadRequestException(`Failed to create event product: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event Product',
       entity_id: data.id,
-      action: AuditAction.CREATED,
+      action: AuditAction.CREATE,
       user_id: actorId,
       new_values: data,
     });
@@ -312,28 +290,15 @@ export class EventsService {
     return data;
   }
 
-  async findEventProducts(
-    eventId: string,
-    page: number = 1,
-    pageSize: number = 20,
-  ) {
+  async findEventProducts(eventId: string, page: number = 1, pageSize: number = 20) {
     await this.getEventOrThrow(eventId);
 
-    const offset = Math.max(0, (page - 1) * pageSize);
+    const offset = paginationOffset(page, pageSize);
 
     const { data, count, error } = await this.supabase
       .from('event_products')
       .select(
-        `
-        *,
-        product:products(
-          id,
-          name,
-          default_unit,
-          is_active,
-          category:categories(id, name)
-        )
-      `,
+        `*, product:products(id, name, default_unit, is_active, category:categories(id, name))`,
         { count: 'exact' },
       )
       .eq('event_id', eventId)
@@ -344,17 +309,11 @@ export class EventsService {
       throw new BadRequestException(`Failed to fetch event products: ${error.message}`);
     }
 
-    return {
-      data: data ?? [],
-      total: count ?? 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count ?? 0) / pageSize),
-    };
+    return paginate(data, count, page, pageSize);
   }
 
   async updateEventProduct(
-    rowId: string,
+    eventProductId: string,
     updateEventProductDto: UpdateEventProductDto,
     role: UserRole,
     actorId: string,
@@ -362,34 +321,28 @@ export class EventsService {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
       .select('*')
-      .eq('id', rowId)
+      .eq('id', eventProductId)
       .single();
 
     if (rowError || !row) {
-      throw new NotFoundException('Event product row not found');
+      throw new NotFoundException('Event product not found');
     }
 
     const event = await this.getEventOrThrow(row.event_id);
     this.enforceEventEditPermission(event, role);
 
-    const cleanPayload = Object.fromEntries(
-      Object.entries(updateEventProductDto).filter(([_, value]) => value !== undefined),
-    );
+    const cleanPayload = stripUndefined(updateEventProductDto as Record<string, any>);
 
-    this.ensurePayloadNotEmpty(
-      cleanPayload,
-      'No valid event product fields provided for update',
-    );
+    if (Object.keys(cleanPayload).length === 0) {
+      throw new BadRequestException('No valid fields provided for update');
+    }
 
-    // Staff members can only update quantity and unit
     if (role === UserRole.STAFF_MEMBER) {
       const allowedKeys = ['quantity', 'unit'];
-      const attemptedKeys = Object.keys(cleanPayload);
-      const invalidKeys = attemptedKeys.filter((k) => !allowedKeys.includes(k));
-
+      const invalidKeys = Object.keys(cleanPayload).filter((k) => !allowedKeys.includes(k));
       if (invalidKeys.length > 0) {
         throw new ForbiddenException(
-          `Staff Members can only update ${allowedKeys.join(', ')}. You attempted: ${invalidKeys.join(', ')}`,
+          `Staff Members can only update ${allowedKeys.join(', ')}`,
         );
       }
     }
@@ -397,7 +350,7 @@ export class EventsService {
     const { data, error } = await this.supabase
       .from('event_products')
       .update(cleanPayload)
-      .eq('id', rowId)
+      .eq('id', eventProductId)
       .select()
       .single();
 
@@ -405,11 +358,10 @@ export class EventsService {
       throw new BadRequestException(`Failed to update event product: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event Product',
-      entity_id: rowId,
-      action: AuditAction.UPDATED,
+      entity_id: eventProductId,
+      action: AuditAction.UPDATE,
       user_id: actorId,
       old_values: row,
       new_values: data,
@@ -418,15 +370,15 @@ export class EventsService {
     return data;
   }
 
-  async deleteEventProduct(rowId: string, role: UserRole, actorId: string) {
+  async deleteEventProduct(eventProductId: string, role: UserRole, actorId: string) {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
       .select('*')
-      .eq('id', rowId)
+      .eq('id', eventProductId)
       .single();
 
     if (rowError || !row) {
-      throw new NotFoundException('Event product row not found');
+      throw new NotFoundException('Event product not found');
     }
 
     const event = await this.getEventOrThrow(row.event_id);
@@ -435,17 +387,16 @@ export class EventsService {
     const { error } = await this.supabase
       .from('event_products')
       .delete()
-      .eq('id', rowId);
+      .eq('id', eventProductId);
 
     if (error) {
       throw new BadRequestException(`Failed to delete event product: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event Product',
-      entity_id: rowId,
-      action: AuditAction.DELETED,
+      entity_id: eventProductId,
+      action: AuditAction.DELETE,
       user_id: actorId,
       old_values: row,
     });
@@ -458,15 +409,7 @@ export class EventsService {
 
     const { data, error } = await this.supabase
       .from('event_products')
-      .select(`
-        quantity,
-        unit,
-        product:products(
-          id,
-          name,
-          category:categories(id, name)
-        )
-      `)
+      .select(`quantity, unit, product:products(id, name, category:categories(id, name))`)
       .eq('event_id', eventId);
 
     if (error) {
@@ -483,16 +426,12 @@ export class EventsService {
 
       if (!summaryMap[categoryName]) summaryMap[categoryName] = {};
       if (!summaryMap[categoryName][unit]) summaryMap[categoryName][unit] = 0;
-
       summaryMap[categoryName][unit] += qty;
     }
 
     return Object.entries(summaryMap).map(([category, units]) => ({
       category,
-      totals: Object.entries(units).map(([unit, quantity]) => ({
-        unit,
-        quantity,
-      })),
+      totals: Object.entries(units).map(([unit, quantity]) => ({ unit, quantity })),
     }));
   }
 
@@ -509,11 +448,10 @@ export class EventsService {
       throw new BadRequestException(`Failed to delete event: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'Event',
       entity_id: id,
-      action: AuditAction.DELETED, // Treated as Hard Delete here per logic
+      action: AuditAction.DELETE,
       user_id: actorId,
       old_values: event,
     });

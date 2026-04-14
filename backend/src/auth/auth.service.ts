@@ -6,97 +6,63 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { UserRole } from './enums/user-role.enum';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private supabaseAdmin: SupabaseClient;
+  private readonly supabase: SupabaseClient;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
   ) {
-    this.supabaseAdmin = createClient(
-      this.configService.get<string>('SUPABASE_URL') || '',
-      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || '',
-    );
+    this.supabase = this.databaseService.getClient();
   }
 
-  private get supabase() {
-    return this.databaseService.getClient();
-  }
-
-  /**
-   * PUBLIC REGISTRATION
-   * Anyone can register as a regular user (not Admin, Staff, or Staff Member)
-   */
   async register(registerDto: RegisterDto) {
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(registerDto.email)) {
-      throw new BadRequestException('Invalid email format');
-    }
-
-    // Validate password strength
-    if (registerDto.password.length < 6) {
-      throw new BadRequestException('Password must be at least 6 characters');
-    }
-
-    // Check if user already exists
-    const { data: existingUser } = await this.supabaseAdmin
+    const { data: existingUser } = await this.supabase
       .from('users')
       .select('id')
       .eq('email', registerDto.email)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       throw new BadRequestException('User with this email already exists');
     }
 
-    // Role from request body
-    const role = registerDto.role;
+    const displayName = registerDto.name || registerDto.email.split('@')[0];
 
     try {
-      // 1. Create user in Supabase Auth
-      const { data: authData, error: authError } = await this.supabaseAdmin.auth.admin.createUser({
+      const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
         email: registerDto.email,
         password: registerDto.password,
         email_confirm: true,
-        user_metadata: {
-          role: role,
-          name: registerDto.name || registerDto.email.split('@')[0],
-        },
+        user_metadata: { role: registerDto.role, name: displayName },
       });
 
       if (authError) {
         throw new BadRequestException(`Registration failed: ${authError.message}`);
       }
 
-      // 2. Create user record in database
-      const { data: user, error: userError } = await this.supabaseAdmin
+      const { data: user, error: userError } = await this.supabase
         .from('users')
         .insert({
           id: authData.user.id,
           email: registerDto.email,
-          name: registerDto.name || registerDto.email.split('@')[0],
-          role: role,
+          name: displayName,
+          role: registerDto.role,
           is_active: true,
-          created_at: new Date().toISOString(),
         })
         .select('id, email, name, role, is_active')
         .single();
 
       if (userError) {
-        // Rollback: Delete auth user if DB insert fails
-        await this.supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        throw new InternalServerErrorException(
-          `Failed to create user record: ${userError.message}`,
-        );
+        await this.supabase.auth.admin.deleteUser(authData.user.id);
+        throw new InternalServerErrorException(`Failed to create user record: ${userError.message}`);
       }
 
       return user;
@@ -108,10 +74,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * LOGIN
-   * Authenticate user with email and password
-   */
   async login(loginDto: LoginDto) {
     const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
       email: loginDto.email,
@@ -119,36 +81,30 @@ export class AuthService {
     });
 
     if (authError || !authData?.user || !authData?.session) {
-      this.logger.error(`❌ Auth failed for ${loginDto.email}: ${authError?.message || 'No user/session'}`);
+      this.logger.warn(`Auth failed for ${loginDto.email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Fetch user details from database
-    const { data: dbUser, error: userError } = await this.supabaseAdmin
+    const { data: dbUser, error: userError } = await this.supabase
       .from('users')
       .select('id, email, name, role, is_active')
       .eq('id', authData.user.id)
       .single();
 
     if (userError || !dbUser) {
-      this.logger.error(`❌ User record missing in DB for ${loginDto.email} (${authData.user.id}). Error: ${userError?.message}`);
-      throw new UnauthorizedException('User record not found in database. Please contact admin.');
+      this.logger.error(`User record missing in DB for auth user ${authData.user.id}`);
+      throw new UnauthorizedException('User record not found. Please contact admin.');
     }
 
-    if (dbUser.is_active === false) {
-      this.logger.warn(`⚠️ Inactive user attempt: ${loginDto.email}`);
+    if (!dbUser.is_active) {
       throw new UnauthorizedException('User account is inactive');
     }
 
-    // Sync role to JWT metadata
-    try {
-      await this.supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
-        user_metadata: {
-          role: dbUser.role,
-        },
-      });
-    } catch (err) {
-      console.warn('User metadata sync failed:', err);
+    const { error: metaError } = await this.supabase.auth.admin.updateUserById(authData.user.id, {
+      user_metadata: { role: dbUser.role },
+    });
+    if (metaError) {
+      this.logger.warn(`Metadata sync failed for user ${authData.user.id}: ${metaError.message}`);
     }
 
     return {
@@ -164,26 +120,14 @@ export class AuthService {
     };
   }
 
-  /**
-   * VALIDATE TOKEN
-   * Validate JWT token and extract user info
-   */
   async validateToken(token: string) {
-    const { data, error } = await this.supabaseAdmin.auth.getUser(token);
-
-    if (error || !data?.user) {
-      return null;
-    }
-
+    const { data, error } = await this.supabase.auth.getUser(token);
+    if (error || !data?.user) return null;
     return data.user;
   }
 
-  /**
-   * REFRESH TOKEN
-   * Generate new access token from refresh token
-   */
   async refreshToken(refreshToken: string) {
-    const { data, error } = await this.supabaseAdmin.auth.refreshSession({
+    const { data, error } = await this.supabase.auth.refreshSession({
       refresh_token: refreshToken,
     });
 
@@ -198,10 +142,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * SIGN OUT
-   * Logout user
-   */
   async signOut() {
     const { error } = await this.supabase.auth.signOut();
     if (error) {

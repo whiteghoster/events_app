@@ -3,173 +3,87 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { UserRole } from '../auth/enums/user-role.enum';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../auth/enums/audit-action.enum';
-
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum, IsBoolean, MinLength } from 'class-validator';
-
-export class CreateUserDto {
-  @IsEmail({}, { message: 'Invalid email format' })
-  @IsNotEmpty({ message: 'Email is required' })
-  email: string;
-
-  @IsNotEmpty({ message: 'Password is required' })
-  @MinLength(6, { message: 'Password must be at least 6 characters' })
-  password: string;
-
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @IsEnum(UserRole, { message: 'Invalid user role' })
-  @IsNotEmpty({ message: 'Role is required' })
-  role: UserRole; // ADMIN can specify Staff or Staff Member
-}
-
-export class UpdateUserDto {
-  @IsEmail({}, { message: 'Invalid email format' })
-  @IsOptional()
-  email?: string;
-
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @IsEnum(UserRole, { message: 'Invalid user role' })
-  @IsOptional()
-  role?: UserRole;
-
-  @IsBoolean()
-  @IsOptional()
-  is_active?: boolean;
-}
+import { UserRole, AuditAction } from '../common/types';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  private supabaseAdmin: SupabaseClient;
+  private readonly logger = new Logger(UsersService.name);
 
   constructor(
-    private databaseService: DatabaseService,
-    private configService: ConfigService,
-    private auditService: AuditService,
-  ) {
-    this.supabaseAdmin = createClient(
-      this.configService.get<string>('SUPABASE_URL') || '',
-      this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || '',
-    );
-  }
+    private readonly databaseService: DatabaseService,
+    private readonly auditService: AuditService,
+  ) {}
 
   private get supabase() {
     return this.databaseService.getClient();
   }
 
-  /**
-   * CREATE USER (ADMIN ONLY)
-   * Only Admin can create Staff and Staff Member users
-   * Cannot create other Admins
-   */
   async create(createUserDto: CreateUserDto, adminRole: UserRole, actorId: string) {
-    // Only Admin can create users
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can create users');
     }
 
-    // Admin cannot create other Admins
     if (createUserDto.role === UserRole.ADMIN) {
-      throw new BadRequestException('Cannot create Admin users. Admin users can only be created via registration.');
+      throw new BadRequestException('Cannot create Admin users. Use registration instead.');
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(createUserDto.email)) {
-      throw new BadRequestException('Invalid email format');
-    }
-
-    // Validate password strength
-    if (createUserDto.password.length < 6) {
-      throw new BadRequestException('Password must be at least 6 characters');
-    }
-
-    // Check if user already exists
-    const { data: existingUser } = await this.supabaseAdmin
+    const { data: existingUser } = await this.supabase
       .from('users')
       .select('id')
       .eq('email', createUserDto.email)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       throw new BadRequestException('User with this email already exists');
     }
 
-    try {
-      // 1. Create user in Supabase Auth
-      const { data: authData, error: authError } = await this.supabaseAdmin.auth.admin.createUser({
+    const displayName = createUserDto.name || createUserDto.email.split('@')[0];
+
+    const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
+      email: createUserDto.email,
+      password: createUserDto.password,
+      email_confirm: true,
+      user_metadata: { role: createUserDto.role, name: displayName },
+    });
+
+    if (authError) {
+      throw new BadRequestException(`Failed to create auth user: ${authError.message}`);
+    }
+
+    const { data: user, error: userError } = await this.supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
         email: createUserDto.email,
-        password: createUserDto.password,
-        email_confirm: true,
-        user_metadata: {
-          role: createUserDto.role,
-          name: createUserDto.name || createUserDto.email.split('@')[0],
-        },
-      });
+        name: displayName,
+        role: createUserDto.role,
+        is_active: true,
+      })
+      .select('id, email, name, role, is_active, created_at')
+      .single();
 
-      if (authError) {
-        throw new BadRequestException(`Failed to create auth user: ${authError.message}`);
-      }
+    if (userError) {
+      await this.supabase.auth.admin.deleteUser(authData.user.id);
+      throw new BadRequestException(`Failed to create user record: ${userError.message}`);
+    }
 
-      // 2. Create user record in database
-      const { data: user, error: userError } = await this.supabaseAdmin
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: createUserDto.email,
-          name: createUserDto.name || createUserDto.email.split('@')[0],
-          role: createUserDto.role,
-          is_active: true,
-          created_at: new Date().toISOString(),
-        })
-        .select('id, email, name, role, is_active, created_at')
-        .single();
-
-      if (userError) {
-        // Rollback: Delete auth user if DB insert fails
-        await this.supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        throw new BadRequestException(`Failed to create user record: ${userError.message}`);
-      }
-
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'User',
       entity_id: user.id,
-      action: AuditAction.CREATED,
-      user_id: actorId, // Correctly identifies the actor
+      action: AuditAction.CREATE,
+      user_id: actorId,
       new_values: user,
     });
 
-      return {
-        ...user,
-        createdAt: user.created_at,
-      };
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-      throw new BadRequestException('Failed to create user');
-    }
+    return user;
   }
 
-  /**
-   * FIND ALL USERS (ADMIN ONLY)
-   * List all users with pagination
-   */
   async findAll(adminRole: UserRole, page: number = 1, pageSize: number = 20) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can view all users');
@@ -177,7 +91,7 @@ export class UsersService {
 
     const offset = Math.max(0, (page - 1) * pageSize);
 
-    const { data, count, error } = await this.supabaseAdmin
+    const { data, count, error } = await this.supabase
       .from('users')
       .select('id, email, name, role, is_active, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -188,27 +102,20 @@ export class UsersService {
     }
 
     return {
-      data: (data || []).map((user: any) => ({
-        ...user,
-        createdAt: user.created_at,
-      })),
-      total: count || 0,
+      data: data ?? [],
+      total: count ?? 0,
       page,
       pageSize,
-      totalPages: Math.ceil((count || 0) / pageSize),
+      totalPages: Math.ceil((count ?? 0) / pageSize),
     };
   }
 
-  /**
-   * FIND USER BY ID (ADMIN ONLY)
-   * Get specific user details
-   */
   async findById(id: string, adminRole: UserRole) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can view user details');
     }
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.supabase
       .from('users')
       .select('id, email, name, role, is_active, created_at')
       .eq('id', id)
@@ -218,36 +125,19 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return {
-      ...data,
-      createdAt: data.created_at,
-    };
+    return data;
   }
 
-  /**
-   * UPDATE USER (ADMIN ONLY)
-   * Update user details
-   * Cannot change Admin role
-   */
-  async update(
-    id: string,
-    updateUserDto: UpdateUserDto,
-    adminRole: UserRole,
-    actorId: string,
-  ) {
+  async update(id: string, updateUserDto: UpdateUserDto, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can update users');
     }
 
-    // Prevent creating new Admins
     if (updateUserDto.role === UserRole.ADMIN) {
-      throw new BadRequestException(
-        'Cannot assign Admin role. Admin role is only available through registration.',
-      );
+      throw new BadRequestException('Cannot assign Admin role. Use registration instead.');
     }
 
-    // Verify user exists
-    const { data: existingUser } = await this.supabaseAdmin
+    const { data: existingUser } = await this.supabase
       .from('users')
       .select('id, role')
       .eq('id', id)
@@ -257,17 +147,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    // Cannot change Admin to other role
     if (existingUser.role === UserRole.ADMIN && updateUserDto.role) {
       throw new BadRequestException('Cannot change Admin user role');
     }
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.supabase
       .from('users')
-      .update({
-        ...updateUserDto,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ ...updateUserDto, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
@@ -276,53 +162,37 @@ export class UsersService {
       throw new BadRequestException(`Failed to update user: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'User',
       entity_id: id,
-      action: AuditAction.UPDATED,
+      action: AuditAction.UPDATE,
       user_id: actorId,
       old_values: existingUser,
       new_values: data,
     });
 
-    // Update auth metadata if role changed
     if (updateUserDto.role) {
-      try {
-        await this.supabaseAdmin.auth.admin.updateUserById(id, {
-          user_metadata: {
-            role: updateUserDto.role,
-          },
-        });
-      } catch (err) {
-        console.warn('Failed to update auth metadata:', err);
+      const { error: metaError } = await this.supabase.auth.admin.updateUserById(id, {
+        user_metadata: { role: updateUserDto.role },
+      });
+      if (metaError) {
+        this.logger.warn(`Failed to sync auth metadata for user ${id}: ${metaError.message}`);
       }
     }
 
     return data;
   }
 
-  /**
-   * DEACTIVATE USER (ADMIN ONLY)
-   * Soft delete - set is_active to false
-   */
   async remove(id: string, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can deactivate users');
     }
 
-    // Verify user exists
     const existingUser = await this.findById(id, adminRole);
-    if (!existingUser) {
-      throw new NotFoundException('User not found');
-    }
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.supabase
       .from('users')
-      .update({
-        is_active: false,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
@@ -331,37 +201,26 @@ export class UsersService {
       throw new BadRequestException(`Failed to deactivate user: ${error.message}`);
     }
 
-    // Audit Log
     await this.auditService.createLog({
       entity_type: 'User',
       entity_id: id,
-      action: AuditAction.DELETED,
+      action: AuditAction.DELETE,
       user_id: actorId,
       old_values: existingUser,
       new_values: data,
     });
 
-    return {
-      ...data,
-      message: 'User deactivated successfully',
-    };
+    return { ...data, message: 'User deactivated successfully' };
   }
 
-  /**
-   * ACTIVATE USER (ADMIN ONLY)
-   * Restore user - set is_active to true
-   */
   async activate(id: string, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can activate users');
     }
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.supabase
       .from('users')
-      .update({
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ is_active: true, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
@@ -370,35 +229,24 @@ export class UsersService {
       throw new BadRequestException(`Failed to activate user: ${error.message}`);
     }
 
-    return {
-      ...data,
-      message: 'User activated successfully',
-    };
+    return { ...data, message: 'User activated successfully' };
   }
 
-  /**
-   * PERMANENT DELETE (ADMIN ONLY)
-   * Hard delete - remove from Auth AND Database
-   */
   async hardDelete(id: string, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can delete users permanently');
     }
 
-    // 1. Delete from Supabase Auth
-    try {
-      const { error: authError } = await this.supabaseAdmin.auth.admin.deleteUser(id);
-      if (authError) {
-        // If auth delete fails, it might be because the user doesn't exist in Auth.
-        // We log it and proceed to try and clean up the DB record.
-        console.warn(`Auth delete failed for ${id}: ${authError.message}`);
-      }
-    } catch (err) {
-      console.warn(`Auth delete failed for ${id}:`, err);
+    if (id === actorId) {
+      throw new BadRequestException('Cannot permanently delete your own account');
     }
 
-    // 2. Delete from Database
-    const { error: dbError } = await this.supabaseAdmin
+    const { error: authError } = await this.supabase.auth.admin.deleteUser(id);
+    if (authError) {
+      this.logger.warn(`Auth delete failed for user ${id}: ${authError.message}`);
+    }
+
+    const { error: dbError } = await this.supabase
       .from('users')
       .delete()
       .eq('id', id);
@@ -407,14 +255,13 @@ export class UsersService {
       throw new BadRequestException(`Failed to delete user from database: ${dbError.message}`);
     }
 
-    // Audit Log (Before we lose reference)
     await this.auditService.createLog({
       entity_type: 'User',
       entity_id: id,
-      action: 'PERMANENTLY_DELETED',
+      action: AuditAction.DELETE,
       user_id: actorId,
     });
 
-    return { success: true, message: 'User permanently deleted' };
+    return { message: 'User permanently deleted' };
   }
 }
