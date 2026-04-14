@@ -8,8 +8,7 @@ import { ChevronDown, ChevronUp, Plus, Pencil, Trash2, Check, X, MapPin, Calenda
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
 import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canViewAudit } from '@/lib/auth-context'
-import { auditLog } from '@/lib/mock-data'
-import { eventsApi, catalogApi } from '@/lib/api'
+import { eventsApi, catalogApi, auditApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 
 
@@ -33,6 +32,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [eventProductsList, setEventProductsList] = useState<EventProduct[]>([])
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [eventLogs, setEventLogs] = useState<AuditEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [infoExpanded, setInfoExpanded] = useState(false)
@@ -53,33 +53,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const loadData = useCallback(async () => {
     try {
-      const [eventData, productsData, catData, prodData] = await Promise.all([
+      const [eventData, productsData, catData, prodData, logsData] = await Promise.all([
         eventsApi.getEventById(id),
         eventsApi.getEventProducts(id),
         catalogApi.getCategories(),
-        catalogApi.getProducts({ pageSize: 1000 })
+        catalogApi.getProducts({ pageSize: 1000 }),
+        auditApi.getAuditLogs({ limit: 50 }) // we don't have entity_id filter yet, fetching latest
       ])
 
       setEvent(eventData)
       setEventProductsList(productsData)
-
-      setAllCategories((catData as any[]).map(c => ({
-        id: c.id,
-        name: c.name,
-        isActive: c.is_active !== false, // Default to true if missing
-        createdAt: c.created_at
-      })))
-
-      setAllProducts((prodData.data as any[]).map(p => ({
-        id: p.id,
-        name: p.name,
-        categoryId: p.category_id,
-        defaultUnit: p.default_unit,
-        price: p.price,
-        description: p.description,
-        isActive: p.is_active,
-        createdAt: p.created_at
-      })))
+      setAllCategories(catData)
+      setAllProducts(prodData.data)
+      
+      // Filter logs locally for now until backend supports entity_id filtering
+      setEventLogs(logsData.data.filter(l => l.entityName === eventData.name))
     } catch (err) {
       console.error('Failed to load event data:', err)
       const msg = err instanceof Error ? err.message : ''
@@ -98,10 +86,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }, [loadData])
 
 
-  const eventAuditLog = useMemo(() => {
-    // In a real app, this would be fetched from API
-    return auditLog.filter(a => a.entityName === event?.name).slice(0, 10)
-  }, [event?.name])
 
   const categorySummary = useMemo(() => {
     const summary: Record<string, { quantities: Record<string, number> }> = {}
@@ -629,13 +613,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium text-foreground">Change Log</span>
-                <span className="text-muted-foreground text-sm">({eventAuditLog.length} entries)</span>
+                <span className="text-muted-foreground text-sm">({eventLogs.length} entries)</span>
               </div>
               {auditExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-4 pb-4 space-y-3">
-                {eventAuditLog.map(entry => (
+                {eventLogs.map(entry => (
                   <div key={entry.id} className="bg-secondary rounded-lg p-3">
                     <div className="flex items-center gap-2 text-sm">
                       <span className="font-medium text-foreground">{entry.userName}</span>
@@ -657,7 +641,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     </p>
                   </div>
                 ))}
-                {eventAuditLog.length === 0 && (
+                {eventLogs.length === 0 && (
                   <p className="text-muted-foreground text-sm text-center py-4">No changes recorded for this event.</p>
                 )}
               </div>

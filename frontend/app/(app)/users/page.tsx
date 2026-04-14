@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canViewUsers } from '@/lib/auth-context'
-import { users as initialUsers } from '@/lib/mock-data'
+import { usersApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,28 +17,49 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { User, UserRole } from '@/lib/types'
 
-const roles: UserRole[] = ['Admin', 'Staff', 'Staff Member']
+const roles: { value: UserRole; label: string }[] = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'staff', label: 'Staff' },
+  { value: 'staff_member', label: 'Staff Member' },
+]
 
 const roleColors: Record<UserRole, string> = {
-  'Admin': 'bg-primary text-primary-foreground',
-  'Staff': 'bg-info text-foreground',
-  'Staff Member': 'bg-finished text-foreground',
+  'admin': 'bg-primary text-primary-foreground',
+  'staff': 'bg-info text-foreground',
+  'staff_member': 'bg-finished text-foreground',
 }
 
 export default function UsersPage() {
   const router = useRouter()
   const { user: currentUser } = useAuth()
   
-  const [users, setUsers] = useState<User[]>(initialUsers)
+  const [users, setUsers] = useState<User[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Staff' as UserRole,
+    role: 'staff' as UserRole,
   })
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      setIsInitialLoading(true)
+      const res = await usersApi.getUsers()
+      setUsers(res.data)
+    } catch (error: any) {
+      toast.error('Failed to load users')
+    } finally {
+      setIsInitialLoading(false)
+    }
+  }
 
   if (!currentUser || !canViewUsers(currentUser.role)) {
     router.replace('/events')
@@ -58,7 +79,7 @@ export default function UsersPage() {
       setFormData({
         name: '',
         email: '',
-        role: 'Staff',
+        role: 'staff',
       })
     }
     setDialogOpen(true)
@@ -71,38 +92,45 @@ export default function UsersPage() {
     }
 
     setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    if (editingUser) {
-      setUsers(prev => prev.map(u => 
-        u.id === editingUser.id 
-          ? { ...u, name: formData.name, role: formData.role }
-          : u
-      ))
-      toast.success('User updated')
-    } else {
-      const newUser: User = {
-        id: `new-${Date.now()}`,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        createdAt: new Date().toISOString().split('T')[0],
+    try {
+      if (editingUser) {
+        await usersApi.updateUser(editingUser.id, {
+          name: formData.name,
+          role: formData.role,
+        })
+        toast.success('User updated')
+      } else {
+        await usersApi.createUser({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+        })
+        toast.success('Invite sent')
       }
-      setUsers(prev => [...prev, newUser])
-      toast.success('Invite sent')
+      fetchUsers() // Refresh list
+      setDialogOpen(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save user')
+    } finally {
+      setIsLoading(false)
     }
-    
-    setIsLoading(false)
-    setDialogOpen(false)
   }
 
-  const handleDelete = (user: User) => {
+  const handleDelete = async (user: User) => {
     if (user.id === currentUser.id) {
       toast.error('You cannot delete yourself')
       return
     }
-    setUsers(prev => prev.filter(u => u.id !== user.id))
-    toast.success('User removed')
+    
+    if (!confirm(`Are you sure you want to deactivate ${user.name}?`)) return
+
+    try {
+      await usersApi.deleteUser(user.id)
+      setUsers(prev => prev.filter(u => u.id !== user.id))
+      toast.success('User removed')
+    } catch (error: any) {
+      toast.error('Failed to remove user')
+    }
   }
 
   return (
@@ -139,7 +167,7 @@ export default function UsersPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground hidden sm:table-cell">
-                  {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A'}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
@@ -209,7 +237,7 @@ export default function UsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map(r => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

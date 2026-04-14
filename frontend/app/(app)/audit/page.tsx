@@ -1,18 +1,19 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Download, Search } from 'lucide-react'
+import { Download, Search, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canViewAudit } from '@/lib/auth-context'
-import { auditLog, users } from '@/lib/mock-data'
+import { auditApi, usersApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { AuditAction } from '@/lib/types'
+import { toast } from 'sonner'
+import type { AuditAction, User, AuditEntry } from '@/lib/types'
 
 const entityTypes = ['All', 'Event', 'Product', 'Category', 'Event Row', 'User']
 const actions: (AuditAction | 'All')[] = ['All', 'Created', 'Updated', 'Deleted']
@@ -27,6 +28,11 @@ export default function AuditPage() {
   const router = useRouter()
   const { user: currentUser } = useAuth()
   
+  const [logs, setLogs] = useState<AuditEntry[]>([])
+  const [availableUsers, setAvailableUsers] = useState<User[]>([])
+  const [total, setTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
   const [search, setSearch] = useState('')
   const [entityFilter, setEntityFilter] = useState('All')
   const [actionFilter, setActionFilter] = useState<AuditAction | 'All'>('All')
@@ -36,35 +42,51 @@ export default function AuditPage() {
   const [page, setPage] = useState(1)
   const perPage = 25
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await usersApi.getUsers(1, 100)
+      setAvailableUsers(res.data)
+    } catch (error) {
+      console.error('Failed to fetch users for audit filter')
+    }
+  }, [])
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const res = await auditApi.getAuditLogs({
+        entity_type: entityFilter === 'All' ? undefined : entityFilter,
+        action: actionFilter === 'All' ? undefined : actionFilter,
+        page,
+        limit: perPage,
+      })
+      setLogs(res.data)
+      setTotal(res.pagination.total)
+    } catch (error) {
+      toast.error('Failed to load audit logs')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [entityFilter, actionFilter, page])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
+  useEffect(() => {
+    fetchLogs()
+  }, [fetchLogs])
+
   if (!currentUser || !canViewAudit(currentUser.role)) {
     router.replace('/events')
     return null
   }
 
-  const filteredLog = useMemo(() => {
-    return auditLog.filter(entry => {
-      const matchesSearch = !search || 
-        entry.change.toLowerCase().includes(search.toLowerCase()) ||
-        entry.entityName.toLowerCase().includes(search.toLowerCase())
-      
-      const matchesEntity = entityFilter === 'All' || entry.entityType === entityFilter
-      const matchesAction = actionFilter === 'All' || entry.action === actionFilter
-      const matchesUser = userFilter === 'All' || entry.userId === userFilter
-      
-      const entryDate = new Date(entry.timestamp).toISOString().split('T')[0]
-      const matchesDateFrom = !dateFrom || entryDate >= dateFrom
-      const matchesDateTo = !dateTo || entryDate <= dateTo
-      
-      return matchesSearch && matchesEntity && matchesAction && matchesUser && matchesDateFrom && matchesDateTo
-    })
-  }, [search, entityFilter, actionFilter, userFilter, dateFrom, dateTo])
-
-  const paginatedLog = filteredLog.slice((page - 1) * perPage, page * perPage)
-  const totalPages = Math.ceil(filteredLog.length / perPage)
+  const totalPages = Math.ceil(total / perPage)
 
   const handleExportCSV = () => {
     const headers = ['When', 'Who', 'Action', 'Entity', 'Name', 'Change']
-    const rows = filteredLog.map(entry => [
+    const rows = logs.map(entry => [
       new Date(entry.timestamp).toLocaleString('en-IN'),
       entry.userName,
       entry.action,
@@ -135,7 +157,7 @@ export default function AuditPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Users</SelectItem>
-              {users.map(u => (
+              {availableUsers.map(u => (
                 <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
               ))}
             </SelectContent>
@@ -173,7 +195,16 @@ export default function AuditPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedLog.map(entry => (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-12">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                    <p>Loading activities...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : logs.map(entry => (
               <TableRow key={entry.id} className="border-border">
                 <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                   {new Date(entry.timestamp).toLocaleString('en-IN', { 
@@ -196,7 +227,7 @@ export default function AuditPage() {
                 <TableCell className="text-muted-foreground max-w-xs truncate">{entry.change}</TableCell>
               </TableRow>
             ))}
-            {paginatedLog.length === 0 && (
+            {!isLoading && logs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No audit entries found matching your filters.
@@ -210,7 +241,7 @@ export default function AuditPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              Showing {(page - 1) * perPage + 1} - {Math.min(page * perPage, filteredLog.length)} of {filteredLog.length}
+              Showing {(page - 1) * perPage + 1} - {Math.min(page * perPage, total)} of {total}
             </p>
             <div className="flex gap-2">
               <Button 

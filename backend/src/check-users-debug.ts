@@ -23,8 +23,8 @@ async function check() {
     return;
   }
 
-  console.log(`Found ${users.length} users:`);
-  users.forEach(u => {
+  console.log(`Found ${users?.length || 0} users:`);
+  (users as any[])?.forEach(u => {
     console.log(`- [${u.id}] ${u.email} (${u.role}) Active: ${u.is_active}`);
   });
   
@@ -36,9 +36,9 @@ async function check() {
     return;
   }
 
-  console.log(`Found ${authUsers.length} auth users:`);
-  authUsers.forEach(u => {
-      const inDb = users.some(dbU => dbU.id === u.id);
+  console.log(`Found ${authUsers?.length || 0} auth users:`);
+  (authUsers as any[])?.forEach(u => {
+      const inDb = (users as any[])?.some(dbU => dbU.id === u.id);
       console.log(`- [${u.id}] ${u.email} In DB: ${inDb ? '✅' : '❌'}`);
   });
 }

@@ -591,7 +591,7 @@ export default function CatalogPage() {
           <DialogHeader>
             <DialogTitle>Deactivate Product</DialogTitle>
             <DialogDescription>
-              This product is in {getProductLiveEventCount(productToDeactivate?.id || '')} live events. Deactivate anyway?
+              This product may be in live events. Deactivate anyway?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

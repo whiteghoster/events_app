@@ -1,4 +1,4 @@
-import type { Event, EventProduct, EventStatus, Category, Product, OccasionType } from './types'
+import type { Event, EventProduct, EventStatus, Category, Product, OccasionType, User, AuditEntry } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
@@ -132,6 +132,44 @@ function mapEventFromBackend(event: any): Event {
     closedBy: event.closed_by || event.closedBy || null,
     createdAt: event.created_at || event.createdAt || undefined,
     updatedAt: event.updated_at || event.updatedAt || null,
+  }
+}
+
+function mapUserFromBackend(user: any): User {
+  return {
+    id: user.id || '',
+    name: user.name || '',
+    email: user.email || '',
+    role: (user.role || 'staff').toLowerCase() as any,
+    createdAt: user.created_at || user.createdAt || new Date().toISOString(),
+  }
+}
+
+function mapAuditEntryFromBackend(log: any): AuditEntry {
+  // Determine a friendly name for the entity
+  const entityName = log.new_values?.name || log.old_values?.name || log.entity_id || 'Unknown'
+  
+  // Format the change summary
+  let change = ''
+  if (log.action === 'Created') {
+    change = `New ${log.entity_type} created`
+  } else if (log.action === 'Deleted') {
+    change = `${log.entity_type} removed`
+  } else {
+    // For updates, try to show some changed keys
+    const keys = Object.keys(log.new_values || {}).filter(k => k !== 'updated_at')
+    change = keys.length > 0 ? `Updated ${keys.join(', ')}` : 'Entry updated'
+  }
+
+  return {
+    id: log.id,
+    timestamp: log.created_at || new Date().toISOString(),
+    userId: log.user_id || '',
+    userName: log.users?.email || 'System',
+    action: log.action as any,
+    entityType: log.entity_type || 'Unknown',
+    entityName: entityName,
+    change: change,
   }
 }
 
@@ -461,5 +499,88 @@ export const eventsApi = {
 
   async deleteEvent(id: string): Promise<void> {
     await apiRequest(`/events/${id}`, { method: 'DELETE' })
+  },
+}
+
+// -------------------------------------------------------------------
+// Users API
+// -------------------------------------------------------------------
+export const usersApi = {
+  async getUsers(page: number = 1, pageSize: number = 50): Promise<{
+    data: User[]
+    total: number
+  }> {
+    const res = await apiRequest<{
+      success: boolean
+      data: any[]
+      total: number
+    }>(`/users?page=${page}&pageSize=${pageSize}`)
+    
+    return {
+      data: (res.data || []).map(mapUserFromBackend),
+      total: res.total || 0
+    }
+  },
+
+  async createUser(payload: { name: string; email: string; role: string }): Promise<User> {
+    const res = await apiRequest<{ data: any }>('/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...payload,
+        role: payload.role.toLowerCase().replace(' ', '_'), // Handle 'Staff Member' -> 'staff_member'
+      }),
+    })
+    return mapUserFromBackend(res.data)
+  },
+
+  async updateUser(id: string, payload: { name?: string; role?: string }): Promise<User> {
+    const res = await apiRequest<{ data: any }>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...payload,
+        role: payload.role ? payload.role.toLowerCase().replace(' ', '_') : undefined,
+      }),
+    })
+    return mapUserFromBackend(res.data)
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    await apiRequest(`/users/${id}`, { method: 'DELETE' })
+  },
+}
+
+// -------------------------------------------------------------------
+// Audit API
+// -------------------------------------------------------------------
+export const auditApi = {
+  async getAuditLogs(params?: {
+    entity_type?: string
+    action?: string
+    page?: number
+    limit?: number
+  }): Promise<{
+    data: AuditEntry[]
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      hasMore: boolean
+    }
+  }> {
+    const q = new URLSearchParams()
+    if (params?.entity_type) q.set('entity_type', params.entity_type)
+    if (params?.action) q.set('action', params.action)
+    if (params?.page) q.set('page', params.page.toString())
+    if (params?.limit) q.set('limit', params.limit.toString())
+
+    const res = await apiRequest<{
+      data: any[]
+      pagination: any
+    }>(`/audit?${q.toString()}`)
+
+    return {
+      data: (res.data || []).map(mapAuditEntryFromBackend),
+      pagination: res.pagination || { page: 1, limit: 50, total: 0, hasMore: false },
+    }
   },
 }

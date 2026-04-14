@@ -9,7 +9,6 @@ import { EventCard } from '@/components/event-card'
 import { StatusBadge } from '@/components/status-badge'
 import { EmptyState, FlowerIcon } from '@/components/empty-state'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
-import { events as demoEvents, eventProducts } from '@/lib/mock-data'
 import { eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -115,8 +114,7 @@ export default function EventsPage() {
   const finishedCount = allEvents.filter(e => e.status === 'finished').length
 
 
-  const getProductsForEvent = (eventId: string) =>
-    eventProducts.filter(p => p.eventId === eventId)
+  const getProductsForEvent = (eventId: string) => []
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">

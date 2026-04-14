@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
-import { events } from '@/lib/mock-data'
 import { eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,15 +45,6 @@ export default function NewEventPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Check for venue/date conflict
-  const conflictEvent = useMemo(() => {
-    if (!formData.venueName || !formData.eventDate) return null
-    return events.find(
-      e => e.venueName.toLowerCase() === formData.venueName.toLowerCase() && 
-           e.eventDate === formData.eventDate &&
-           e.status === 'Live'
-    )
-  }, [formData.venueName, formData.eventDate])
 
   if (!user || !canCreateEvent(user.role)) {
     router.replace('/events')
@@ -197,15 +187,6 @@ export default function NewEventPage() {
               />
             </div>
 
-            {conflictEvent && (
-              <div className="flex items-start gap-3 p-4 bg-warning/10 border border-warning/30 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-warning">Another event is already scheduled at this venue on this date:</p>
-                  <p className="text-muted-foreground mt-1">&quot;{conflictEvent.name}&quot;. You can still create this event.</p>
-                </div>
-              </div>
-            )}
           </section>
 
           <div className="border-t border-border" />

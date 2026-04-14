@@ -119,6 +119,11 @@ export interface EventProduct {
 }
 
 /**
+ * Audit Log Action
+ */
+export type AuditAction = 'Created' | 'Updated' | 'Deleted'
+
+/**
  * Audit Log Entry
  */
 export interface AuditEntry {
@@ -126,7 +131,7 @@ export interface AuditEntry {
   timestamp: string
   userId: string
   userName: string
-  action: 'Created' | 'Updated' | 'Deleted'
+  action: AuditAction
   entityType: string
   entityName: string
   change: string
