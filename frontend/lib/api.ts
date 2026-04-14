@@ -233,8 +233,9 @@ export const eventsApi = {
     contactName?: string
     contactPhone?: string
     notes?: string
+    assignedTo?: string
   }): Promise<Event> {
-    const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, ...rest } = payload
+    const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, assignedTo, ...rest } = payload
     const data = await apiRequest<any>('/events', {
       method: 'POST',
       body: JSON.stringify({
@@ -245,6 +246,7 @@ export const eventsApi = {
         venue_address: venueAddress,
         contact_person: contactName,
         contact_phone: contactPhone,
+        assigned_to: assignedTo,
       }),
     })
     return mapEventFromBackend(data)
@@ -256,7 +258,7 @@ export const eventsApi = {
   },
 
   async updateEvent(id: string, payload: Partial<Event>): Promise<Event> {
-    const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, status, ...rest } = payload
+    const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, assignedTo, status, ...rest } = payload
     const data = await apiRequest<any>(`/events/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -267,6 +269,7 @@ export const eventsApi = {
         venue_address: venueAddress,
         contact_person: contactName,
         contact_phone: contactPhone,
+        assigned_to: assignedTo,
       }),
     })
     return mapEventFromBackend(data)

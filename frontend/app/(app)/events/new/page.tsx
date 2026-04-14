@@ -33,7 +33,7 @@ export default function NewEventPage() {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [staffList, setStaffList] = useState<User[]>([])
-  
+
   const [formData, setFormData] = useState({
     name: '',
     occasionType: '' as OccasionType | '',
@@ -100,7 +100,7 @@ export default function NewEventPage() {
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
         notes: formData.notes,
-        assigned_to: formData.assignedTo || undefined,
+        assignedTo: formData.assignedTo || undefined,
       })
       toast.success('Event created successfully')
       router.push('/events')
@@ -126,7 +126,7 @@ export default function NewEventPage() {
           {/* Section 1: Event Identity */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Event Identity</h2>
-            
+
             <div className="space-y-2">
               <Label htmlFor="name" className="text-label">
                 Event Name <span className="text-primary">*</span>
@@ -205,7 +205,7 @@ export default function NewEventPage() {
           {/* Section 3: Venue */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Venue</h2>
-            
+
             <div className="space-y-2">
               <Label htmlFor="venueName" className="text-label">
                 Venue Name <span className="text-primary">*</span>
@@ -238,7 +238,7 @@ export default function NewEventPage() {
           {/* Section 4: Contact */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Contact (Optional)</h2>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contactName" className="text-label">Contact Person Name</Label>
@@ -267,7 +267,7 @@ export default function NewEventPage() {
           {/* Section 5: Notes */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Notes</h2>
-            
+
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-label">Notes / Remarks</Label>
               <Textarea

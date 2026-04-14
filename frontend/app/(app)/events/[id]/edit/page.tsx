@@ -117,7 +117,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
         notes: formData.notes,
-        assigned_to: formData.assignedTo === 'unassigned' ? null : formData.assignedTo,
+        assignedTo: formData.assignedTo === 'unassigned' ? undefined : formData.assignedTo,
       })
       toast.success('Event updated successfully')
       router.push(`/events/${id}`)
