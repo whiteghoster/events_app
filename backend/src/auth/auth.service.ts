@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -13,6 +14,7 @@ import { UserRole } from './enums/user-role.enum';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private supabaseAdmin: SupabaseClient;
 
   constructor(
@@ -117,6 +119,7 @@ export class AuthService {
     });
 
     if (authError || !authData?.user || !authData?.session) {
+      this.logger.error(`❌ Auth failed for ${loginDto.email}: ${authError?.message || 'No user/session'}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -128,10 +131,12 @@ export class AuthService {
       .single();
 
     if (userError || !dbUser) {
-      throw new UnauthorizedException('User record not found');
+      this.logger.error(`❌ User record missing in DB for ${loginDto.email} (${authData.user.id}). Error: ${userError?.message}`);
+      throw new UnauthorizedException('User record not found in database. Please contact admin.');
     }
 
     if (dbUser.is_active === false) {
+      this.logger.warn(`⚠️ Inactive user attempt: ${loginDto.email}`);
       throw new UnauthorizedException('User account is inactive');
     }
 

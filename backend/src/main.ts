@@ -33,16 +33,28 @@ async function bootstrap() {
     logger.log('✅ Global exception filter configured');
 
     // CORS configuration — allow both local dev and production
-    const corsOrigin = process.env.FRONTEND_URL
-      ? [process.env.FRONTEND_URL, 'http://localhost:3000']
-      : ['https://events-app-seven-flax.vercel.app', 'http://localhost:3000'];
+    const frontendUrl = process.env.FRONTEND_URL;
+    const corsOrigin = [
+      'https://events-app-seven-flax.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ];
+
+    if (frontendUrl) {
+      corsOrigin.push(frontendUrl);
+      // Also add without trailing slash just in case
+      if (frontendUrl.endsWith('/')) {
+        corsOrigin.push(frontendUrl.slice(0, -1));
+      }
+    }
+
     app.enableCors({
       origin: corsOrigin,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
     });
-    logger.log(`✅ CORS enabled for: ${corsOrigin}`);
+    logger.log(`✅ CORS enabled for origins: ${corsOrigin.join(', ')}`);
 
     const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT') || 3002; // ✅ Default to 3002
