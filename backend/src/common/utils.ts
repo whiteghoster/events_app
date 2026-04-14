@@ -25,3 +25,12 @@ export function paginate<T>(
 export function paginationOffset(page: number, pageSize: number): number {
   return Math.max(0, (page - 1) * pageSize);
 }
+
+export function sanitizeSearchTerm(raw: string): string {
+  return raw.replace(/[%_,.*()]/g, '');
+}
+
+export function escapeCsvCell(value: unknown): string {
+  const str = String(value ?? '').replace(/"/g, '""');
+  return `"${str}"`;
+}

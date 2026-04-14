@@ -1,5 +1,5 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsString, IsEnum } from 'class-validator';
-import { UserRole } from '../../common/types';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsString, IsIn } from 'class-validator';
+import { UserRole, SELF_REGISTERABLE_ROLES } from '../../common/types';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email must be valid' })
@@ -15,6 +15,6 @@ export class RegisterDto {
   name?: string;
 
   @IsNotEmpty({ message: 'Role is required' })
-  @IsEnum(UserRole, { message: 'Invalid role' })
+  @IsIn(SELF_REGISTERABLE_ROLES, { message: 'Role must be staff or staff_member' })
   role: UserRole;
 }

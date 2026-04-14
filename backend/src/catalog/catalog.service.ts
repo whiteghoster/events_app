@@ -347,7 +347,14 @@ export class CatalogService {
 
   // SEED DATA
 
+  private assertNonProduction() {
+    if (process.env.NODE_ENV === 'production') {
+      throw new BadRequestException('Seed operations are disabled in production');
+    }
+  }
+
   async seedCategories() {
+    this.assertNonProduction();
     const categories = ['Flowers', 'Foliage', 'Vases', 'Ribbons', 'Lighting', 'Decorations'];
 
     const { error } = await this.supabase
@@ -365,6 +372,7 @@ export class CatalogService {
   }
 
   async seedProducts() {
+    this.assertNonProduction();
     const { data: categories, error: catError } = await this.supabase
       .from('categories')
       .select('id, name');

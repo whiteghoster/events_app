@@ -1,7 +1,6 @@
 import {
   Injectable,
   BadRequestException,
-  ForbiddenException,
   NotFoundException,
   Logger,
 } from '@nestjs/common';
@@ -24,11 +23,7 @@ export class UsersService {
     return this.databaseService.getClient();
   }
 
-  async create(createUserDto: CreateUserDto, adminRole: UserRole, actorId: string) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can create users');
-    }
-
+  async create(createUserDto: CreateUserDto, actorId: string) {
     if (createUserDto.role === UserRole.ADMIN) {
       throw new BadRequestException('Cannot create Admin users. Use registration instead.');
     }
@@ -69,7 +64,10 @@ export class UsersService {
       .single();
 
     if (userError) {
-      await this.supabase.auth.admin.deleteUser(authData.user.id);
+      const { error: cleanupError } = await this.supabase.auth.admin.deleteUser(authData.user.id);
+      if (cleanupError) {
+        this.logger.error(`Orphaned auth user ${authData.user.id}: cleanup failed: ${cleanupError.message}`);
+      }
       throw new BadRequestException(`Failed to create user record: ${userError.message}`);
     }
 
@@ -84,11 +82,7 @@ export class UsersService {
     return user;
   }
 
-  async findAll(adminRole: UserRole, page: number = 1, pageSize: number = 20) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can view all users');
-    }
-
+  async findAll(page: number = 1, pageSize: number = 20) {
     const offset = Math.max(0, (page - 1) * pageSize);
 
     const { data, count, error } = await this.supabase
@@ -110,11 +104,7 @@ export class UsersService {
     };
   }
 
-  async findById(id: string, adminRole: UserRole) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can view user details');
-    }
-
+  async findById(id: string) {
     const { data, error } = await this.supabase
       .from('users')
       .select('id, email, name, role, is_active, created_at')
@@ -128,11 +118,7 @@ export class UsersService {
     return data;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, adminRole: UserRole, actorId: string) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can update users');
-    }
-
+  async update(id: string, updateUserDto: UpdateUserDto, actorId: string) {
     if (updateUserDto.role === UserRole.ADMIN) {
       throw new BadRequestException('Cannot assign Admin role. Use registration instead.');
     }
@@ -183,12 +169,8 @@ export class UsersService {
     return data;
   }
 
-  async remove(id: string, adminRole: UserRole, actorId: string) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can deactivate users');
-    }
-
-    const existingUser = await this.findById(id, adminRole);
+  async deactivate(id: string, actorId: string) {
+    const existingUser = await this.findById(id);
 
     const { data, error } = await this.supabase
       .from('users')
@@ -210,14 +192,10 @@ export class UsersService {
       new_values: data,
     });
 
-    return { ...data, message: 'User deactivated successfully' };
+    return data;
   }
 
-  async activate(id: string, adminRole: UserRole, actorId: string) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can activate users');
-    }
-
+  async activate(id: string, actorId: string) {
     const { data, error } = await this.supabase
       .from('users')
       .update({ is_active: true, updated_at: new Date().toISOString() })
@@ -229,14 +207,10 @@ export class UsersService {
       throw new BadRequestException(`Failed to activate user: ${error.message}`);
     }
 
-    return { ...data, message: 'User activated successfully' };
+    return data;
   }
 
-  async hardDelete(id: string, adminRole: UserRole, actorId: string) {
-    if (adminRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admin can delete users permanently');
-    }
-
+  async hardDelete(id: string, actorId: string) {
     if (id === actorId) {
       throw new BadRequestException('Cannot permanently delete your own account');
     }

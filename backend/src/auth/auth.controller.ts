@@ -1,9 +1,11 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { AuthenticatedUser } from '../common/types';
 
 @Controller('auth')
 export class AuthController {
@@ -45,10 +47,9 @@ export class AuthController {
     return { success: true, data: user };
   }
 
-  @Public()
   @Post('logout')
-  async logout() {
-    await this.authService.signOut();
+  async logout(@CurrentUser() user: AuthenticatedUser) {
+    await this.authService.signOut(user.id);
     return { success: true };
   }
 }

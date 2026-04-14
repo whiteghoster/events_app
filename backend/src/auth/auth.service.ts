@@ -5,8 +5,6 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -14,13 +12,11 @@ import { RegisterDto } from './dto/register.dto';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly supabase: SupabaseClient;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly databaseService: DatabaseService,
-  ) {
-    this.supabase = this.databaseService.getClient();
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  private get supabase() {
+    return this.databaseService.getClient();
   }
 
   async register(registerDto: RegisterDto) {
@@ -36,42 +32,38 @@ export class AuthService {
 
     const displayName = registerDto.name || registerDto.email.split('@')[0];
 
-    try {
-      const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
-        email: registerDto.email,
-        password: registerDto.password,
-        email_confirm: true,
-        user_metadata: { role: registerDto.role, name: displayName },
-      });
+    const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
+      email: registerDto.email,
+      password: registerDto.password,
+      email_confirm: true,
+      user_metadata: { role: registerDto.role, name: displayName },
+    });
 
-      if (authError) {
-        throw new BadRequestException(`Registration failed: ${authError.message}`);
-      }
-
-      const { data: user, error: userError } = await this.supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: registerDto.email,
-          name: displayName,
-          role: registerDto.role,
-          is_active: true,
-        })
-        .select('id, email, name, role, is_active')
-        .single();
-
-      if (userError) {
-        await this.supabase.auth.admin.deleteUser(authData.user.id);
-        throw new InternalServerErrorException(`Failed to create user record: ${userError.message}`);
-      }
-
-      return user;
-    } catch (error) {
-      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Registration failed');
+    if (authError) {
+      throw new BadRequestException(`Registration failed: ${authError.message}`);
     }
+
+    const { data: user, error: userError } = await this.supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email: registerDto.email,
+        name: displayName,
+        role: registerDto.role,
+        is_active: true,
+      })
+      .select('id, email, name, role, is_active')
+      .single();
+
+    if (userError) {
+      const { error: cleanupError } = await this.supabase.auth.admin.deleteUser(authData.user.id);
+      if (cleanupError) {
+        this.logger.error(`Orphaned auth user ${authData.user.id}: cleanup failed: ${cleanupError.message}`);
+      }
+      throw new InternalServerErrorException(`Failed to create user record: ${userError.message}`);
+    }
+
+    return user;
   }
 
   async login(loginDto: LoginDto) {
@@ -142,9 +134,10 @@ export class AuthService {
     };
   }
 
-  async signOut() {
-    const { error } = await this.supabase.auth.signOut();
+  async signOut(userId: string) {
+    const { error } = await this.supabase.auth.admin.signOut(userId, 'global');
     if (error) {
+      this.logger.error(`Sign out failed for user ${userId}: ${error.message}`);
       throw new InternalServerErrorException('Failed to sign out');
     }
   }

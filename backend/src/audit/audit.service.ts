@@ -1,19 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { AuditAction } from '../common/types';
+import { AuditAction, AuditLog, AuditLogResult } from '../common/types';
 import { FindAuditLogsDto } from './dto/find-audit-logs.dto';
+import { sanitizeSearchTerm, escapeCsvCell } from '../common/utils';
 
 const AUDIT_SELECT = `*, users (email, name, role)`;
-
-export interface AuditLogResult {
-  data: any[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
-  };
-}
 
 @Injectable()
 export class AuditService {
@@ -28,7 +19,7 @@ export class AuditService {
   async findAll(dto: FindAuditLogsDto = {}): Promise<AuditLogResult> {
     let query = this.supabase
       .from('audit_log')
-      .select(AUDIT_SELECT)
+      .select(AUDIT_SELECT, { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (dto.entity_type) query = query.eq('entity_type', dto.entity_type);
@@ -39,9 +30,12 @@ export class AuditService {
     if (dto.date_to) query = query.lte('created_at', dto.date_to);
 
     if (dto.search) {
-      query = query.or(
-        `old_values.ilike.%${dto.search}%,new_values.ilike.%${dto.search}%,entity_type.ilike.%${dto.search}%`,
-      );
+      const sanitized = sanitizeSearchTerm(dto.search);
+      if (sanitized) {
+        query = query.or(
+          `old_values.ilike.%${sanitized}%,new_values.ilike.%${sanitized}%,entity_type.ilike.%${sanitized}%`,
+        );
+      }
     }
 
     const limit = Math.min(dto.limit || 50, 100);
@@ -50,19 +44,19 @@ export class AuditService {
 
     query = query.range(offset, offset + limit - 1);
 
-    const { data, error } = await query;
+    const { data, count, error } = await query;
 
     if (error) {
-      throw new Error(`Failed to fetch audit logs: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch audit logs: ${error.message}`);
     }
 
     return {
-      data: data ?? [],
+      data: (data ?? []) as AuditLog[],
       pagination: {
         page,
         limit,
-        total: data?.length ?? 0,
-        hasMore: (data?.length ?? 0) === limit,
+        total: count ?? 0,
+        hasMore: page * limit < (count ?? 0),
       },
     };
   }
@@ -78,7 +72,7 @@ export class AuditService {
       throw new NotFoundException('Audit log not found');
     }
 
-    return data;
+    return data as AuditLog;
   }
 
   async exportAuditLogs(dto: FindAuditLogsDto = {}) {
@@ -92,7 +86,7 @@ export class AuditService {
     };
   }
 
-  private convertToCSV(logs: any[]): string {
+  private convertToCSV(logs: AuditLog[]): string {
     if (logs.length === 0) return '';
 
     const headers = [
@@ -115,8 +109,8 @@ export class AuditService {
     ]);
 
     return [
-      headers.join(','),
-      ...csvRows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+      headers.map(escapeCsvCell).join(','),
+      ...csvRows.map((row) => row.map(escapeCsvCell).join(',')),
     ].join('\n');
   }
 

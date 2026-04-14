@@ -1,6 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsDateString, IsUUID } from 'class-validator';
 import { OccasionType } from '../../common/types';
-import { EventStatus } from '../../common/types';
 
 export class UpdateEventDto {
   @IsString()
@@ -34,10 +33,6 @@ export class UpdateEventDto {
   @IsString()
   @IsOptional()
   notes?: string;
-
-  @IsEnum(EventStatus)
-  @IsOptional()
-  status?: EventStatus;
 
   @IsUUID()
   @IsOptional()

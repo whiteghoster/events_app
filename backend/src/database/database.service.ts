@@ -30,6 +30,7 @@ export class DatabaseService {
     const { error } = await this.supabase.rpc('set_app_user_id', { user_id: null });
     if (error) {
       this.logger.error(`Failed to clear app.user_id: ${error.message}`);
+      throw error;
     }
   }
 }

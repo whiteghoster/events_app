@@ -4,6 +4,8 @@ export enum UserRole {
   STAFF_MEMBER = 'staff_member',
 }
 
+export const SELF_REGISTERABLE_ROLES = [UserRole.STAFF, UserRole.STAFF_MEMBER] as const;
+
 export enum EventStatus {
   LIVE = 'live',
   HOLD = 'hold',
@@ -40,4 +42,30 @@ export interface PaginatedResult<T = any> {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+export interface AuditLog {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: AuditAction;
+  user_id: string;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  created_at: string;
+  users?: {
+    email: string;
+    name: string;
+    role: string;
+  };
+}
+
+export interface AuditLogResult {
+  data: AuditLog[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
 }

@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 export const supabaseConfig = {
   url: process.env.SUPABASE_URL,
   anonKey: process.env.SUPABASE_ANON_KEY,
@@ -18,14 +16,4 @@ export function validateSupabaseConfig() {
   if (!anonKey) {
     throw new Error('SUPABASE_ANON_KEY environment variable is not set');
   }
-}
-
-export function createSupabaseClient(useServiceRole = false) {
-  const key = useServiceRole ? supabaseConfig.serviceRoleKey : supabaseConfig.anonKey;
-
-  if (!supabaseConfig.url || !key) {
-    throw new Error('Supabase configuration incomplete');
-  }
-
-  return createClient(supabaseConfig.url, key);
 }
