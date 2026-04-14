@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserCheck, ShieldAlert, RefreshCw } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canViewUsers } from '@/lib/auth-context'
 import { usersApi } from '@/lib/api'
@@ -138,6 +138,34 @@ export default function UsersPage() {
     }
   }
 
+  const handleActivate = async (user: User) => {
+    try {
+      const updated = await usersApi.activateUser(user.id)
+      setUsers(prev => prev.map(u => u.id === user.id ? updated : u))
+      toast.success('User account re-activated')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to activate user')
+    }
+  }
+
+  const handlePermanentDelete = async (user: User) => {
+    const confirmed = window.confirm(
+      `DANGER: Are you sure you want to PERMANENTLY delete ${user.name}? This will remove all their auth credentials and database records. This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setIsLoading(true)
+    try {
+      await usersApi.permanentlyDeleteUser(user.id)
+      setUsers(prev => prev.filter(u => u.id !== user.id))
+      toast.success('User permanently deleted')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to permanently delete user')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
@@ -183,23 +211,50 @@ export default function UsersPage() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleOpenDialog(user)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    {user.id !== currentUser.id && (
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(user)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    {user.isActive !== false ? (
+                      <>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleOpenDialog(user)}
+                          title="Edit User"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        {user.id !== currentUser.id && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDelete(user)}
+                            title="Deactivate User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 text-success hover:text-success/80"
+                          onClick={() => handleActivate(user)}
+                          title="Activate User"
+                        >
+                          <UserCheck className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 text-destructive hover:text-destructive/80"
+                          onClick={() => handlePermanentDelete(user)}
+                          title="Permanently Delete"
+                        >
+                          <ShieldAlert className="w-4 h-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </TableCell>

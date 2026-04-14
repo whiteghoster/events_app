@@ -108,4 +108,33 @@ export class UsersController {
       message: 'User deactivated successfully',
     };
   }
+
+  /**
+   * ACTIVATE USER
+   * Admin only
+   */
+  @Post(':id/activate')
+  @Roles(UserRole.ADMIN)
+  async activate(@Param('id') id: string, @CurrentUser() user: any) {
+    const result = await this.usersService.activate(id, user.role);
+    return {
+      success: true,
+      data: result,
+      message: 'User activated successfully',
+    };
+  }
+
+  /**
+   * PERMANENT DELETE
+   * Admin only
+   */
+  @Delete(':id/permanent')
+  @Roles(UserRole.ADMIN)
+  async permanentDelete(@Param('id') id: string, @CurrentUser() user: any) {
+    await this.usersService.hardDelete(id, user.role);
+    return {
+      success: true,
+      message: 'User permanently deleted from system',
+    };
+  }
 }

@@ -313,4 +313,67 @@ export class UsersService {
       message: 'User deactivated successfully',
     };
   }
+
+  /**
+   * ACTIVATE USER (ADMIN ONLY)
+   * Restore user - set is_active to true
+   */
+  async activate(id: string, adminRole: UserRole) {
+    if (adminRole !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admin can activate users');
+    }
+
+    const { data, error } = await this.supabaseAdmin
+      .from('users')
+      .update({
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to activate user: ${error.message}`);
+    }
+
+    return {
+      ...data,
+      message: 'User activated successfully',
+    };
+  }
+
+  /**
+   * PERMANENT DELETE (ADMIN ONLY)
+   * Hard delete - remove from Auth AND Database
+   */
+  async hardDelete(id: string, adminRole: UserRole) {
+    if (adminRole !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admin can delete users permanently');
+    }
+
+    // 1. Delete from Supabase Auth
+    try {
+      const { error: authError } = await this.supabaseAdmin.auth.admin.deleteUser(id);
+      if (authError) {
+        // If auth delete fails, it might be because the user doesn't exist in Auth.
+        // We log it and proceed to try and clean up the DB record.
+        console.warn(`Auth delete failed for ${id}: ${authError.message}`);
+      }
+    } catch (err) {
+      console.warn(`Auth delete failed for ${id}:`, err);
+    }
+
+    // 2. Delete from Database
+    const { error: dbError } = await this.supabaseAdmin
+      .from('users')
+      .delete()
+      .eq('id', id);
+
+    if (dbError) {
+      throw new BadRequestException(`Failed to delete user from database: ${dbError.message}`);
+    }
+
+    return { success: true, message: 'User permanently deleted' };
+  }
 }

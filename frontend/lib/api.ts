@@ -473,6 +473,19 @@ export const usersApi = {
   async deleteUser(id: string): Promise<void> {
     await apiRequest(`/users/${id}`, { method: 'DELETE' })
   },
+
+  async activateUser(id: string): Promise<User> {
+    const data = await apiRequest<any>(`/users/${id}/activate`, {
+      method: 'POST',
+    })
+    return mapUserFromBackend(data)
+  },
+
+  async permanentlyDeleteUser(id: string): Promise<void> {
+    await apiRequest(`/users/${id}/permanent`, {
+      method: 'DELETE',
+    })
+  },
 }
 
 // -------------------------------------------------------------------
