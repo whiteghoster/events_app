@@ -8,6 +8,8 @@ import { DatabaseService } from '../database/database.service';
 import { UserRole } from '../auth/enums/user-role.enum';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../auth/enums/audit-action.enum';
 
 import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum, IsBoolean, MinLength } from 'class-validator';
 
@@ -54,6 +56,7 @@ export class UsersService {
   constructor(
     private databaseService: DatabaseService,
     private configService: ConfigService,
+    private auditService: AuditService,
   ) {
     this.supabaseAdmin = createClient(
       this.configService.get<string>('SUPABASE_URL') || '',
@@ -70,7 +73,7 @@ export class UsersService {
    * Only Admin can create Staff and Staff Member users
    * Cannot create other Admins
    */
-  async create(createUserDto: CreateUserDto, adminRole: UserRole) {
+  async create(createUserDto: CreateUserDto, adminRole: UserRole, actorId: string) {
     // Only Admin can create users
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can create users');
@@ -138,6 +141,15 @@ export class UsersService {
         await this.supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         throw new BadRequestException(`Failed to create user record: ${userError.message}`);
       }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'User',
+      entity_id: user.id,
+      action: AuditAction.CREATED,
+      user_id: actorId, // Correctly identifies the actor
+      new_values: user,
+    });
 
       return {
         ...user,
@@ -221,6 +233,7 @@ export class UsersService {
     id: string,
     updateUserDto: UpdateUserDto,
     adminRole: UserRole,
+    actorId: string,
   ) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can update users');
@@ -263,6 +276,16 @@ export class UsersService {
       throw new BadRequestException(`Failed to update user: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'User',
+      entity_id: id,
+      action: AuditAction.UPDATED,
+      user_id: actorId,
+      old_values: existingUser,
+      new_values: data,
+    });
+
     // Update auth metadata if role changed
     if (updateUserDto.role) {
       try {
@@ -283,7 +306,7 @@ export class UsersService {
    * DEACTIVATE USER (ADMIN ONLY)
    * Soft delete - set is_active to false
    */
-  async remove(id: string, adminRole: UserRole) {
+  async remove(id: string, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can deactivate users');
     }
@@ -308,6 +331,16 @@ export class UsersService {
       throw new BadRequestException(`Failed to deactivate user: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'User',
+      entity_id: id,
+      action: AuditAction.DELETED,
+      user_id: actorId,
+      old_values: existingUser,
+      new_values: data,
+    });
+
     return {
       ...data,
       message: 'User deactivated successfully',
@@ -318,7 +351,7 @@ export class UsersService {
    * ACTIVATE USER (ADMIN ONLY)
    * Restore user - set is_active to true
    */
-  async activate(id: string, adminRole: UserRole) {
+  async activate(id: string, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can activate users');
     }
@@ -347,7 +380,7 @@ export class UsersService {
    * PERMANENT DELETE (ADMIN ONLY)
    * Hard delete - remove from Auth AND Database
    */
-  async hardDelete(id: string, adminRole: UserRole) {
+  async hardDelete(id: string, adminRole: UserRole, actorId: string) {
     if (adminRole !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admin can delete users permanently');
     }
@@ -373,6 +406,14 @@ export class UsersService {
     if (dbError) {
       throw new BadRequestException(`Failed to delete user from database: ${dbError.message}`);
     }
+
+    // Audit Log (Before we lose reference)
+    await this.auditService.createLog({
+      entity_type: 'User',
+      entity_id: id,
+      action: 'PERMANENTLY_DELETED',
+      user_id: actorId,
+    });
 
     return { success: true, message: 'User permanently deleted' };
   }

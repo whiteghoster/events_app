@@ -33,7 +33,7 @@ export class EventsController {
   ) {
     return {
       success: true,
-      data: await this.eventsService.createEvent(createEventDto),
+      data: await this.eventsService.createEvent(createEventDto, user.id),
     };
   }
 
@@ -73,7 +73,7 @@ export class EventsController {
   ) {
     return {
       success: true,
-      data: await this.eventsService.updateEvent(id, updateEventDto, user.role),
+      data: await this.eventsService.updateEvent(id, updateEventDto, user.role, user.id),
     };
   }
 
@@ -86,7 +86,7 @@ export class EventsController {
   ) {
     return {
       success: true,
-      data: await this.eventsService.closeEvent(id, closeEventDto.status, user.role),
+      data: await this.eventsService.closeEvent(id, closeEventDto.status, user.role, user.id),
       message: `Event moved to ${closeEventDto.status} successfully`,
     };
   }
@@ -108,6 +108,7 @@ export class EventsController {
           event_id: eventId,
         },
         user.role,
+        user.id,
       ),
     };
   }
@@ -143,6 +144,7 @@ export class EventsController {
         rowId,
         updateEventProductDto,
         user.role,
+        user.id,
       ),
     };
   }
@@ -154,7 +156,7 @@ export class EventsController {
     @Param('rowId') rowId: string,
     @CurrentUser() user: any,
   ) {
-    await this.eventsService.deleteEventProduct(rowId, user.role);
+    await this.eventsService.deleteEventProduct(rowId, user.role, user.id);
     return {
       success: true,
       message: 'Event product deleted successfully',
@@ -177,7 +179,7 @@ export class EventsController {
   ) {
     return {
       success: true,
-      data: await this.eventsService.deleteEvent(id, user.role),
+      data: await this.eventsService.deleteEvent(id, user.role, user.id),
     };
   }
 }

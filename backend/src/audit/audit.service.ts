@@ -200,4 +200,41 @@ export class AuditService {
       ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
   }
+
+  /**
+   * CREATE LOG MANUALLY
+   * Used by services to explicitly record actions
+   */
+  async createLog(params: {
+    entity_type: string;
+    entity_id: string;
+    action: AuditAction | string;
+    user_id: string;
+    old_values?: any;
+    new_values?: any;
+  }) {
+    const supabase = this.databaseService.getClient();
+
+    // Sanitize values (exclude passwords)
+    const sanitize = (obj: any) => {
+      if (!obj) return null;
+      const copy = { ...obj };
+      delete copy.password;
+      return copy;
+    };
+
+    const { error } = await supabase.from('audit_log').insert({
+      entity_type: params.entity_type,
+      entity_id: params.entity_id,
+      action: params.action,
+      user_id: params.user_id,
+      old_values: sanitize(params.old_values),
+      new_values: sanitize(params.new_values),
+      created_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error('Failed to create manual audit log:', error);
+    }
+  }
 }

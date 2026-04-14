@@ -15,6 +15,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/user-role.enum';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('catalog')
 export class CatalogController {
@@ -24,10 +25,10 @@ export class CatalogController {
 
   @Post('categories')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createCategory(@Body() createCategoryDto: CreateCategoryDto) {
+  async createCategory(@Body() createCategoryDto: CreateCategoryDto, @CurrentUser() user: any) {
     return {
       success: true,
-      data: await this.catalogService.createCategory(createCategoryDto),
+      data: await this.catalogService.createCategory(createCategoryDto, user.id),
     };
   }
 
@@ -59,17 +60,18 @@ export class CatalogController {
   async updateCategory(
     @Param('id') id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
+    @CurrentUser() user: any,
   ) {
     return {
       success: true,
-      data: await this.catalogService.updateCategory(id, updateCategoryDto),
+      data: await this.catalogService.updateCategory(id, updateCategoryDto, user.id),
     };
   }
 
   @Delete('categories/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteCategory(@Param('id') id: string) {
-    await this.catalogService.deleteCategory(id);
+  async deleteCategory(@Param('id') id: string, @CurrentUser() user: any) {
+    await this.catalogService.deleteCategory(id, user.id);
     return {
       success: true,
       message: 'Category deleted successfully',
@@ -80,10 +82,10 @@ export class CatalogController {
 
   @Post('products')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async createProduct(@Body() createProductDto: CreateProductDto) {
+  async createProduct(@Body() createProductDto: CreateProductDto, @CurrentUser() user: any) {
     return {
       success: true,
-      data: await this.catalogService.createProduct(createProductDto),
+      data: await this.catalogService.createProduct(createProductDto, user.id),
     };
   }
 
@@ -129,27 +131,31 @@ export class CatalogController {
 
   @Put('products/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async updateProduct(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+  async updateProduct(
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+    @CurrentUser() user: any,
+  ) {
     return {
       success: true,
-      data: await this.catalogService.updateProduct(id, updateProductDto),
+      data: await this.catalogService.updateProduct(id, updateProductDto, user.id),
     };
   }
 
   @Post('products/:id/deactivate')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deactivateProduct(@Param('id') id: string) {
+  async deactivateProduct(@Param('id') id: string, @CurrentUser() user: any) {
     return {
       success: true,
-      data: await this.catalogService.deactivateProduct(id),
+      data: await this.catalogService.deactivateProduct(id, user.id),
       message: 'Product deactivated successfully',
     };
   }
 
   @Delete('products/:id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  async deleteProduct(@Param('id') id: string) {
-    await this.catalogService.deleteProduct(id);
+  async deleteProduct(@Param('id') id: string, @CurrentUser() user: any) {
+    await this.catalogService.deleteProduct(id, user.id);
     return {
       success: true,
       message: 'Product deleted successfully',

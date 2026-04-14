@@ -27,7 +27,7 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
     @CurrentUser() user: any,
   ) {
-    const newUser = await this.usersService.create(createUserDto, user.role);
+    const newUser = await this.usersService.create(createUserDto, user.role, user.id);
     return {
       success: true,
       data: newUser,
@@ -86,6 +86,7 @@ export class UsersController {
       id,
       updateUserDto,
       user.role,
+      user.id,
     );
     return {
       success: true,
@@ -101,7 +102,7 @@ export class UsersController {
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
-    const result = await this.usersService.remove(id, user.role);
+    const result = await this.usersService.remove(id, user.role, user.id);
     return {
       success: true,
       data: result,
@@ -116,7 +117,7 @@ export class UsersController {
   @Post(':id/activate')
   @Roles(UserRole.ADMIN)
   async activate(@Param('id') id: string, @CurrentUser() user: any) {
-    const result = await this.usersService.activate(id, user.role);
+    const result = await this.usersService.activate(id, user.role, user.id);
     return {
       success: true,
       data: result,
@@ -131,7 +132,7 @@ export class UsersController {
   @Delete(':id/permanent')
   @Roles(UserRole.ADMIN)
   async permanentDelete(@Param('id') id: string, @CurrentUser() user: any) {
-    await this.usersService.hardDelete(id, user.role);
+    await this.usersService.hardDelete(id, user.role, user.id);
     return {
       success: true,
       message: 'User permanently deleted from system',

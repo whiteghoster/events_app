@@ -10,10 +10,15 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { EventStatus } from '../auth/enums/event-status.enum';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../auth/enums/audit-action.enum';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly auditService: AuditService,
+  ) { }
 
   private get supabase() {
     return this.databaseService.getClient();
@@ -23,7 +28,7 @@ export class CatalogService {
   // CATEGORIES
   // ===========================
 
-  async createCategory(createCategoryDto: CreateCategoryDto) {
+  async createCategory(createCategoryDto: CreateCategoryDto, actorId: string) {
     const { data, error } = await this.supabase
       .from('categories')
       .insert({
@@ -39,6 +44,15 @@ export class CatalogService {
       }
       throw new BadRequestException(`Failed to create category: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Category',
+      entity_id: data.id,
+      action: AuditAction.CREATED,
+      user_id: actorId,
+      new_values: data,
+    });
 
     return data;
   }
@@ -83,9 +97,9 @@ export class CatalogService {
     return data;
   }
 
-  async updateCategory(id: string, updateCategoryDto: UpdateCategoryDto) {
+  async updateCategory(id: string, updateCategoryDto: UpdateCategoryDto, actorId: string) {
     // Verify category exists
-    await this.findCategoryById(id);
+    const oldCategory = await this.findCategoryById(id);
 
     const { data, error } = await this.supabase
       .from('categories')
@@ -101,12 +115,22 @@ export class CatalogService {
       throw new BadRequestException(`Failed to update category: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Category',
+      entity_id: id,
+      action: AuditAction.UPDATED,
+      user_id: actorId,
+      old_values: oldCategory,
+      new_values: data,
+    });
+
     return data;
   }
 
-  async deleteCategory(id: string) {
+  async deleteCategory(id: string, actorId: string) {
     // Verify category exists
-    await this.findCategoryById(id);
+    const category = await this.findCategoryById(id);
 
     // Check for active products in this category
     const { count, error: countError } = await this.supabase
@@ -133,6 +157,15 @@ export class CatalogService {
       throw new BadRequestException(`Failed to delete category: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Category',
+      entity_id: id,
+      action: AuditAction.DELETED,
+      user_id: actorId,
+      old_values: category,
+    });
+
     return { message: 'Category deleted successfully' };
   }
 
@@ -140,7 +173,7 @@ export class CatalogService {
   // PRODUCTS
   // ===========================
 
-  async createProduct(createProductDto: CreateProductDto) {
+  async createProduct(createProductDto: CreateProductDto, actorId: string) {
     // Verify category exists
     await this.findCategoryById(createProductDto.category_id);
 
@@ -164,6 +197,15 @@ export class CatalogService {
       }
       throw new BadRequestException(`Failed to create product: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Product',
+      entity_id: data.id,
+      action: AuditAction.CREATED,
+      user_id: actorId,
+      new_values: data,
+    });
 
     return data;
   }
@@ -247,9 +289,9 @@ export class CatalogService {
     return data;
   }
 
-  async updateProduct(id: string, updateProductDto: UpdateProductDto) {
+  async updateProduct(id: string, updateProductDto: UpdateProductDto, actorId: string) {
     // Verify product exists
-    await this.findProductById(id);
+    const oldProduct = await this.findProductById(id);
 
     // If category_id is being updated, verify new category exists
     if (updateProductDto.category_id) {
@@ -270,12 +312,22 @@ export class CatalogService {
       throw new BadRequestException(`Failed to update product: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Product',
+      entity_id: id,
+      action: AuditAction.UPDATED,
+      user_id: actorId,
+      old_values: oldProduct,
+      new_values: data,
+    });
+
     return data;
   }
 
-  async deactivateProduct(id: string) {
+  async deactivateProduct(id: string, actorId: string) {
     // Verify product exists
-    await this.findProductById(id);
+    const oldProduct = await this.findProductById(id);
 
     // Check if product is used in any live events
     const { data: linkedRows, error: linkedRowsError } = await this.supabase
@@ -316,12 +368,22 @@ export class CatalogService {
       throw new BadRequestException(`Failed to deactivate product: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Product',
+      entity_id: id,
+      action: 'DEACTIVATED',
+      user_id: actorId,
+      old_values: oldProduct,
+      new_values: data,
+    });
+
     return data;
   }
 
-  async deleteProduct(id: string) {
+  async deleteProduct(id: string, actorId: string) {
     // Verify product exists
-    await this.findProductById(id);
+    const product = await this.findProductById(id);
 
     // Check if product is in any events
     const { count, error: countError } = await this.supabase
@@ -349,6 +411,15 @@ export class CatalogService {
     if (error) {
       throw new BadRequestException(`Failed to delete product: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Product',
+      entity_id: id,
+      action: AuditAction.DELETED,
+      user_id: actorId,
+      old_values: product,
+    });
 
     return { message: 'Product deleted successfully' };
   }

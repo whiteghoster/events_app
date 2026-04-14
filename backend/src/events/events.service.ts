@@ -12,6 +12,8 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../auth/enums/audit-action.enum';
 
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   [EventStatus.LIVE]: [EventStatus.HOLD, EventStatus.FINISHED],
@@ -21,7 +23,10 @@ const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
 
 @Injectable()
 export class EventsService {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly auditService: AuditService,
+  ) { }
 
   private get supabase() {
     return this.databaseService.getClient();
@@ -72,7 +77,7 @@ export class EventsService {
 
   // ========== EVENTS ==========
 
-  async createEvent(createEventDto: CreateEventDto) {
+  async createEvent(createEventDto: CreateEventDto, actorId: string) {
     const payload = {
       name: createEventDto.name,
       occasion_type: createEventDto.occasion_type,
@@ -98,6 +103,15 @@ export class EventsService {
     if (error) {
       throw new BadRequestException(`Failed to create event: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event',
+      entity_id: data.id,
+      action: AuditAction.CREATED,
+      user_id: actorId,
+      new_values: data,
+    });
 
     return data;
   }
@@ -151,7 +165,7 @@ export class EventsService {
     return await this.getEventOrThrow(id);
   }
 
-  async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole) {
+  async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole, actorId: string) {
     const event = await this.getEventOrThrow(id);
     this.enforceEventEditPermission(event, role);
 
@@ -188,10 +202,20 @@ export class EventsService {
       throw new BadRequestException(`Failed to update event: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event',
+      entity_id: id,
+      action: AuditAction.UPDATED,
+      user_id: actorId,
+      old_values: event,
+      new_values: data,
+    });
+
     return data;
   }
 
-  async closeEvent(id: string, newStatus: EventStatus, role: UserRole) {
+  async closeEvent(id: string, newStatus: EventStatus, role: UserRole, actorId: string) {
     if (role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admin can move event status');
     }
@@ -229,6 +253,16 @@ export class EventsService {
       throw new BadRequestException(`Failed to update event status: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event',
+      entity_id: id,
+      action: 'STATUS_CHANGED',
+      user_id: actorId,
+      old_values: { status: event.status },
+      new_values: { status: newStatus },
+    });
+
     return data;
   }
 
@@ -237,6 +271,7 @@ export class EventsService {
   async createEventProduct(
     createEventProductDto: CreateEventProductDto,
     role: UserRole,
+    actorId: string,
   ) {
     const event = await this.getEventOrThrow(createEventProductDto.event_id);
     this.enforceEventEditPermission(event, role);
@@ -264,6 +299,15 @@ export class EventsService {
     if (error) {
       throw new BadRequestException(`Failed to create event product: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event Product',
+      entity_id: data.id,
+      action: AuditAction.CREATED,
+      user_id: actorId,
+      new_values: data,
+    });
 
     return data;
   }
@@ -313,6 +357,7 @@ export class EventsService {
     rowId: string,
     updateEventProductDto: UpdateEventProductDto,
     role: UserRole,
+    actorId: string,
   ) {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
@@ -360,10 +405,20 @@ export class EventsService {
       throw new BadRequestException(`Failed to update event product: ${error.message}`);
     }
 
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event Product',
+      entity_id: rowId,
+      action: AuditAction.UPDATED,
+      user_id: actorId,
+      old_values: row,
+      new_values: data,
+    });
+
     return data;
   }
 
-  async deleteEventProduct(rowId: string, role: UserRole) {
+  async deleteEventProduct(rowId: string, role: UserRole, actorId: string) {
     const { data: row, error: rowError } = await this.supabase
       .from('event_products')
       .select('*')
@@ -385,6 +440,15 @@ export class EventsService {
     if (error) {
       throw new BadRequestException(`Failed to delete event product: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event Product',
+      entity_id: rowId,
+      action: AuditAction.DELETED,
+      user_id: actorId,
+      old_values: row,
+    });
 
     return { message: 'Event product deleted successfully' };
   }
@@ -432,7 +496,7 @@ export class EventsService {
     }));
   }
 
-  async deleteEvent(id: string, role: UserRole) {
+  async deleteEvent(id: string, role: UserRole, actorId: string) {
     if (role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admins can delete events');
     }
@@ -444,6 +508,15 @@ export class EventsService {
     if (error) {
       throw new BadRequestException(`Failed to delete event: ${error.message}`);
     }
+
+    // Audit Log
+    await this.auditService.createLog({
+      entity_type: 'Event',
+      entity_id: id,
+      action: AuditAction.DELETED, // Treated as Hard Delete here per logic
+      user_id: actorId,
+      old_values: event,
+    });
 
     return { message: 'Event deleted successfully' };
   }
