@@ -94,23 +94,26 @@ export default function UsersPage() {
     setIsLoading(true)
     try {
       if (editingUser) {
-        await usersApi.updateUser(editingUser.id, {
+        const updated = await usersApi.updateUser(editingUser.id, {
           name: formData.name,
           role: formData.role,
         })
-        toast.success('User updated')
+        setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
+        toast.success('User updated successfully')
       } else {
         await usersApi.createUser({
           name: formData.name,
           email: formData.email,
           role: formData.role,
+          password: Math.random().toString(36).slice(-10), // Random password for invitee
         })
-        toast.success('Invite sent')
+        toast.success('User invitation created')
+        fetchUsers()
       }
-      fetchUsers() // Refresh list
       setDialogOpen(false)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save user')
+      console.error('Save failed:', error)
+      toast.error(error.message || 'Error processing request')
     } finally {
       setIsLoading(false)
     }
@@ -126,10 +129,12 @@ export default function UsersPage() {
 
     try {
       await usersApi.deleteUser(user.id)
-      setUsers(prev => prev.filter(u => u.id !== user.id))
-      toast.success('User removed')
+      // Update local state instead of full refresh
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: false } : u))
+      toast.success('User has been deactivated')
     } catch (error: any) {
-      toast.error('Failed to remove user')
+      console.error('Deactivation failed:', error)
+      toast.error(error.message || 'Failed to deactivate user')
     }
   }
 
