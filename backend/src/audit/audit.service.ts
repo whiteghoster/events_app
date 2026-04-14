@@ -10,6 +10,10 @@ export class FindAuditLogsDto {
   entity_type?: string;
 
   @IsOptional()
+  @IsString()
+  entity_id?: string;
+
+  @IsOptional()
   @IsEnum(AuditAction)
   action?: AuditAction;
 
@@ -62,7 +66,9 @@ export class AuditService {
       .select(`
         *,
         users (
-          email
+          email,
+          name,
+          role
         )
       `)
       .order('created_at', { ascending: false });
@@ -78,6 +84,10 @@ export class AuditService {
 
     if (findAuditLogsDto.user_id) {
       query = query.eq('user_id', findAuditLogsDto.user_id);
+    }
+
+    if (findAuditLogsDto.entity_id) {
+      query = query.eq('entity_id', findAuditLogsDto.entity_id);
     }
 
     if (findAuditLogsDto.date_from) {
@@ -129,7 +139,9 @@ export class AuditService {
       .select(`
         *,
         users (
-          email
+          email,
+          name,
+          role
         )
       `)
       .eq('id', id)
@@ -166,20 +178,21 @@ export class AuditService {
     if (logs.length === 0) return '';
 
     const headers = [
-      'ID', 'Entity Type', 'Entity ID', 'Action', 'User ID', 'User Email', 
-      'Old Values', 'New Values', 'Created At'
+      'ID', 'When', 'Action', 'Entity', 'Entity ID', 'User Name', 'User Role', 'User Email', 
+      'Old Values', 'New Values'
     ];
 
     const csvRows = logs.map(log => [
       log.id,
+      log.created_at,
+      log.action,
       log.entity_type,
       log.entity_id,
-      log.action,
-      log.user_id,
+      log.users?.name || 'System',
+      log.users?.role || 'admin',
       log.users?.email || 'Unknown',
       JSON.stringify(log.old_values || {}),
       JSON.stringify(log.new_values || {}),
-      log.created_at
     ]);
 
     return [

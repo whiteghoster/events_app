@@ -134,6 +134,7 @@ export interface AuditEntry {
   timestamp: string
   userId: string
   userName: string
+  userRole: UserRole
   action: AuditAction
   entityType: string
   entityName: string

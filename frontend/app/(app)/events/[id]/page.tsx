@@ -23,6 +23,12 @@ import type { Event, EventProduct, EventStatus, Category, Product } from '@/lib/
 
 const units = ['kg', 'g', 'pcs', 'bunch', 'dozen', 'box', 'bundle', 'set', 'roll', 'metre', 'litre', 'ml']
 
+const roleColors: Record<string, string> = {
+  'admin': 'bg-primary/20 text-primary border-primary/30',
+  'staff': 'bg-info/20 text-info border-info/30',
+  'staff_member': 'bg-finished/20 text-finished border-finished/30',
+}
+
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -75,9 +81,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       // 3. Conditional Audit Logs (Admin Only)
       if (user && canViewAudit(user.role)) {
         try {
-          const logsData = await auditApi.getAuditLogs({ limit: 50 })
-          // Filter logs locally for now until backend supports entity_id filtering
-          setEventLogs(logsData.data.filter(l => l.entityName === eventData.name))
+          // Fetch logs specifically for this event ID (and potentially its linked items)
+          const logsData = await auditApi.getAuditLogs({ 
+            entity_id: id,
+            limit: 50 
+          })
+          setEventLogs(logsData.data)
         } catch (err) {
           console.warn('Could not load audit logs:', err)
           setEventLogs([])
@@ -661,7 +670,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 {eventLogs.map(entry => (
                   <div key={entry.id} className="bg-secondary rounded-lg p-3">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium text-foreground">{entry.userName}</span>
+                      <span className="font-semibold text-foreground">{entry.userName}</span>
+                      <Badge variant="outline" className={cn('text-[9px] px-1 h-4 uppercase', roleColors[entry.userRole] || 'bg-secondary/50')}>
+                        {entry.userRole?.replace('_', ' ')}
+                      </Badge>
                       <span className="text-muted-foreground">·</span>
                       <span className={cn(
                         'text-xs font-medium',

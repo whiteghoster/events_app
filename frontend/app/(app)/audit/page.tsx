@@ -24,6 +24,12 @@ const actionColors: Record<AuditAction, string> = {
   'Deleted': 'bg-destructive/20 text-destructive border-destructive/30',
 }
 
+const roleColors: Record<string, string> = {
+  'admin': 'bg-primary/20 text-primary border-primary/30',
+  'staff': 'bg-info/20 text-info border-info/30',
+  'staff_member': 'bg-finished/20 text-finished border-finished/30',
+}
+
 export default function AuditPage() {
   const router = useRouter()
   const { user: currentUser } = useAuth()
@@ -200,12 +206,13 @@ export default function AuditPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground">When</TableHead>
-              <TableHead className="text-muted-foreground">Who</TableHead>
+              <TableHead className="text-muted-foreground w-[180px]">When</TableHead>
+              <TableHead className="text-muted-foreground">User Name</TableHead>
+              <TableHead className="text-muted-foreground">Role</TableHead>
               <TableHead className="text-muted-foreground">Action</TableHead>
               <TableHead className="text-muted-foreground hidden sm:table-cell">Entity</TableHead>
-              <TableHead className="text-muted-foreground hidden md:table-cell">Name</TableHead>
-              <TableHead className="text-muted-foreground">Change</TableHead>
+              <TableHead className="text-muted-foreground hidden md:table-cell">Entity Name</TableHead>
+              <TableHead className="text-muted-foreground">Changes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -220,25 +227,28 @@ export default function AuditPage() {
               </TableRow>
             ) : logs.map(entry => (
               <TableRow key={entry.id} className="border-border">
-                <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                  {new Date(entry.timestamp).toLocaleString('en-IN', { 
-                    day: '2-digit', 
-                    month: 'short', 
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })}
+                <TableCell className="font-mono text-[10px] text-muted-foreground leading-tight">
+                  <div className="font-semibold text-foreground/80">
+                    {new Date(entry.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                  <div>
+                    {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </div>
                 </TableCell>
                 <TableCell className="font-medium">{entry.userName}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={cn('text-[10px] px-1.5 h-5 uppercase', roleColors[entry.userRole] || 'bg-secondary/50')}>
+                    {entry.userRole?.replace('_', ' ')}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={cn('text-xs', actionColors[entry.action])}>
                     {entry.action}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground hidden sm:table-cell">{entry.entityType}</TableCell>
+                <TableCell className="text-muted-foreground hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">{entry.entityType}</TableCell>
                 <TableCell className="font-medium hidden md:table-cell">{entry.entityName}</TableCell>
-                <TableCell className="text-muted-foreground max-w-xs truncate">{entry.change}</TableCell>
+                <TableCell className="text-muted-foreground max-w-xs truncate text-sm">{entry.change}</TableCell>
               </TableRow>
             ))}
             {!isLoading && logs.length === 0 && (

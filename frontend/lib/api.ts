@@ -144,7 +144,8 @@ function mapAuditEntryFromBackend(log: any): AuditEntry {
     id: log.id,
     timestamp: log.created_at || new Date().toISOString(),
     userId: log.user_id || '',
-    userName: log.users?.email || 'System',
+    userName: log.users?.name || log.users?.email || 'System',
+    userRole: log.users?.role || 'admin',
     action: log.action as any,
     entityType: log.entity_type || 'Unknown',
     entityName: entityName,
@@ -496,6 +497,7 @@ export const auditApi = {
   async getAuditLogs(params?: any): Promise<{ data: AuditEntry[]; pagination: any }> {
     const q = new URLSearchParams()
     if (params?.entity_type) q.set('entity_type', params.entity_type)
+    if (params?.entity_id) q.set('entity_id', params.entity_id)
     if (params?.action) q.set('action', params.action)
     if (params?.page) q.set('page', params.page.toString())
     if (params?.limit) q.set('limit', params.limit.toString())
