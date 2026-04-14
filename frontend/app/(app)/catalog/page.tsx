@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, MoreVertical, RotateCcw, Ban, X } from 'lucide-react'
+import { Plus, Pencil, MoreVertical, RotateCcw, Ban, X, Loader2, Database } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
 import { EmptyState, FlowerIcon } from '@/components/empty-state'
 import { useAuth, canManageProducts, canViewCatalog } from '@/lib/auth-context'
-import { categories as initialCategories, products as initialProducts, events, eventProducts } from '@/lib/mock-data'
+import { catalogApi, eventsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,10 +28,14 @@ export default function CatalogPage() {
   const router = useRouter()
   const { user } = useAuth()
   
-  const [categories, setCategories] = useState<Category[]>(initialCategories)
-  const [products, setProducts] = useState<Product[]>(initialProducts)
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(categories[0]?.id || '')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   
+  const [isPageLoading, setIsPageLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
   const [productSheetOpen, setProductSheetOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   
@@ -51,6 +55,36 @@ export default function CatalogPage() {
     isActive: true,
   })
 
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setIsPageLoading(true)
+    else setIsRefreshing(true)
+
+    try {
+      const [catData, prodData] = await Promise.all([
+        catalogApi.getCategories(),
+        catalogApi.getProducts({ pageSize: 1000 })
+      ])
+      
+      setCategories(catData)
+      setProducts(prodData.data)
+      
+      if (!selectedCategoryId && catData.length > 0) {
+        setSelectedCategoryId(catData[0].id)
+      }
+    } catch (err) {
+      toast.error('Failed to load catalog data')
+    } finally {
+      setIsPageLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [selectedCategoryId])
+
+  useEffect(() => {
+    if (user && canViewCatalog(user.role)) {
+      loadData()
+    }
+  }, [user, loadData])
+
   if (!user || !canViewCatalog(user.role)) {
     router.replace('/events')
     return null
@@ -66,10 +100,18 @@ export default function CatalogPage() {
 
   const activeProductCount = filteredProducts.filter(p => p.isActive).length
 
-  // Check if product is in any live events
-  const getProductLiveEventCount = (productId: string) => {
-    const liveEventIds = events.filter(e => e.status === 'Live').map(e => e.id)
-    return eventProducts.filter(ep => ep.productId === productId && liveEventIds.includes(ep.eventId)).length
+  const handleSeedCatalog = async () => {
+    setIsRefreshing(true)
+    try {
+      await catalogApi.seedCategories()
+      await catalogApi.seedProducts()
+      toast.success('Catalog seeded with default items')
+      loadData()
+    } catch (err) {
+      toast.error('Failed to seed catalog')
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const handleOpenProductSheet = (product?: Product) => {
@@ -97,53 +139,55 @@ export default function CatalogPage() {
     setProductSheetOpen(true)
   }
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!productFormData.name.trim()) {
       toast.error('Product name is required')
       return
     }
 
-    if (editingProduct) {
-      setProducts(prev => prev.map(p => 
-        p.id === editingProduct.id 
-          ? { 
-              ...p, 
-              name: productFormData.name,
-              categoryId: productFormData.categoryId,
-              categoryName: categories.find(c => c.id === productFormData.categoryId)?.name || p.categoryName,
-              defaultUnit: productFormData.defaultUnit,
-              price: productFormData.price ? parseFloat(productFormData.price) : undefined,
-              description: productFormData.description || undefined,
-              isActive: productFormData.isActive,
-            }
-          : p
-      ))
-      toast.success('Product updated')
-    } else {
-      const newProduct: Product = {
-        id: `new-${Date.now()}`,
-        name: productFormData.name,
-        categoryId: productFormData.categoryId,
-        categoryName: categories.find(c => c.id === productFormData.categoryId)?.name || '',
-        defaultUnit: productFormData.defaultUnit,
-        price: productFormData.price ? parseFloat(productFormData.price) : undefined,
-        description: productFormData.description || undefined,
-        isActive: productFormData.isActive,
+    setIsSaving(true)
+    try {
+      if (editingProduct) {
+        await catalogApi.updateProduct(editingProduct.id, {
+          name: productFormData.name,
+          categoryId: productFormData.categoryId,
+          defaultUnit: productFormData.defaultUnit,
+          price: productFormData.price ? parseFloat(productFormData.price) : undefined,
+          description: productFormData.description || '',
+          isActive: productFormData.isActive,
+        })
+        toast.success('Product updated')
+      } else {
+        await catalogApi.createProduct({
+          name: productFormData.name,
+          categoryId: productFormData.categoryId,
+          defaultUnit: productFormData.defaultUnit,
+          price: productFormData.price ? parseFloat(productFormData.price) : undefined,
+          description: productFormData.description || '',
+        })
+        toast.success('Product created')
       }
-      setProducts(prev => [...prev, newProduct])
-      toast.success('Product created')
+      setProductSheetOpen(false)
+      loadData(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save product')
+    } finally {
+      setIsSaving(false)
     }
-    setProductSheetOpen(false)
   }
 
-  const handleDeactivateProduct = (product: Product) => {
-    const liveCount = getProductLiveEventCount(product.id)
-    if (liveCount > 0) {
-      setProductToDeactivate(product)
-      setDeactivateDialogOpen(true)
-    } else {
-      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isActive: false } : p))
+  const handleDeactivateProduct = async (product: Product) => {
+    try {
+      await catalogApi.deactivateProduct(product.id)
       toast.success('Product deactivated')
+      loadData(true)
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('live event')) {
+        setProductToDeactivate(product)
+        setDeactivateDialogOpen(true)
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Failed to deactivate product')
+      }
     }
   }
 
@@ -156,9 +200,14 @@ export default function CatalogPage() {
     setProductToDeactivate(null)
   }
 
-  const handleReactivateProduct = (product: Product) => {
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, isActive: true } : p))
-    toast.success('Product reactivated')
+  const handleReactivateProduct = async (product: Product) => {
+    try {
+      await catalogApi.updateProduct(product.id, { isActive: true })
+      toast.success('Product reactivated')
+      loadData(true)
+    } catch (err) {
+      toast.error('Failed to reactivate product')
+    }
   }
 
   const handleOpenCategoryDialog = (category?: Category) => {
@@ -172,49 +221,70 @@ export default function CatalogPage() {
     setCategoryDialogOpen(true)
   }
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!newCategoryName.trim()) {
       toast.error('Category name is required')
       return
     }
 
-    if (editingCategory) {
-      setCategories(prev => prev.map(c => 
-        c.id === editingCategory.id ? { ...c, name: newCategoryName } : c
-      ))
-      setProducts(prev => prev.map(p => 
-        p.categoryId === editingCategory.id ? { ...p, categoryName: newCategoryName } : p
-      ))
-      toast.success('Category updated')
-    } else {
-      const newCategory: Category = {
-        id: `new-${Date.now()}`,
-        name: newCategoryName,
-        productCount: 0,
-        isActive: true,
+    setIsSaving(true)
+    try {
+      if (editingCategory) {
+        await catalogApi.updateCategory(editingCategory.id, newCategoryName)
+        toast.success('Category updated')
+      } else {
+        await catalogApi.createCategory(newCategoryName)
+        toast.success('Category created')
       }
-      setCategories(prev => [...prev, newCategory])
-      toast.success('Category created')
+      setCategoryDialogOpen(false)
+      loadData(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save category')
+    } finally {
+      setIsSaving(false)
     }
-    setCategoryDialogOpen(false)
   }
 
-  const handleDeleteCategory = (category: Category) => {
-    const productCount = products.filter(p => p.categoryId === category.id && p.isActive).length
-    if (productCount > 0) {
-      toast.error(`Cannot delete - ${productCount} active products in this category`)
-      return
+  const handleDeleteCategory = async (category: Category) => {
+    try {
+      await catalogApi.deleteCategory(category.id)
+      toast.success('Category deleted')
+      if (selectedCategoryId === category.id) {
+        setSelectedCategoryId('')
+      }
+      loadData(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete category')
     }
-    setCategories(prev => prev.filter(c => c.id !== category.id))
-    if (selectedCategoryId === category.id) {
-      setSelectedCategoryId(categories[0]?.id || '')
-    }
-    toast.success('Category deleted')
+  }
+
+  if (isPageLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Synchronizing Catalog...</p>
+      </div>
+    )
   }
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <PageHeader title="Product Catalog" />
+      <PageHeader 
+        title="Product Catalog" 
+        action={
+          user?.role === 'admin' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSeedCatalog}
+              disabled={isRefreshing}
+            >
+              <Database className="w-4 h-4 mr-2" />
+              {isRefreshing ? 'Seeding...' : 'Seed Catalog'}
+            </Button>
+          )
+        }
+      />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Categories Panel */}
@@ -479,7 +549,8 @@ export default function CatalogPage() {
           </div>
           <SheetFooter>
             <Button variant="outline" onClick={() => setProductSheetOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button onClick={handleSaveProduct} disabled={isSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Save
             </Button>
           </SheetFooter>
@@ -506,7 +577,8 @@ export default function CatalogPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCategory} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button onClick={handleSaveCategory} disabled={isSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Save
             </Button>
           </DialogFooter>

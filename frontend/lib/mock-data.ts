@@ -7,51 +7,9 @@ export const users: User[] = [
 ]
 
 
-export const categories: Category[] = [
-  { id: '1', name: 'Flowers', productCount: 11, isActive: true },
-  { id: '2', name: 'Cakes', productCount: 9, isActive: true },
-  { id: '3', name: 'Fruit Baskets', productCount: 6, isActive: true },
-  { id: '4', name: 'Chocolates', productCount: 6, isActive: true },
-  { id: '5', name: 'Brass Items', productCount: 9, isActive: true },
-  { id: '6', name: 'Accessories', productCount: 11, isActive: true },
-  { id: '7', name: 'Artificial Flowers', productCount: 7, isActive: true },
-]
+export const categories: Category[] = []
 
-export const products: Product[] = [
-  { id: '1', name: 'Roses', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'bunch', isActive: true },
-  { id: '2', name: 'Marigold', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'pcs', price: 20, isActive: true },
-  { id: '3', name: 'Orchid', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'pcs', isActive: true },
-  { id: '4', name: 'Jasmine', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'kg', isActive: true },
-  { id: '5', name: 'Tuberose', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'bunch', isActive: false },
-  { id: '6', name: 'Lotus', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'pcs', isActive: true },
-  { id: '7', name: 'Lily', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'bunch', isActive: true },
-  { id: '8', name: 'Carnation', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'bunch', isActive: true },
-  { id: '9', name: 'Gerbera', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'pcs', isActive: true },
-  { id: '10', name: 'Chrysanthemum', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'pcs', isActive: true },
-  { id: '11', name: 'Sunflower', categoryId: '1', categoryName: 'Flowers', defaultUnit: 'pcs', isActive: true },
-  { id: '12', name: 'Wedding Cake', categoryId: '2', categoryName: 'Cakes', defaultUnit: 'pcs', price: 4500, isActive: true },
-  { id: '13', name: 'Birthday Cake', categoryId: '2', categoryName: 'Cakes', defaultUnit: 'pcs', price: 1500, isActive: true },
-  { id: '14', name: 'Cupcakes', categoryId: '2', categoryName: 'Cakes', defaultUnit: 'dozen', price: 800, isActive: true },
-  { id: '15', name: 'Pastries', categoryId: '2', categoryName: 'Cakes', defaultUnit: 'box', price: 500, isActive: true },
-  { id: '16', name: 'Fruit Cake', categoryId: '2', categoryName: 'Cakes', defaultUnit: 'pcs', price: 1200, isActive: true },
-  { id: '17', name: 'Mixed Fruit Basket', categoryId: '3', categoryName: 'Fruit Baskets', defaultUnit: 'set', price: 1500, isActive: true },
-  { id: '18', name: 'Exotic Fruit Basket', categoryId: '3', categoryName: 'Fruit Baskets', defaultUnit: 'set', price: 2500, isActive: true },
-  { id: '19', name: 'Dry Fruit Basket', categoryId: '3', categoryName: 'Fruit Baskets', defaultUnit: 'set', price: 2000, isActive: true },
-  { id: '20', name: 'Assorted Chocolates', categoryId: '4', categoryName: 'Chocolates', defaultUnit: 'box', price: 800, isActive: true },
-  { id: '21', name: 'Premium Chocolates', categoryId: '4', categoryName: 'Chocolates', defaultUnit: 'box', price: 1500, isActive: true },
-  { id: '22', name: 'Chocolate Hamper', categoryId: '4', categoryName: 'Chocolates', defaultUnit: 'set', price: 2500, isActive: true },
-  { id: '23', name: 'Pooja Thali', categoryId: '5', categoryName: 'Brass Items', defaultUnit: 'set', price: 1200, isActive: true },
-  { id: '24', name: 'Diya Set', categoryId: '5', categoryName: 'Brass Items', defaultUnit: 'set', price: 600, isActive: true },
-  { id: '25', name: 'Bell', categoryId: '5', categoryName: 'Brass Items', defaultUnit: 'pcs', price: 400, isActive: true },
-  { id: '26', name: 'Kalash', categoryId: '5', categoryName: 'Brass Items', defaultUnit: 'pcs', price: 800, isActive: true },
-  { id: '27', name: 'Ribbon Roll', categoryId: '6', categoryName: 'Accessories', defaultUnit: 'roll', price: 150, isActive: true },
-  { id: '28', name: 'Fairy Lights', categoryId: '6', categoryName: 'Accessories', defaultUnit: 'metre', price: 50, isActive: true },
-  { id: '29', name: 'Candles', categoryId: '6', categoryName: 'Accessories', defaultUnit: 'box', price: 200, isActive: true },
-  { id: '30', name: 'Balloons', categoryId: '6', categoryName: 'Accessories', defaultUnit: 'pcs', price: 10, isActive: true },
-  { id: '31', name: 'Artificial Rose Garland', categoryId: '7', categoryName: 'Artificial Flowers', defaultUnit: 'metre', price: 300, isActive: true },
-  { id: '32', name: 'Artificial Marigold Garland', categoryId: '7', categoryName: 'Artificial Flowers', defaultUnit: 'metre', price: 200, isActive: true },
-  { id: '33', name: 'Artificial Lotus', categoryId: '7', categoryName: 'Artificial Flowers', defaultUnit: 'pcs', price: 100, isActive: true },
-]
+export const products: Product[] = []
 
 export const events: Event[] = [
   { id: '1', name: 'Sharma Wedding', occasionType: 'wedding', eventDate: '2026-04-14', venueName: 'The Grand Banquet Hall', venueAddress: '123 MG Road, Bangalore', contactName: 'Rahul Sharma', contactPhone: '9876543210', status: 'live', createdAt: '2026-03-01', updatedAt: '2026-04-06' },

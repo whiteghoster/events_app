@@ -14,8 +14,8 @@ import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
 
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
-  [EventStatus.LIVE]: [EventStatus.HOLD],
-  [EventStatus.HOLD]: [EventStatus.FINISHED],
+  [EventStatus.LIVE]: [EventStatus.HOLD, EventStatus.FINISHED],
+  [EventStatus.HOLD]: [EventStatus.FINISHED, EventStatus.LIVE],
   [EventStatus.FINISHED]: [],
 };
 
@@ -58,6 +58,11 @@ export class EventsService {
     }
   }
 
+  private generateDisplayId(): string {
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    return `EVT-${randomNum}`;
+  }
+
   // ========== EVENTS ==========
 
   async createEvent(createEventDto: CreateEventDto) {
@@ -70,6 +75,7 @@ export class EventsService {
       contact_person: createEventDto.contact_person,
       contact_phone: createEventDto.contact_phone,
       notes: createEventDto.notes,
+      display_id: this.generateDisplayId(),
     };
 
     const { data, error } = await this.supabase
@@ -98,9 +104,13 @@ export class EventsService {
 
     let query = this.supabase.from('events').select('*', { count: 'exact' });
 
-    if (tab === 'live') {
+    if (tab === 'live' || tab === 'LIVE') {
       query = query.eq('status', EventStatus.LIVE).order('date', { ascending: true });
-    } else if (tab === 'over') {
+    } else if (tab === 'hold' || tab === 'HOLD') {
+      query = query.eq('status', EventStatus.HOLD).order('closed_at', { ascending: false });
+    } else if (tab === 'finished' || tab === 'FINISHED') {
+      query = query.eq('status', EventStatus.FINISHED).order('closed_at', { ascending: false });
+    } else if (tab === 'over' || tab === 'OVER') {
       query = query
         .in('status', [EventStatus.HOLD, EventStatus.FINISHED])
         .order('closed_at', { ascending: false });
@@ -184,23 +194,15 @@ export class EventsService {
       );
     }
 
-    // LIVE -> HOLD requires at least one product row
+    /* 
+       Relaxed: No longer requiring products before HOLD. 
+       This allows users to hold events mid-setup.
+    */
+    /*
     if (event.status === EventStatus.LIVE && newStatus === EventStatus.HOLD) {
-      const { count, error: countError } = await this.supabase
-        .from('event_products')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', id);
-
-      if (countError) {
-        throw new BadRequestException('Failed to validate event product rows');
-      }
-
-      if (!count || count < 1) {
-        throw new ConflictException(
-          'Cannot move event to hold without at least one product row',
-        );
-      }
+      ...
     }
+    */
 
     const { data, error } = await this.supabase
       .from('events')
@@ -417,5 +419,21 @@ export class EventsService {
         quantity,
       })),
     }));
+  }
+
+  async deleteEvent(id: string, role: UserRole) {
+    if (role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only admins can delete events');
+    }
+
+    const event = await this.getEventOrThrow(id);
+
+    const { error } = await this.supabase.from('events').delete().eq('id', id);
+
+    if (error) {
+      throw new BadRequestException(`Failed to delete event: ${error.message}`);
+    }
+
+    return { message: 'Event deleted successfully' };
   }
 }

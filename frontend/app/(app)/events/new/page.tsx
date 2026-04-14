@@ -18,12 +18,12 @@ import type { OccasionType } from '@/lib/types'
 const occasions: { value: OccasionType; label: string }[] = [
   { value: 'haldi', label: 'Haldi' },
   { value: 'bhaat', label: 'Bhaat' },
-  { value: 'mehandi', label: 'Mehandi' },
+  { value: 'mehendi', label: 'Mehendi' },
   { value: 'wedding', label: 'Wedding' },
   { value: 'reception', label: 'Reception' },
   { value: 'cocktail', label: 'Cocktail' },
   { value: 'after_party', label: 'After Party' },
-  { value: 'other', label: 'Other' },
+  { value: 'others', label: 'Other' },
 ]
 
 

@@ -138,6 +138,13 @@ export function AppSidebar() {
             </Link>
           )
         })}
+        <button
+          onClick={logout}
+          className="flex-1 flex flex-col items-center py-3 gap-1 transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="text-xs font-medium">Log Out</span>
+        </button>
       </nav>
     </>
   )

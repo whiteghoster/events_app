@@ -64,12 +64,17 @@ export function EventCard({ event, products = [] }: EventCardProps) {
       <div className="group bg-card rounded-xl p-5 border border-border hover:border-primary/50 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-            {occasionIcons[event.occasionType]}
-            {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
-
-
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
+              {occasionIcons[event.occasionType]}
+              {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
+            </span>
+            {event.displayId && (
+              <span className="text-xs font-mono font-medium text-muted-foreground bg-secondary px-2 py-1 rounded">
+                {event.displayId}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Event Name */}

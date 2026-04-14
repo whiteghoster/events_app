@@ -117,6 +117,7 @@ function normalizeStatus(status: string): EventStatus {
 function mapEventFromBackend(event: any): Event {
   return {
     id: event.id,
+    displayId: event.display_id || event.displayId || undefined,
     name: event.name,
     occasionType: (event.occasion_type || event.occasionType || 'other') as OccasionType,
 
@@ -173,7 +174,33 @@ export const authApi = {
 // -------------------------------------------------------------------
 export const catalogApi = {
   async getCategories(): Promise<Category[]> {
-    return await apiRequest<any[]>('/catalog/categories')
+    const res = await apiRequest<{ data: any[] }>('/catalog/categories')
+    return (res.data || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      isActive: c.is_active !== false,
+      createdAt: c.created_at
+    }))
+  },
+
+  async createCategory(name: string): Promise<Category> {
+    const res = await apiRequest<{ data: any }>('/catalog/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+    return res.data
+  },
+
+  async updateCategory(id: string, name: string): Promise<Category> {
+    const res = await apiRequest<{ data: any }>(`/catalog/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    })
+    return res.data
+  },
+
+  async deleteCategory(id: string): Promise<void> {
+    await apiRequest(`/catalog/categories/${id}`, { method: 'DELETE' })
   },
 
   async getProducts(params?: { categoryId?: string; page?: number; pageSize?: number }): Promise<{
@@ -185,10 +212,83 @@ export const catalogApi = {
     if (params?.page) q.set('page', params.page.toString())
     if (params?.pageSize) q.set('pageSize', params.pageSize.toString())
 
-    return await apiRequest<{
-      data: Product[]
+    const res = await apiRequest<{
+      data: any[]
       total: number
     }>(`/catalog/products?${q.toString()}`)
+
+    return {
+      data: (res.data || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        categoryId: p.category_id,
+        categoryName: p.category?.name,
+        defaultUnit: p.default_unit,
+        price: p.price,
+        description: p.description,
+        isActive: p.is_active,
+        createdAt: p.created_at
+      })),
+      total: res.total || 0
+    }
+  },
+
+  async createProduct(payload: {
+    name: string
+    categoryId: string
+    defaultUnit: string
+    price?: number
+    description?: string
+  }): Promise<Product> {
+    const res = await apiRequest<{ data: any }>('/catalog/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name,
+        category_id: payload.categoryId,
+        default_unit: payload.defaultUnit,
+        price: payload.price,
+        description: payload.description,
+      }),
+    })
+    return res.data
+  },
+
+  async updateProduct(id: string, payload: {
+    name?: string
+    categoryId?: string
+    defaultUnit?: string
+    price?: number
+    description?: string
+    isActive?: boolean
+  }): Promise<Product> {
+    const res = await apiRequest<{ data: any }>(`/catalog/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: payload.name,
+        category_id: payload.categoryId,
+        default_unit: payload.defaultUnit,
+        price: payload.price,
+        description: payload.description,
+        is_active: payload.isActive,
+      }),
+    })
+    return res.data
+  },
+
+  async deactivateProduct(id: string): Promise<void> {
+    await apiRequest(`/catalog/products/${id}/deactivate`, { method: 'POST' })
+  },
+
+  async deleteProduct(id: string): Promise<void> {
+    await apiRequest(`/catalog/products/${id}`, { method: 'DELETE' })
+  },
+
+  async seedCategories(): Promise<void> {
+    await apiRequest('/catalog/seed/categories', { method: 'POST' })
+  },
+
+  async seedProducts(): Promise<void> {
+    await apiRequest('/catalog/seed/products', { method: 'POST' })
   },
 }
 
@@ -357,5 +457,9 @@ export const eventsApi = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     })
+  },
+
+  async deleteEvent(id: string): Promise<void> {
+    await apiRequest(`/events/${id}`, { method: 'DELETE' })
   },
 }

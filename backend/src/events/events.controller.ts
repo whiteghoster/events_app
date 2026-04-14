@@ -168,4 +168,16 @@ export class EventsController {
       data: await this.eventsService.getCategorySummary(eventId),
     };
   }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  async deleteEvent(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return {
+      success: true,
+      data: await this.eventsService.deleteEvent(id, user.role),
+    };
+  }
 }

@@ -66,7 +66,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       setAllCategories((catData as any[]).map(c => ({
         id: c.id,
         name: c.name,
-        isActive: c.is_active,
+        isActive: c.is_active !== false, // Default to true if missing
         createdAt: c.created_at
       })))
 
@@ -188,6 +188,20 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  const handleDeleteEvent = async () => {
+    if (!window.confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      await eventsApi.deleteEvent(id)
+      toast.success('Event deleted successfully')
+      router.push('/events')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
+
   const handleAddProduct = async () => {
     if (!newProductData.categoryId || !newProductData.productId || !newProductData.quantity || !newProductData.unit) {
       toast.error('Please fill all required fields')
@@ -222,7 +236,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       await eventsApi.closeEvent(id, closeStatus)
       toast.success(`Event moved to ${closeStatus}`)
       setCloseModalOpen(false)
-      router.push('/events')
+      
+      if (closeStatus === 'hold') {
+        loadData()
+      } else {
+        router.push('/events')
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to close event')
     }
@@ -239,6 +258,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         ]}
         action={
           <div className="flex items-center gap-3">
+            {event.displayId && (
+              <span className="text-sm font-mono font-semibold text-muted-foreground bg-secondary px-3 py-1.5 rounded-md border border-border">
+                {event.displayId}
+              </span>
+            )}
             <StatusBadge status={event.status} size="md" />
             {user && canEditEvent(user.role) && isEditable && (
               <Button variant="outline" size="sm" onClick={() => router.push(`/events/${id}/edit`)}>
@@ -246,12 +270,37 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 Edit Event
               </Button>
             )}
-            {user && canCloseEvent(user.role) && event.status === 'Live' && eventProductsList.length > 0 && (
+            {user && canCloseEvent(user.role) && event.status.toLowerCase() === 'live' && (
+              <Button
+                variant="outline"
+                className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
+                onClick={() => {
+                  setCloseStatus('hold')
+                  setCloseModalOpen(true)
+                }}
+              >
+                Hold Event
+              </Button>
+            )}
+            {user && canCloseEvent(user.role) && ['live', 'hold'].includes(event.status.toLowerCase()) && (
               <Button
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => setCloseModalOpen(true)}
+                onClick={() => {
+                  setCloseStatus('finished')
+                  setCloseModalOpen(true)
+                }}
               >
-                Close Event
+                Finish Event
+              </Button>
+            )}
+            {user && user.role === 'admin' && event.status.toLowerCase() === 'finished' && (
+              <Button
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleDeleteEvent}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Event
               </Button>
             )}
           </div>
@@ -621,27 +670,31 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Close This Event</DialogTitle>
+            <DialogTitle>
+              {event.status.toLowerCase() === 'hold' ? 'Finish This Event' : 'Close This Event'}
+            </DialogTitle>
             <DialogDescription>
-              Moving &quot;{event.name}&quot; to Over. Choose closing status:
+              Moving &quot;{event.name}&quot; to {event.status.toLowerCase() === 'hold' ? 'Finished' : 'Over'}. Choose closing status:
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-3">
-              <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary cursor-pointer">
-                <input
-                  type="radio"
-                  name="closeStatus"
-                  value="hold"
-                  checked={closeStatus === 'hold'}
-                  onChange={() => setCloseStatus('hold')}
-                  className="accent-primary"
-                />
-                <div>
-                  <p className="font-medium text-foreground">Hold</p>
-                  <p className="text-sm text-muted-foreground">Admin can still edit</p>
-                </div>
-              </label>
+              {event.status.toLowerCase() !== 'hold' && (
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary cursor-pointer">
+                  <input
+                    type="radio"
+                    name="closeStatus"
+                    value="hold"
+                    checked={closeStatus === 'hold'}
+                    onChange={() => setCloseStatus('hold')}
+                    className="accent-primary"
+                  />
+                  <div>
+                    <p className="font-medium text-foreground">Hold</p>
+                    <p className="text-sm text-muted-foreground">Admin can still edit</p>
+                  </div>
+                </label>
+              )}
               <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary cursor-pointer">
                 <input
                   type="radio"

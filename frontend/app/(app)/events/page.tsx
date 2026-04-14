@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Lock, Loader2 } from 'lucide-react'
+import { Plus, Search, Lock, Loader2, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/page-header'
 import { EventCard } from '@/components/event-card'
 import { StatusBadge } from '@/components/status-badge'
@@ -21,12 +22,12 @@ const occasions: { value: OccasionType | 'All'; label: string }[] = [
   { value: 'All', label: 'All Occasions' },
   { value: 'haldi', label: 'Haldi' },
   { value: 'bhaat', label: 'Bhaat' },
-  { value: 'mehandi', label: 'Mehandi' },
+  { value: 'mehendi', label: 'Mehendi' },
   { value: 'wedding', label: 'Wedding' },
   { value: 'reception', label: 'Reception' },
   { value: 'cocktail', label: 'Cocktail' },
   { value: 'after_party', label: 'After Party' },
-  { value: 'other', label: 'Other' },
+  { value: 'others', label: 'Other' },
 ]
 
 
@@ -42,20 +43,52 @@ export default function EventsPage() {
   const [search, setSearch] = useState('')
   const [occasionFilter, setOccasionFilter] = useState<OccasionType | 'All'>('All')
 
-  // Fetch real events from backend on mount
+  // Fetch real events from backend based on tab/subtab selection
   useEffect(() => {
     let cancelled = false
     const load = async () => {
-      const response = await eventsApi.getEvents()
-      if (!cancelled) {
-        setApiEvents(response.events)
-        setPagination(response.pagination)
-        setLoading(false)
+      setLoading(true)
+      
+      let tabParam = activeTab === 'over' ? overSubTab : 'live'
+
+      try {
+        const response = await eventsApi.getEvents(
+          tabParam, 
+          occasionFilter === 'All' ? undefined : occasionFilter,
+          pagination.page,
+          pagination.pageSize
+        )
+        if (!cancelled) {
+          setApiEvents(response.events)
+          setPagination(response.pagination)
+        }
+      } catch (err) {
+        toast.error('Failed to load events')
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [activeTab, overSubTab, occasionFilter, pagination.page])
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      await eventsApi.deleteEvent(id)
+      toast.success('Event deleted successfully')
+      // Refresh current list
+      const tabParam = activeTab === 'over' ? overSubTab : 'live'
+      const response = await eventsApi.getEvents(tabParam, occasionFilter === 'All' ? undefined : occasionFilter)
+      setApiEvents(response.events)
+      setPagination(response.pagination)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete event')
+    }
+  }
 
   // Merge: real DB events first, then demo events (demo IDs won't clash with UUIDs)
   const allEvents = useMemo<Event[]>(() => {
@@ -73,16 +106,9 @@ export default function EventsPage() {
           : new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()
       )
 
-  const liveEvents = useMemo(
-    () => filterAndSort(allEvents.filter(e => e.status === 'live')),
-    [allEvents, search, occasionFilter],
-  )
-
-
-  const overEvents = useMemo(
-    () => filterAndSort(allEvents.filter(e => e.status === overSubTab), false),
-    [allEvents, overSubTab, search, occasionFilter],
-  )
+  // The lists are now synchronized with the backend tab response
+  const liveEvents = useMemo(() => activeTab === 'live' ? allEvents : [], [allEvents, activeTab])
+  const overEvents = useMemo(() => activeTab === 'over' ? allEvents : [], [allEvents, activeTab])
 
   const liveCount = allEvents.filter(e => e.status === 'live').length
   const holdCount = allEvents.filter(e => e.status === 'hold').length
@@ -249,12 +275,15 @@ export default function EventsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground w-24">ID</TableHead>
                     <TableHead className="text-muted-foreground">Event Name</TableHead>
                     <TableHead className="text-muted-foreground hidden sm:table-cell">Occasion</TableHead>
                     <TableHead className="text-muted-foreground hidden md:table-cell">Venue</TableHead>
                     <TableHead className="text-muted-foreground">Date</TableHead>
-                    <TableHead className="text-muted-foreground hidden lg:table-cell">Closed By</TableHead>
                     <TableHead className="text-muted-foreground">Status</TableHead>
+                    {overSubTab === 'finished' && user?.role === 'admin' && (
+                      <TableHead className="text-muted-foreground w-20 text-right">Action</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -267,6 +296,9 @@ export default function EventsPage() {
                       )}
                       onClick={() => window.location.href = `/events/${event.id}`}
                     >
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {event.displayId || '-'}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {event.status === 'finished' && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
@@ -282,10 +314,24 @@ export default function EventsPage() {
                       <TableCell className="text-muted-foreground">
                         {new Date(event.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground">{event.closedBy || '-'}</TableCell>
                       <TableCell>
                         <StatusBadge status={event.status} />
                       </TableCell>
+                      {overSubTab === 'finished' && user?.role === 'admin' && (
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteEvent(event.id)
+                            }}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

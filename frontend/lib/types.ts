@@ -31,7 +31,7 @@ export type OccasionType =
   | 'reception' 
   | 'cocktail' 
   | 'after_party' 
-  | 'other'
+  | 'others'
 
 export const OCCASION_TYPES = {
   HALDI: 'haldi' as const,
@@ -41,7 +41,7 @@ export const OCCASION_TYPES = {
   RECEPTION: 'reception' as const,
   COCKTAIL: 'cocktail' as const,
   AFTER_PARTY: 'after_party' as const,
-  OTHER: 'other' as const,
+  OTHERS: 'others' as const,
 } as const
 
 
@@ -61,6 +61,7 @@ export interface User {
  */
 export interface Event {
   id: string
+  displayId?: string
   name: string
   occasionType: OccasionType
   eventDate: string
