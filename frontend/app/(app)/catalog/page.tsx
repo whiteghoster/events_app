@@ -299,66 +299,78 @@ export default function CatalogPage() {
               )}
             </div>
             <div className="p-2">
-              {categories.map(category => {
-                const productCount = products.filter(p => p.categoryId === category.id).length
-                const hasActiveProducts = products.some(p => p.categoryId === category.id && p.isActive)
-                const isSelected = category.id === selectedCategoryId
-                
-                return (
-                  <div
-                    key={category.id}
-                    className={cn(
-                      'flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group',
-                      isSelected 
-                        ? 'bg-sidebar-accent border-l-2 border-l-primary' 
-                        : 'hover:bg-secondary'
-                    )}
-                    onClick={() => setSelectedCategoryId(category.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={cn(
-                        'font-medium text-sm',
-                        isSelected ? 'text-primary' : 'text-foreground'
-                      )}>
-                        {category.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                        {productCount}
-                      </span>
-                      {hasActiveProducts && (
-                        <span className="w-2 h-2 rounded-full bg-success" />
+              {categories.length > 0 ? (
+                categories.map(category => {
+                  const productCount = products.filter(p => p.categoryId === category.id).length
+                  const hasActiveProducts = products.some(p => p.categoryId === category.id && p.isActive)
+                  const isSelected = category.id === selectedCategoryId
+                  
+                  return (
+                    <div
+                      key={category.id}
+                      className={cn(
+                        'flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group',
+                        isSelected 
+                          ? 'bg-sidebar-accent border-l-2 border-l-primary' 
+                          : 'hover:bg-secondary'
+                      )}
+                      onClick={() => setSelectedCategoryId(category.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          'font-medium text-sm',
+                          isSelected ? 'text-primary' : 'text-foreground'
+                        )}>
+                          {category.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                          {productCount}
+                        </span>
+                        {hasActiveProducts && (
+                          <span className="w-2 h-2 rounded-full bg-success" />
+                        )}
+                      </div>
+                      {canManage && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleOpenCategoryDialog(category)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Edit name
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteCategory(category)}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
-                    {canManage && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenCategoryDialog(category)}>
-                            <Pencil className="w-4 h-4 mr-2" />
-                            Edit name
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => handleDeleteCategory(category)}
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                )
-              })}
+                  )
+                })
+              ) : (
+                <div className="p-8 text-center bg-secondary/30 rounded-lg border border-dashed border-border mx-2 my-2">
+                  <p className="text-xs text-muted-foreground mb-3">No categories available.</p>
+                  {canManage && (
+                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => handleOpenCategoryDialog()}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add First Category
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

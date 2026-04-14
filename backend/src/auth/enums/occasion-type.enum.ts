@@ -10,5 +10,5 @@ export enum OccasionType {
   RECEPTION = 'reception',
   COCKTAIL = 'cocktail',
   AFTER_PARTY = 'after_party',
-  OTHERS = 'others',
+  OTHER = 'others',
 }

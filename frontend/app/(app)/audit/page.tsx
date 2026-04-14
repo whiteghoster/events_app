@@ -84,25 +84,39 @@ export default function AuditPage() {
 
   const totalPages = Math.ceil(total / perPage)
 
-  const handleExportCSV = () => {
-    const headers = ['When', 'Who', 'Action', 'Entity', 'Name', 'Change']
-    const rows = logs.map(entry => [
-      new Date(entry.timestamp).toLocaleString('en-IN'),
-      entry.userName,
-      entry.action,
-      entry.entityType,
-      entry.entityName,
-      entry.change,
-    ])
-    
-    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `audit-log-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleExportCSV = async () => {
+    try {
+      toast.loading('Preparing export...', { id: 'export-loading' })
+      const res = await auditApi.exportAuditLogs({
+        entity_type: entityFilter === 'All' ? undefined : entityFilter,
+        action: actionFilter === 'All' ? undefined : actionFilter,
+        user_id: userFilter === 'All' ? undefined : userFilter,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        search: search || undefined,
+      })
+      
+      const headers = ['ID', 'When', 'Action', 'Entity', 'Change']
+      const rows = res.data.map((entry: any) => [
+        entry.id,
+        new Date(entry.created_at).toLocaleString('en-IN'),
+        entry.action,
+        entry.entity_type,
+        `New: ${JSON.stringify(entry.new_values || {})}`
+      ])
+      
+      const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.filename
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Export completed', { id: 'export-loading' })
+    } catch (err) {
+      toast.error('Export failed', { id: 'export-loading' })
+    }
   }
 
   return (

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsDateString, IsUUID } from 'class-validator';
 import { OccasionType } from '../../auth/enums/occasion-type.enum';
 
 export class CreateEventDto {
@@ -33,4 +33,8 @@ export class CreateEventDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsUUID()
+  @IsOptional()
+  assigned_to?: string;
 }

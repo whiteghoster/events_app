@@ -28,11 +28,18 @@ export class EventsService {
   }
 
   private async getEventOrThrow(eventId: string) {
-    const { data, error } = await this.supabase
+    let query = this.supabase
       .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .single();
+      .select('*, assigned_staff:users(name)');
+
+    // Handle human-readable Display ID (e.g., EVT-59022) or standard UUID
+    if (eventId.startsWith('EVT-')) {
+      query = query.eq('display_id', eventId);
+    } else {
+      query = query.eq('id', eventId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error || !data) {
       throw new NotFoundException('Event not found');
@@ -75,6 +82,7 @@ export class EventsService {
       contact_person: createEventDto.contact_person,
       contact_phone: createEventDto.contact_phone,
       notes: createEventDto.notes,
+      assigned_to: createEventDto.assigned_to,
       display_id: this.generateDisplayId(),
     };
 
@@ -102,7 +110,9 @@ export class EventsService {
   ) {
     const offset = Math.max(0, (page - 1) * pageSize);
 
-    let query = this.supabase.from('events').select('*', { count: 'exact' });
+    let query = this.supabase
+      .from('events')
+      .select('*, assigned_staff:users(name)', { count: 'exact' });
 
     if (tab === 'live' || tab === 'LIVE') {
       query = query.eq('status', EventStatus.LIVE).order('date', { ascending: true });
@@ -158,6 +168,7 @@ export class EventsService {
       contact_person: updateEventDto.contact_person,
       contact_phone: updateEventDto.contact_phone,
       notes: updateEventDto.notes,
+      assigned_to: updateEventDto.assigned_to,
     };
 
     const cleanPayload = Object.fromEntries(

@@ -34,6 +34,7 @@ const occasions: { value: OccasionType | 'All'; label: string }[] = [
 export default function EventsPage() {
   const { user } = useAuth()
   const [apiEvents, setApiEvents] = useState<Event[]>([])
+  const [totals, setTotals] = useState({ live: 0, hold: 0, finished: 0 })
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'live' | 'over'>('live')
@@ -41,6 +42,25 @@ export default function EventsPage() {
 
   const [search, setSearch] = useState('')
   const [occasionFilter, setOccasionFilter] = useState<OccasionType | 'All'>('All')
+
+  // Fetch all totals for tabs
+  const refreshTotals = async () => {
+    try {
+      const oc = occasionFilter === 'All' ? undefined : occasionFilter
+      const [liveRes, holdRes, finishedRes] = await Promise.all([
+        eventsApi.getEvents('live', oc, 1, 1),
+        eventsApi.getEvents('hold', oc, 1, 1),
+        eventsApi.getEvents('finished', oc, 1, 1)
+      ])
+      setTotals({
+        live: liveRes.pagination.total,
+        hold: holdRes.pagination.total,
+        finished: finishedRes.pagination.total
+      })
+    } catch (err) {
+      console.error('Failed to refresh totals:', err)
+    }
+  }
 
   // Fetch real events from backend based on tab/subtab selection
   useEffect(() => {
@@ -60,6 +80,12 @@ export default function EventsPage() {
         if (!cancelled) {
           setApiEvents(response.events)
           setPagination(response.pagination)
+          
+          // Update the specific total for the current tab in our global totals state
+          setTotals(prev => ({
+            ...prev,
+            [tabParam]: response.pagination.total
+          }))
         }
       } catch (err) {
         toast.error('Failed to load events')
@@ -71,6 +97,11 @@ export default function EventsPage() {
     return () => { cancelled = true }
   }, [activeTab, overSubTab, occasionFilter, pagination.page])
 
+  // Refresh totals on mount and when filter changes
+  useEffect(() => {
+    refreshTotals()
+  }, [occasionFilter])
+
   const handleDeleteEvent = async (id: string) => {
     if (!window.confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) {
       return
@@ -79,6 +110,7 @@ export default function EventsPage() {
     try {
       await eventsApi.deleteEvent(id)
       toast.success('Event deleted successfully')
+      refreshTotals()
       // Refresh current list
       const tabParam = activeTab === 'over' ? overSubTab : 'live'
       const response = await eventsApi.getEvents(tabParam, occasionFilter === 'All' ? undefined : occasionFilter)
@@ -109,9 +141,10 @@ export default function EventsPage() {
   const liveEvents = useMemo(() => activeTab === 'live' ? allEvents : [], [allEvents, activeTab])
   const overEvents = useMemo(() => activeTab === 'over' ? allEvents : [], [allEvents, activeTab])
 
-  const liveCount = allEvents.filter(e => e.status === 'live').length
-  const holdCount = allEvents.filter(e => e.status === 'hold').length
-  const finishedCount = allEvents.filter(e => e.status === 'finished').length
+  const liveCount = totals.live
+  const overCount = totals.hold + totals.finished
+  const holdCount = totals.hold
+  const finishedCount = totals.finished
 
 
   const getProductsForEvent = (eventId: string) => []

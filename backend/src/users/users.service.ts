@@ -9,17 +9,41 @@ import { UserRole } from '../auth/enums/user-role.enum';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum, IsBoolean, MinLength } from 'class-validator';
+
 export class CreateUserDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
+
+  @IsNotEmpty({ message: 'Password is required' })
+  @MinLength(6, { message: 'Password must be at least 6 characters' })
   password: string;
+
+  @IsString()
+  @IsOptional()
   name?: string;
+
+  @IsEnum(UserRole, { message: 'Invalid user role' })
+  @IsNotEmpty({ message: 'Role is required' })
   role: UserRole; // ADMIN can specify Staff or Staff Member
 }
 
 export class UpdateUserDto {
+  @IsEmail({}, { message: 'Invalid email format' })
+  @IsOptional()
   email?: string;
+
+  @IsString()
+  @IsOptional()
   name?: string;
+
+  @IsEnum(UserRole, { message: 'Invalid user role' })
+  @IsOptional()
   role?: UserRole;
+
+  @IsBoolean()
+  @IsOptional()
   is_active?: boolean;
 }
 

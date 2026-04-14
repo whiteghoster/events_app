@@ -8,6 +8,7 @@ import { useAuth, canViewCatalog, canViewUsers, canViewAudit } from '@/lib/auth-
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
+import { SidebarRegisterForm } from '@/components/sidebar-register-form'
 
 const navItems = [
   { href: '/events', label: 'Events', icon: Calendar, permission: () => true },
@@ -17,9 +18,9 @@ const navItems = [
 ]
 
 const roleColors = {
-  'Admin': 'bg-primary text-primary-foreground',
-  'Staff': 'bg-info text-foreground',
-  'Staff Member': 'bg-finished text-foreground',
+  'admin': 'bg-primary text-primary-foreground',
+  'staff': 'bg-info text-foreground',
+  'staff_member': 'bg-finished text-foreground',
 }
 
 export function AppSidebar() {
@@ -105,6 +106,11 @@ export function AppSidebar() {
               </div>
             )}
           </div>
+          {user.role === 'admin' && (
+            <div className="mb-4">
+              <SidebarRegisterForm collapsed={collapsed} />
+            </div>
+          )}
           {!collapsed && (
             <Button
               variant="ghost"
@@ -120,8 +126,8 @@ export function AppSidebar() {
       </aside>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex z-50">
-        {navItems.slice(0, 4).map(item => {
+      <nav className="lg:hidden fixed bottom-1 left-0 right-0 bg-card border-t border-border flex z-[100] pb-[env(safe-area-inset-bottom)] px-2">
+        {navItems.map(item => {
           if (!item.permission(user.role)) return null
           const isActive = pathname.startsWith(item.href)
           return (
@@ -129,21 +135,21 @@ export function AppSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex-1 flex flex-col items-center py-3 gap-1 transition-colors',
+                'flex-1 flex flex-col items-center py-3 gap-1 transition-colors min-w-0',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{item.label}</span>
+              <item.icon className="w-5 h-5 shrink-0" />
+              <span className="text-[10px] font-medium truncate w-full text-center">{item.label}</span>
             </Link>
           )
         })}
         <button
           onClick={logout}
-          className="flex-1 flex flex-col items-center py-3 gap-1 transition-colors text-muted-foreground hover:text-foreground"
+          className="flex-1 flex flex-col items-center py-3 gap-1 transition-colors text-muted-foreground hover:text-foreground flex-shrink-0 min-w-0"
         >
-          <LogOut className="w-5 h-5" />
-          <span className="text-xs font-medium">Log Out</span>
+          <LogOut className="w-5 h-5 shrink-0" />
+          <span className="text-[10px] font-medium truncate w-full text-center">Log Out</span>
         </button>
       </nav>
     </>

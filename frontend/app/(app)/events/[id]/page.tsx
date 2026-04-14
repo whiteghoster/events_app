@@ -33,6 +33,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [eventLogs, setEventLogs] = useState<AuditEntry[]>([])
+  const [categorySummary, setCategorySummary] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [infoExpanded, setInfoExpanded] = useState(false)
@@ -52,25 +53,39 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   })
 
   const loadData = useCallback(async () => {
+    setIsLoading(true)
     try {
-      const [eventData, productsData, catData, prodData, logsData] = await Promise.all([
-        eventsApi.getEventById(id),
-        eventsApi.getEventProducts(id),
-        catalogApi.getCategories(),
-        catalogApi.getProducts({ pageSize: 1000 }),
-        auditApi.getAuditLogs({ limit: 50 }) // we don't have entity_id filter yet, fetching latest
+      // 1. Core Event Data (Must succeed)
+      const eventData = await eventsApi.getEventById(id)
+      setEvent(eventData)
+
+      // 2. Parallel secondary data
+      const [productsData, catData, prodData, summaryData] = await Promise.all([
+        eventsApi.getEventProducts(id).catch(err => { console.error('Products failed:', err); return [] }),
+        catalogApi.getCategories().catch(err => { console.error('Categories failed:', err); return [] }),
+        catalogApi.getProducts({ pageSize: 1000 }).catch(err => { console.error('Products list failed:', err); return { data: [] } }),
+        eventsApi.getCategorySummary(id).catch(err => { console.error('Summary failed:', err); return [] })
       ])
 
-      setEvent(eventData)
       setEventProductsList(productsData)
       setAllCategories(catData)
       setAllProducts(prodData.data)
-      
-      // Filter logs locally for now until backend supports entity_id filtering
-      setEventLogs(logsData.data.filter(l => l.entityName === eventData.name))
+      setCategorySummary(summaryData)
+
+      // 3. Conditional Audit Logs (Admin Only)
+      if (user && canViewAudit(user.role)) {
+        try {
+          const logsData = await auditApi.getAuditLogs({ limit: 50 })
+          // Filter logs locally for now until backend supports entity_id filtering
+          setEventLogs(logsData.data.filter(l => l.entityName === eventData.name))
+        } catch (err) {
+          console.warn('Could not load audit logs:', err)
+          setEventLogs([])
+        }
+      }
     } catch (err) {
       console.error('Failed to load event data:', err)
-      const msg = err instanceof Error ? err.message : ''
+      const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('Event not found')) {
         toast.error('This event does not exist in the database. Please create a new event.')
       } else {
@@ -79,25 +94,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     } finally {
       setIsLoading(false)
     }
-  }, [id])
+  }, [id, user])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
 
-
-  const categorySummary = useMemo(() => {
-    const summary: Record<string, { quantities: Record<string, number> }> = {}
-    eventProductsList.forEach(p => {
-      if (!summary[p.categoryName]) {
-        summary[p.categoryName] = { quantities: {} }
-      }
-      const key = p.unit
-      summary[p.categoryName].quantities[key] = (summary[p.categoryName].quantities[key] || 0) + (p.quantity || 0)
-    })
-    return summary
-  }, [eventProductsList])
 
   const filteredProducts = useMemo(() => {
     if (!newProductData.categoryId) return []
@@ -121,6 +124,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     )
   }
 
+
+
   const isEditable = event.status === 'live' || (event.status === 'hold' && user?.role === 'admin')
 
   const canEdit = user && (canEditProductRow(user.role) || canEditQuantityOnly(user.role))
@@ -143,7 +148,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
     try {
       await eventsApi.updateEventProduct(id, editingRow!, {
-        product_id: editingData.productId,
         quantity: editingData.quantity,
         unit: editingData.unit,
         price: editingData.price,
@@ -315,6 +319,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
                 </p>
 
+              </div>
+              <div>
+                <p className="text-label mb-1">Assigned Staff</p>
+                <p className={cn("text-foreground", !event.assignedStaffName && "italic text-muted-foreground")}>
+                  {event.assignedStaffName || 'Not assigned yet'}
+                </p>
               </div>
               <div>
                 <p className="text-label mb-1">Date</p>
@@ -578,29 +588,58 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </TableBody>
           </Table>
         </div>
+
+        {/* Total Amount Footer */}
+        {eventProductsList.length > 0 && (() => {
+          const pricedItems = eventProductsList.filter(p => p.price && p.price > 0)
+          const grandTotal = eventProductsList.reduce((sum, p) => sum + (p.price ? p.price * p.quantity : 0), 0)
+          return (
+            <div className="border-t border-border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {pricedItems.map(p => (
+                  <span key={p.id} className="text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{p.productName}</span>
+                    {': '}
+                    {p.quantity} × ₹{p.price} = <span className="text-foreground">₹{(p.price! * p.quantity).toLocaleString('en-IN')}</span>
+                  </span>
+                ))}
+                {pricedItems.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">No prices assigned to products yet.</span>
+                )}
+              </div>
+              <div className="text-sm font-semibold text-foreground shrink-0">
+                Total:{' '}
+                <span className="text-primary text-base">
+                  ₹{grandTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Category Summary */}
-      {Object.keys(categorySummary).length > 0 && (
+      {categorySummary.length > 0 && (
         <div className="bg-secondary rounded-xl p-4 border-l-4 border-primary mb-6">
           <h3 className="text-label mb-3">Category Summary</h3>
-          <div className="space-y-2">
-            {Object.entries(categorySummary).map(([category, data]) => (
-              <div key={category} className="flex items-center gap-3 text-sm">
-                <span className="font-medium text-foreground w-32">{category}</span>
-                <span className="text-muted-foreground">
-                  {Object.entries(data.quantities).map(([unit, qty], i) => (
-                    <span key={unit}>
-                      {i > 0 && ' · '}
-                      {qty} {unit}
-                    </span>
-                  ))}
-                </span>
+          <div className="space-y-4">
+            {categorySummary.map((item, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="font-bold text-foreground w-32">{item.category}</span>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {item.totals.map((t: any, tidx: number) => (
+                      <span key={tidx} className="text-muted-foreground whitespace-nowrap">
+                        {t.quantity} {t.unit}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
           <div className="border-t border-border mt-3 pt-3 text-sm text-muted-foreground">
-            Total: {Object.keys(categorySummary).length} categories · {eventProductsList.length} rows
+            Total: {categorySummary.length} categories · {eventProductsList.length} rows
           </div>
         </div>
       )}

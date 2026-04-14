@@ -2,8 +2,8 @@ import { IsUUID, IsNumber, IsString, IsNotEmpty, IsOptional, Min } from 'class-v
 
 export class CreateEventProductDto {
   @IsUUID()
-  @IsNotEmpty()
-  event_id: string;
+  @IsOptional()
+  event_id?: string;
 
   @IsUUID()
   @IsNotEmpty()

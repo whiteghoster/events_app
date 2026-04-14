@@ -162,9 +162,16 @@ export default function UsersPage() {
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell className="text-muted-foreground">{user.email}</TableCell>
                 <TableCell>
-                  <Badge className={cn('text-xs', roleColors[user.role])}>
-                    {user.role}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn('text-xs', roleColors[user.role])}>
+                      {user.role}
+                    </Badge>
+                    {user.isActive === false && (
+                      <Badge variant="outline" className="text-[10px] uppercase border-destructive text-destructive">
+                        Inactive
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground hidden sm:table-cell">
                   {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A'}

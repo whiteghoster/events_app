@@ -3,11 +3,11 @@ import type { Event, EventProduct, EventStatus, Category, Product, OccasionType,
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
 // -------------------------------------------------------------------
-// Token refresh helper (mirrors auth-context logic, for use outside React)
+// 1. UTILS & HELPERS
 // -------------------------------------------------------------------
+
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken =
-    typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null
+  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null
   if (!refreshToken) return null
 
   try {
@@ -32,18 +32,12 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
-// -------------------------------------------------------------------
-// Core request helper — auto-refreshes on 401 and retries once
-// -------------------------------------------------------------------
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
   _retry = true,
 ): Promise<T> {
-  const token =
-    typeof window !== 'undefined'
-      ? localStorage.getItem('access_token')
-      : null
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
@@ -54,65 +48,52 @@ async function apiRequest<T>(
     },
   })
 
-  // On 401: try to refresh the token once, then retry the original request
   if (response.status === 401 && _retry) {
     const newToken = await refreshAccessToken()
     if (newToken) {
-      return apiRequest<T>(endpoint, options, false) // retry with fresh token
+      return apiRequest<T>(endpoint, options, false)
     }
-    // Refresh failed — clear session and redirect to login
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      localStorage.removeItem('expires_at')
-      localStorage.removeItem('user')
+      localStorage.clear()
       window.location.href = '/auth/login'
     }
     throw new Error('Session expired. Please log in again.')
   }
 
   if (!response.ok) {
-    let errorMessage = `Request failed with status ${response.status}`
+    let errorMessage = `Request failed: ${response.status}`
     try {
       const errorData = await response.json()
       errorMessage = errorData?.message || errorData?.error || errorMessage
-    } catch {
-      // Response is not JSON
-    }
+    } catch { /* ignore */ }
     throw new Error(errorMessage)
   }
 
   try {
     const json = await response.json()
-
-    // Handle paginated responses
-    if (json && typeof json === 'object' && 'data' in json && 'total' in json) {
-      return json as T
-    }
-
-    // Handle simple success wrapper
+    // Handle success wrapper common in NestJS
     if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
+      // If it's a paginated response (detected by pagination keys at the top level),
+      // return the whole object so the caller has access to 'total', 'page', etc.
+      if ('total' in json || 'page' in json || 'pagination' in json) {
+        return json as T
+      }
       return json.data as T
     }
-
     return json as T
-  } catch (error) {
-    throw new Error('Failed to parse response')
+  } catch {
+    throw new Error('Failed to parse server response')
   }
 }
 
 // -------------------------------------------------------------------
-// Status / field normalizers
+// 2. MAPPERS & NORMALIZERS
 // -------------------------------------------------------------------
+
 function normalizeStatus(status: string): EventStatus {
-  if (!status) return 'live'
-  const s = String(status).toLowerCase()
-  if (s === 'live' || s === 'hold' || s === 'finished') {
-    return s as EventStatus
-  }
-  return 'live'
+  const s = String(status || '').toLowerCase()
+  return (['live', 'hold', 'finished'].includes(s)) ? (s as EventStatus) : 'live'
 }
-
 
 function mapEventFromBackend(event: any): Event {
   return {
@@ -120,7 +101,6 @@ function mapEventFromBackend(event: any): Event {
     displayId: event.display_id || event.displayId || undefined,
     name: event.name,
     occasionType: (event.occasion_type || event.occasionType || 'other') as OccasionType,
-
     eventDate: event.date || event.eventDate || '',
     venueName: event.venue_name || event.venueName || '',
     venueAddress: event.venue_address || event.venueAddress || '',
@@ -128,6 +108,8 @@ function mapEventFromBackend(event: any): Event {
     contactPhone: event.contact_phone || event.contactPhone || '',
     notes: event.notes || '',
     status: normalizeStatus(event.status),
+    assignedTo: event.assigned_to || event.assignedTo || undefined,
+    assignedStaffName: event.assigned_staff?.name || event.assignedStaffName || undefined,
     closedAt: event.closed_at || event.closedAt || null,
     closedBy: event.closed_by || event.closedBy || null,
     createdAt: event.created_at || event.createdAt || undefined,
@@ -141,22 +123,19 @@ function mapUserFromBackend(user: any): User {
     name: user.name || '',
     email: user.email || '',
     role: (user.role || 'staff').toLowerCase() as any,
+    isActive: user.is_active !== false,
     createdAt: user.created_at || user.createdAt || new Date().toISOString(),
   }
 }
 
 function mapAuditEntryFromBackend(log: any): AuditEntry {
-  // Determine a friendly name for the entity
   const entityName = log.new_values?.name || log.old_values?.name || log.entity_id || 'Unknown'
-  
-  // Format the change summary
   let change = ''
   if (log.action === 'Created') {
     change = `New ${log.entity_type} created`
   } else if (log.action === 'Deleted') {
     change = `${log.entity_type} removed`
   } else {
-    // For updates, try to show some changed keys
     const keys = Object.keys(log.new_values || {}).filter(k => k !== 'updated_at')
     change = keys.length > 0 ? `Updated ${keys.join(', ')}` : 'Entry updated'
   }
@@ -174,8 +153,9 @@ function mapAuditEntryFromBackend(log: any): AuditEntry {
 }
 
 // -------------------------------------------------------------------
-// Auth API
+// 3. AUTH MODULE
 // -------------------------------------------------------------------
+
 export const authApi = {
   async login(email: string, password: string) {
     return await apiRequest<{
@@ -188,12 +168,17 @@ export const authApi = {
     })
   },
 
+  async register(payload: { email: string; password: string; name: string; role: string }) {
+    return await apiRequest<any>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
   async logout() {
     try {
       await apiRequest('/auth/logout', { method: 'POST' })
-    } catch {
-      // Always clear token even if API call fails
-    }
+    } catch { /* ignore */ }
   },
 
   async refreshToken(refreshToken: string) {
@@ -208,223 +193,57 @@ export const authApi = {
 }
 
 // -------------------------------------------------------------------
-// Catalog API
+// 4. EVENTS MODULE
 // -------------------------------------------------------------------
-export const catalogApi = {
-  async getCategories(): Promise<Category[]> {
-    const res = await apiRequest<{ data: any[] }>('/catalog/categories')
-    return (res.data || []).map(c => ({
-      id: c.id,
-      name: c.name,
-      isActive: c.is_active !== false,
-      createdAt: c.created_at
-    }))
-  },
 
-  async createCategory(name: string): Promise<Category> {
-    const res = await apiRequest<{ data: any }>('/catalog/categories', {
-      method: 'POST',
-      body: JSON.stringify({ name }),
-    })
-    return res.data
-  },
-
-  async updateCategory(id: string, name: string): Promise<Category> {
-    const res = await apiRequest<{ data: any }>(`/catalog/categories/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ name }),
-    })
-    return res.data
-  },
-
-  async deleteCategory(id: string): Promise<void> {
-    await apiRequest(`/catalog/categories/${id}`, { method: 'DELETE' })
-  },
-
-  async getProducts(params?: { categoryId?: string; page?: number; pageSize?: number }): Promise<{
-    data: Product[]
-    total: number
-  }> {
-    const q = new URLSearchParams()
-    if (params?.categoryId) q.set('categoryId', params.categoryId)
-    if (params?.page) q.set('page', params.page.toString())
-    if (params?.pageSize) q.set('pageSize', params.pageSize.toString())
-
-    const res = await apiRequest<{
-      data: any[]
-      total: number
-    }>(`/catalog/products?${q.toString()}`)
-
-    return {
-      data: (res.data || []).map(p => ({
-        id: p.id,
-        name: p.name,
-        categoryId: p.category_id,
-        categoryName: p.category?.name,
-        defaultUnit: p.default_unit,
-        price: p.price,
-        description: p.description,
-        isActive: p.is_active,
-        createdAt: p.created_at
-      })),
-      total: res.total || 0
-    }
-  },
-
-  async createProduct(payload: {
-    name: string
-    categoryId: string
-    defaultUnit: string
-    price?: number
-    description?: string
-  }): Promise<Product> {
-    const res = await apiRequest<{ data: any }>('/catalog/products', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: payload.name,
-        category_id: payload.categoryId,
-        default_unit: payload.defaultUnit,
-        price: payload.price,
-        description: payload.description,
-      }),
-    })
-    return res.data
-  },
-
-  async updateProduct(id: string, payload: {
-    name?: string
-    categoryId?: string
-    defaultUnit?: string
-    price?: number
-    description?: string
-    isActive?: boolean
-  }): Promise<Product> {
-    const res = await apiRequest<{ data: any }>(`/catalog/products/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        name: payload.name,
-        category_id: payload.categoryId,
-        default_unit: payload.defaultUnit,
-        price: payload.price,
-        description: payload.description,
-        is_active: payload.isActive,
-      }),
-    })
-    return res.data
-  },
-
-  async deactivateProduct(id: string): Promise<void> {
-    await apiRequest(`/catalog/products/${id}/deactivate`, { method: 'POST' })
-  },
-
-  async deleteProduct(id: string): Promise<void> {
-    await apiRequest(`/catalog/products/${id}`, { method: 'DELETE' })
-  },
-
-  async seedCategories(): Promise<void> {
-    await apiRequest('/catalog/seed/categories', { method: 'POST' })
-  },
-
-  async seedProducts(): Promise<void> {
-    await apiRequest('/catalog/seed/products', { method: 'POST' })
-  },
-}
-
-
-// -------------------------------------------------------------------
-// Events API
-// -------------------------------------------------------------------
 export const eventsApi = {
   async getEvents(tab?: string, occasionType?: string, page: number = 1, pageSize: number = 20): Promise<{
     events: Event[]
-    pagination: {
-      page: number
-      pageSize: number
-      total: number
-      totalPages: number
-    }
+    pagination: { page: number; pageSize: number; total: number; totalPages: number }
   }> {
-    try {
-      const params = new URLSearchParams()
-      if (tab) params.set('tab', tab)
-      if (occasionType) params.set('occasionType', occasionType)
-      params.set('page', page.toString())
-      params.set('pageSize', pageSize.toString())
-      const query = `?${params.toString()}`
+    const params = new URLSearchParams()
+    if (tab) params.set('tab', tab)
+    if (occasionType) params.set('occasionType', occasionType)
+    params.set('page', page.toString())
+    params.set('pageSize', pageSize.toString())
 
-      const response = await apiRequest<{
-        data: any[]
-        total: number
-        page: number
-        pageSize: number
-        totalPages: number
-      }>(`/events${query}`)
-
-      return {
-        events: (response?.data || []).map(mapEventFromBackend),
-        pagination: {
-          page: response?.page || 1,
-          pageSize: response?.pageSize || 20,
-          total: response?.total || 0,
-          totalPages: response?.totalPages || 0,
-        },
-      }
-    } catch (error) {
-      console.error('eventsApi.getEvents failed:', error)
-      return {
-        events: [],
-        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
-      }
+    const res = await apiRequest<any>(`/events?${params.toString()}`)
+    
+    // Now res is the full object { success, data: [...], total, ... }
+    const events = Array.isArray(res.data) ? res.data : (res.events || [])
+    
+    return {
+      events: events.map(mapEventFromBackend),
+      pagination: {
+        page: res.page || 1,
+        pageSize: res.pageSize || 20,
+        total: res.total || 0,
+        totalPages: res.totalPages || 0,
+      },
     }
   },
 
   async createEvent(payload: {
     name: string
-    occasionType?: string
-    eventDate?: string
-    venueName?: string
+    occasionType: string
+    eventDate: string
+    venueName: string
     venueAddress?: string
     contactName?: string
     contactPhone?: string
     notes?: string
   }): Promise<Event> {
+    const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, ...rest } = payload
     const data = await apiRequest<any>('/events', {
       method: 'POST',
       body: JSON.stringify({
-        name: payload.name,
-        occasion_type: payload.occasionType,
-        date: payload.eventDate,
-        venue_name: payload.venueName,
-        venue_address: payload.venueAddress,
-        contact_person: payload.contactName,
-        contact_phone: payload.contactPhone,
-        notes: payload.notes,
-      }),
-    })
-    return mapEventFromBackend(data)
-  },
-
-  async updateEvent(id: string, payload: {
-    name?: string
-    occasionType?: string
-    eventDate?: string
-    venueName?: string
-    venueAddress?: string
-    contactName?: string
-    contactPhone?: string
-    notes?: string
-  }): Promise<Event> {
-    const data = await apiRequest<any>(`/events/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        name: payload.name,
-        occasion_type: payload.occasionType,
-        date: payload.eventDate,
-        venue_name: payload.venueName,
-        venue_address: payload.venueAddress,
-        contact_person: payload.contactName,
-        contact_phone: payload.contactPhone,
-        notes: payload.notes,
+        ...rest,
+        occasion_type: occasionType,
+        date: eventDate,
+        venue_name: venueName,
+        venue_address: venueAddress,
+        contact_person: contactName,
+        contact_phone: contactPhone,
       }),
     })
     return mapEventFromBackend(data)
@@ -435,17 +254,45 @@ export const eventsApi = {
     return mapEventFromBackend(data)
   },
 
-  async getEventProducts(eventId: string): Promise<EventProduct[]> {
-    const response = await apiRequest<{
-      data: any[]
-      total: number
-    }>(`/events/${eventId}/products`)
+  async updateEvent(id: string, payload: Partial<Event>): Promise<Event> {
+    const { occasionType, eventDate, venueName, venueAddress, contactName, contactPhone, status, ...rest } = payload
+    const data = await apiRequest<any>(`/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...rest,
+        occasion_type: occasionType,
+        date: eventDate,
+        venue_name: venueName,
+        venue_address: venueAddress,
+        contact_person: contactName,
+        contact_phone: contactPhone,
+      }),
+    })
+    return mapEventFromBackend(data)
+  },
 
-    return (response?.data || []).map(item => ({
+  async closeEvent(id: string, status: string): Promise<void> {
+    await apiRequest(`/events/${id}/close`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+  },
+
+  async deleteEvent(id: string): Promise<void> {
+    await apiRequest(`/events/${id}`, { method: 'DELETE' })
+  },
+
+  // Event Products logic
+  async getEventProducts(eventId: string): Promise<EventProduct[]> {
+    const res = await apiRequest<any>(`/events/${eventId}/products`)
+    // apiRequest already unwraps { success, data } — so res IS the data array.
+    // But in case the response includes pagination fields (object), handle both.
+    const items: any[] = Array.isArray(res) ? res : (res?.data || res || [])
+    return items.map((item: any) => ({
       id: item.id,
       eventId: item.event_id || eventId,
       productId: item.product_id,
-      productName: item.product?.name || 'Unknown Product',
+      productName: item.product?.name || 'Unknown Item',
       categoryId: item.product?.category?.id || '',
       categoryName: item.product?.category?.name || 'Unknown Category',
       quantity: item.quantity,
@@ -455,10 +302,7 @@ export const eventsApi = {
   },
 
   async addEventProduct(eventId: string, payload: {
-    productId: string
-    quantity: number
-    unit: string
-    price?: number
+    productId: string; quantity: number; unit: string; price?: number
   }): Promise<void> {
     await apiRequest(`/events/${eventId}/products`, {
       method: 'POST',
@@ -471,12 +315,7 @@ export const eventsApi = {
     })
   },
 
-  async updateEventProduct(eventId: string, rowId: string, payload: {
-    product_id?: string
-    quantity?: number
-    unit?: string
-    price?: number
-  }): Promise<void> {
+  async updateEventProduct(eventId: string, rowId: string, payload: any): Promise<void> {
     await apiRequest(`/events/${eventId}/products/${rowId}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -484,64 +323,151 @@ export const eventsApi = {
   },
 
   async deleteEventProduct(eventId: string, rowId: string): Promise<void> {
-    await apiRequest(`/events/${eventId}/products/${rowId}`, {
-      method: 'DELETE',
-    })
+    await apiRequest(`/events/${eventId}/products/${rowId}`, { method: 'DELETE' })
   },
 
-
-  async closeEvent(id: string, status: string): Promise<void> {
-    await apiRequest(`/events/${id}/close`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    })
-  },
-
-  async deleteEvent(id: string): Promise<void> {
-    await apiRequest(`/events/${id}`, { method: 'DELETE' })
+  async getCategorySummary(eventId: string): Promise<any[]> {
+    const res = await apiRequest<any[]>(`/events/${eventId}/category-summary`)
+    // Backend returns [{ category: string, totals: [{ unit, quantity }] }]
+    // Flatten it for simple display if needed, or keep for complex UI
+    return res
   },
 }
 
 // -------------------------------------------------------------------
-// Users API
+// 5. CATALOG MODULE
 // -------------------------------------------------------------------
-export const usersApi = {
-  async getUsers(page: number = 1, pageSize: number = 50): Promise<{
-    data: User[]
-    total: number
+
+export const catalogApi = {
+  async getCategories(): Promise<Category[]> {
+    const res = await apiRequest<any>('/catalog/categories')
+    const categories = Array.isArray(res) ? res : (res.data || [])
+    
+    return categories.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      isActive: c.is_active !== false,
+      createdAt: c.created_at
+    }))
+  },
+
+  async createCategory(name: string): Promise<Category> {
+    return await apiRequest<any>('/catalog/categories', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  },
+
+  async updateCategory(id: string, name: string): Promise<Category> {
+    return await apiRequest<any>(`/catalog/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    })
+  },
+
+  async deleteCategory(id: string): Promise<void> {
+    await apiRequest(`/catalog/categories/${id}`, { method: 'DELETE' })
+  },
+
+  async getProducts(params?: { categoryId?: string; page?: number; pageSize?: number }): Promise<{
+    data: Product[]; total: number
   }> {
-    const res = await apiRequest<{
-      success: boolean
-      data: any[]
-      total: number
-    }>(`/users?page=${page}&pageSize=${pageSize}`)
+    const q = new URLSearchParams()
+    if (params?.categoryId) q.set('categoryId', params.categoryId)
+    if (params?.page) q.set('page', params.page.toString())
+    if (params?.pageSize) q.set('pageSize', params.pageSize.toString())
+
+    const res = await apiRequest<any>(`/catalog/products?${q.toString()}`)
+    const products = Array.isArray(res.data) ? res.data : (res.products || [])
     
     return {
-      data: (res.data || []).map(mapUserFromBackend),
+      data: products.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        categoryId: p.category_id,
+        categoryName: p.category?.name || 'Uncategorized',
+        defaultUnit: p.default_unit || p.defaultUnit || 'pcs',
+        price: p.price,
+        description: p.description,
+        isActive: p.is_active !== false,
+        createdAt: p.created_at
+      })),
       total: res.total || 0
     }
   },
 
-  async createUser(payload: { name: string; email: string; role: string }): Promise<User> {
-    const res = await apiRequest<{ data: any }>('/users', {
+  async createProduct(payload: any): Promise<Product> {
+    const { categoryId, defaultUnit, ...rest } = payload
+    return await apiRequest<any>('/catalog/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...rest,
+        category_id: categoryId,
+        default_unit: defaultUnit,
+      }),
+    })
+  },
+
+  async updateProduct(id: string, payload: any): Promise<Product> {
+    const { categoryId, defaultUnit, isActive, ...rest } = payload
+    return await apiRequest<any>(`/catalog/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...rest,
+        category_id: categoryId,
+        default_unit: defaultUnit,
+        is_active: isActive,
+      }),
+    })
+  },
+
+  async deactivateProduct(id: string): Promise<void> {
+    await apiRequest(`/catalog/products/${id}/deactivate`, { method: 'POST' })
+  },
+
+  async seedCategories(): Promise<void> {
+    await apiRequest('/catalog/seed/categories', { method: 'POST' })
+  },
+
+  async seedProducts(): Promise<void> {
+    await apiRequest('/catalog/seed/products', { method: 'POST' })
+  },
+}
+
+// -------------------------------------------------------------------
+// 6. USERS MODULE
+// -------------------------------------------------------------------
+
+export const usersApi = {
+  async getUsers(page: number = 1, pageSize: number = 50): Promise<{ data: User[]; total: number }> {
+    const res = await apiRequest<any>(`/users?page=${page}&pageSize=${pageSize}`)
+    // After refactor, res is { success: true, data: [...], total: X }
+    return {
+      data: (Array.isArray(res.data) ? res.data : []).map(mapUserFromBackend),
+      total: res.total || 0
+    }
+  },
+
+  async createUser(payload: { name: string; email: string; password: string; role: string }): Promise<User> {
+    const data = await apiRequest<any>('/users', {
       method: 'POST',
       body: JSON.stringify({
         ...payload,
-        role: payload.role.toLowerCase().replace(' ', '_'), // Handle 'Staff Member' -> 'staff_member'
+        role: payload.role.toLowerCase().replace(' ', '_'),
       }),
     })
-    return mapUserFromBackend(res.data)
+    return mapUserFromBackend(data)
   },
 
-  async updateUser(id: string, payload: { name?: string; role?: string }): Promise<User> {
-    const res = await apiRequest<{ data: any }>(`/users/${id}`, {
+  async updateUser(id: string, payload: any): Promise<User> {
+    const data = await apiRequest<any>(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
         ...payload,
         role: payload.role ? payload.role.toLowerCase().replace(' ', '_') : undefined,
       }),
     })
-    return mapUserFromBackend(res.data)
+    return mapUserFromBackend(data)
   },
 
   async deleteUser(id: string): Promise<void> {
@@ -550,37 +476,34 @@ export const usersApi = {
 }
 
 // -------------------------------------------------------------------
-// Audit API
+// 7. AUDIT MODULE
 // -------------------------------------------------------------------
+
 export const auditApi = {
-  async getAuditLogs(params?: {
-    entity_type?: string
-    action?: string
-    page?: number
-    limit?: number
-  }): Promise<{
-    data: AuditEntry[]
-    pagination: {
-      page: number
-      limit: number
-      total: number
-      hasMore: boolean
-    }
-  }> {
+  async getAuditLogs(params?: any): Promise<{ data: AuditEntry[]; pagination: any }> {
     const q = new URLSearchParams()
     if (params?.entity_type) q.set('entity_type', params.entity_type)
     if (params?.action) q.set('action', params.action)
     if (params?.page) q.set('page', params.page.toString())
     if (params?.limit) q.set('limit', params.limit.toString())
 
-    const res = await apiRequest<{
-      data: any[]
-      pagination: any
-    }>(`/audit?${q.toString()}`)
+    const res = await apiRequest<any>(`/audit?${q.toString()}`)
+    const logs = Array.isArray(res) ? res : (res.data || [])
 
     return {
-      data: (res.data || []).map(mapAuditEntryFromBackend),
+      data: logs.map(mapAuditEntryFromBackend),
       pagination: res.pagination || { page: 1, limit: 50, total: 0, hasMore: false },
+    }
+  },
+
+  async exportAuditLogs(filters: any): Promise<{ data: any[]; filename: string }> {
+    const res = await apiRequest<any>('/audit/export', {
+      method: 'POST',
+      body: JSON.stringify(filters),
+    })
+    return {
+      data: res.data || [],
+      filename: res.filename || 'audit_export.csv'
     }
   },
 }

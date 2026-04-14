@@ -1,15 +1,42 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AuditAction } from '../auth/enums/audit-action.enum';
+import { IsOptional, IsString, IsNumber, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class FindAuditLogsDto {
+  @IsOptional()
+  @IsString()
   entity_type?: string;
+
+  @IsOptional()
+  @IsEnum(AuditAction)
   action?: AuditAction;
+
+  @IsOptional()
+  @IsString()
   user_id?: string;
+
+  @IsOptional()
+  @IsString()
   date_from?: string;
+
+  @IsOptional()
+  @IsString()
   date_to?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   limit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   page?: number;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 }
 

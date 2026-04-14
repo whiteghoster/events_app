@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
-import { eventsApi } from '@/lib/api'
+import { eventsApi, usersApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import type { OccasionType } from '@/lib/types'
+import type { OccasionType, User } from '@/lib/types'
+import { useEffect } from 'react'
 
 const occasions: { value: OccasionType; label: string }[] = [
   { value: 'haldi', label: 'Haldi' },
@@ -31,6 +32,7 @@ export default function NewEventPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [staffList, setStaffList] = useState<User[]>([])
   
   const [formData, setFormData] = useState({
     name: '',
@@ -41,9 +43,24 @@ export default function NewEventPage() {
     contactName: '',
     contactPhone: '',
     notes: '',
+    assignedTo: '',
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const { data } = await usersApi.getUsers(1, 100)
+        // Filter for staff roles
+        const staff = data.filter(u => u.role === 'staff' || u.role === 'staff_member')
+        setStaffList(staff)
+      } catch (err) {
+        console.error('Failed to fetch staff:', err)
+      }
+    }
+    fetchStaff()
+  }, [])
 
 
   if (!user || !canCreateEvent(user.role)) {
@@ -83,6 +100,7 @@ export default function NewEventPage() {
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
         notes: formData.notes,
+        assigned_to: formData.assignedTo || undefined,
       })
       toast.success('Event created successfully')
       router.push('/events')
@@ -158,7 +176,33 @@ export default function NewEventPage() {
 
           <div className="border-t border-border" />
 
-          {/* Section 2: Venue */}
+          {/* Section 2: Staff Assignment */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Staff Assignment</h2>
+            <div className="space-y-2">
+              <Label htmlFor="assignedTo" className="text-label">
+                Assign Work To (Primary Staff)
+              </Label>
+              <Select value={formData.assignedTo} onValueChange={(v) => handleChange('assignedTo', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {staffList.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name} ({s.role})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground italic">
+                The assigned staff member will be responsible for coordinating this event.
+              </p>
+            </div>
+          </section>
+
+          <div className="border-t border-border" />
+
+          {/* Section 3: Venue */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Venue</h2>
             
@@ -191,7 +235,7 @@ export default function NewEventPage() {
 
           <div className="border-t border-border" />
 
-          {/* Section 3: Contact */}
+          {/* Section 4: Contact */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Contact (Optional)</h2>
             
@@ -220,7 +264,7 @@ export default function NewEventPage() {
 
           <div className="border-t border-border" />
 
-          {/* Section 4: Notes */}
+          {/* Section 5: Notes */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Notes</h2>
             

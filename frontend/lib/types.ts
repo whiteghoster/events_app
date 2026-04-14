@@ -53,6 +53,7 @@ export interface User {
   name: string
   email: string
   role: UserRole
+  isActive?: boolean
   createdAt: string
 }
 
@@ -71,6 +72,8 @@ export interface Event {
   contactPhone?: string
   notes?: string
   status: EventStatus
+  assignedTo?: string
+  assignedStaffName?: string
   closedAt?: string | null
   closedBy?: string | null
   createdAt?: string

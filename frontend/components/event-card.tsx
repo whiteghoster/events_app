@@ -14,7 +14,7 @@ const occasionIcons: Record<string, React.ReactNode> = {
   reception: <span className="text-base">🥂</span>,
   cocktail: <span className="text-base">🍸</span>,
   after_party: <span className="text-base">🎇</span>,
-  other: <span className="text-base">📋</span>,
+  others: <span className="text-base">📋</span>,
 }
 
 
@@ -59,81 +59,100 @@ export function EventCard({ event, products = [] }: EventCardProps) {
     return <Package className="w-3.5 h-3.5" />
   }
 
+  // Try to extract city from address (usually part before the last part or contains Mumbai, Delhi etc)
+  const extractCity = () => {
+    if (!event.venueAddress) return ''
+    const parts = event.venueAddress.split(',').map(p => p.trim())
+    // If there's more than 1 part, usually the second to last part is the city if last is state/pin
+    if (parts.length > 1) {
+      return parts[parts.length - 2]
+    }
+    return parts[0]
+  }
+
+  const city = extractCity()
+
   return (
     <Link href={`/events/${event.id}`}>
-      <div className="group bg-card rounded-xl p-5 border border-border hover:border-primary/50 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-              {occasionIcons[event.occasionType]}
-              {event.occasionType.replace('_', ' ').charAt(0).toUpperCase() + event.occasionType.replace('_', ' ').slice(1)}
-            </span>
-            {event.displayId && (
-              <span className="text-xs font-mono font-medium text-muted-foreground bg-secondary px-2 py-1 rounded">
-                {event.displayId}
-              </span>
+      <div className="group bg-card rounded-xl p-5 border border-border hover:border-primary/50 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col h-full ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+        {/* Top Row: Client Name & EVT ID */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="min-w-0 flex-grow">
+            <h3 className="font-serif text-xl font-bold text-foreground group-hover:text-primary transition-colors leading-tight truncate">
+              {event.name}
+            </h3>
+            {event.contactName && (
+              <p className="text-muted-foreground font-sans text-sm font-normal mt-1 opacity-80 group-hover:opacity-100 transition-opacity truncate">
+                {event.contactName}
+              </p>
             )}
           </div>
+          {event.displayId && (
+            <span className="text-xs font-mono font-bold text-muted-foreground bg-secondary px-2.5 py-1.5 rounded-md border border-border/50 shrink-0">
+              {event.displayId}
+            </span>
+          )}
         </div>
 
-        {/* Event Name */}
-        <h3 className="font-serif text-lg text-foreground mb-2 group-hover:text-primary transition-colors">
-          {event.name}
-        </h3>
+        {/* Middle Area: Venue, City, Date */}
+        <div className="space-y-3 mb-6 flex-grow">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-foreground font-medium text-sm">
+              <MapPin className="w-4 h-4 text-primary/70 shrink-0" />
+              <span className="truncate">{event.venueName}</span>
+            </div>
+            {city && (
+              <div className="pl-6 text-xs text-muted-foreground uppercase tracking-wider">
+                {city}
+              </div>
+            )}
+          </div>
 
-        {/* Venue */}
-        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-3">
-          <MapPin className="w-4 h-4 shrink-0" />
-          <span className="truncate">{event.venueName}</span>
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-foreground font-medium">
+                {eventDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+              <span className={cn(
+                'text-[10px] uppercase font-bold tracking-widest',
+                isUrgent ? 'text-primary' : 'text-muted-foreground'
+              )}>
+                {getRelativeDate()}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Date */}
-        <div className="flex items-center gap-2 text-sm mb-3">
-          <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-muted-foreground">
-            {eventDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-          </span>
-          <span className="text-muted-foreground">·</span>
-          <span className={cn(
-            'font-medium',
-            isUrgent ? 'text-primary' : 'text-muted-foreground',
-            daysAway === 0 && 'font-bold'
-          )}>
-            {getRelativeDate()}
-          </span>
-        </div>
+        {/* Bottom Area: Manager & Occasion Type */}
+        <div className="flex items-end justify-between gap-4 pb-4 border-b border-border/50 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 border border-border">
+              <User className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Manager / Contact</p>
+              <p className="text-sm font-medium text-foreground truncate">
+                {event.assignedStaffName || event.contactName || 'Unassigned'}
+              </p>
+            </div>
+          </div>
 
-        {/* Contact */}
-        {event.contactName && (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-4">
-            <User className="w-4 h-4 shrink-0" />
-            <span className="truncate">
-              {event.contactName}
-              {event.contactPhone && ` · ${event.contactPhone}`}
+          <div className="px-3 py-1.5 bg-secondary/80 rounded-lg border border-dashed border-border flex items-center gap-2 shrink-0">
+            {occasionIcons[event.occasionType]}
+            <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
+              {event.occasionType.replace('_', ' ')}
             </span>
           </div>
-        )}
+        </div>
 
-        {/* Category Summary */}
-        {topCategories.length > 0 && (
-          <div className="space-y-1.5 mb-4 pt-3 border-t border-border">
-            {topCategories.map(([category, items]) => (
-              <div key={category} className="flex items-center gap-2 text-sm text-muted-foreground">
-                {categoryIcon(category)}
-                <span className="font-medium text-foreground">{category}:</span>
-                <span>{items.join(', ')}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-border">
-          <span className="text-sm text-primary font-medium group-hover:underline">
+        {/* Footer: View Details & Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-primary text-sm font-bold group-hover:translate-x-1 transition-transform">
             View Details
-          </span>
-          <StatusBadge status={event.status} />
+            <Flower2 className="w-3.5 h-3.5" />
+          </div>
+          <StatusBadge status={event.status} size="sm" />
         </div>
       </div>
     </Link>

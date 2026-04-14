@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canEditEvent } from '@/lib/auth-context'
-import { eventsApi } from '@/lib/api'
+import { eventsApi, usersApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { OCCASION_TYPES } from '@/lib/types'
+import { OCCASION_TYPES, type User } from '@/lib/types'
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -21,6 +21,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [staffList, setStaffList] = useState<User[]>([])
   const [formData, setFormData] = useState({
     name: '',
     occasionType: '',
@@ -30,6 +31,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
     contactName: '',
     contactPhone: '',
     notes: '',
+    assignedTo: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -39,12 +41,13 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       setFormData({
         name: data.name,
         occasionType: data.occasionType,
-        eventDate: data.eventDate,
+        eventDate: data.eventDate ? data.eventDate.split('T')[0] : '',
         venueName: data.venueName,
-        venueAddress: data.venueAddress,
-        contactName: data.contactName,
-        contactPhone: data.contactPhone,
+        venueAddress: data.venueAddress || '',
+        contactName: data.contactName || '',
+        contactPhone: data.contactPhone || '',
         notes: data.notes || '',
+        assignedTo: data.assignedTo || 'unassigned',
       })
     } catch (err) {
       toast.error('Failed to load event details')
@@ -53,6 +56,18 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
       setIsPageLoading(false)
     }
   }, [id, router])
+
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const { data } = await usersApi.getUsers(1, 100)
+        setStaffList(data.filter(u => u.role === 'staff' || u.role === 'staff_member'))
+      } catch (err) {
+        console.error('Failed to fetch staff:', err)
+      }
+    }
+    fetchStaff()
+  }, [])
 
   useEffect(() => {
     if (user && !canEditEvent(user.role)) {
@@ -102,6 +117,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
         notes: formData.notes,
+        assigned_to: formData.assignedTo === 'unassigned' ? null : formData.assignedTo,
       })
       toast.success('Event updated successfully')
       router.push(`/events/${id}`)
@@ -178,7 +194,33 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
           <div className="border-t border-border" />
 
-          {/* Section 2: Venue */}
+          {/* Section 2: Staff Assignment */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Staff Assignment</h2>
+            <div className="space-y-2">
+              <Label htmlFor="assignedTo" className="text-label">
+                Assigned Staff Member
+              </Label>
+              <Select value={formData.assignedTo} onValueChange={(v) => handleChange('assignedTo', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {staffList.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name} ({s.role})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground italic">
+                The assigned staff member will be responsible for coordinating this event.
+              </p>
+            </div>
+          </section>
+
+          <div className="border-t border-border" />
+
+          {/* Section 3: Venue */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Venue</h2>
             
@@ -208,7 +250,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
           <div className="border-t border-border" />
 
-          {/* Section 3: Contact */}
+          {/* Section 4: Contact */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Contact (Optional)</h2>
             
@@ -235,7 +277,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
           <div className="border-t border-border" />
 
-          {/* Section 4: Notes */}
+          {/* Section 5: Notes */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Notes</h2>
             
