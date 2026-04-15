@@ -23,7 +23,7 @@ const jetBrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'EventOS - Event Organisation System',
+  title: 'Floraindia Event - Event Organisation System',
   description: 'Professional event management system for organizing events',
 }
 

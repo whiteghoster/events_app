@@ -21,8 +21,7 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { Category, Product, ProductUnit } from '@/lib/types'
-
-const units: ProductUnit[] = ['kg', 'g', 'pcs', 'bunch', 'dozen', 'box', 'bundle', 'set', 'roll', 'metre', 'litre', 'ml']
+import { PRODUCT_UNITS } from '@/lib/types'
 
 export default function CatalogPage() {
   const router = useRouter()
@@ -518,7 +517,7 @@ export default function CatalogPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {units.map(u => (
+                  {PRODUCT_UNITS.map(u => (
                     <SelectItem key={u} value={u}>{u}</SelectItem>
                   ))}
                 </SelectContent>

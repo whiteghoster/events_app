@@ -1,4 +1,4 @@
-# EventOS - Application Documentation
+# Floraindia Event - Application Documentation
 
 ## Tech Stack
 

@@ -26,10 +26,10 @@ async function bootstrap() {
     app.useGlobalFilters(new AllExceptionsFilter());
 
     // CORS configuration from environment
-    const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean);
+    const corsOriginsEnv = process.env.CORS_ORIGINS;
+    const corsOrigins = corsOriginsEnv
+      ? corsOriginsEnv.split(',').map((origin) => origin.trim()).filter(Boolean)
+      : true; // Allow all origins if CORS_ORIGINS not set
 
     app.enableCors({
       origin: corsOrigins,

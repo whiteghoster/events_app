@@ -107,6 +107,13 @@ export interface Product {
 }
 
 /**
+ * Product Unit
+ */
+export type ProductUnit = 'kg' | 'g' | 'pcs' | 'bunch' | 'dozen' | 'box' | 'bundle' | 'set' | 'roll' | 'metre' | 'litre' | 'ml'
+
+export const PRODUCT_UNITS: ProductUnit[] = ['kg', 'g', 'pcs', 'bunch', 'dozen', 'box', 'bundle', 'set', 'roll', 'metre', 'litre', 'ml']
+
+/**
  * Event Product Model (Line item in an event)
  */
 export interface EventProduct {

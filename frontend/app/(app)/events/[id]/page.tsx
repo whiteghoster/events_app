@@ -579,7 +579,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         {/* Total Amount Footer */}
         {eventProductsList.length > 0 && (() => {
           const pricedItems = eventProductsList.filter(p => p.price && p.price > 0)
-          const grandTotal = eventProductsList.reduce((sum, p) => sum + (p.price ? p.price * p.quantity : 0), 0)
+          const grandTotal = eventProductsList.reduce((sum, p) => sum + (p.price || 0), 0)
           return (
             <div className="border-t border-border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -587,7 +587,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <span key={p.id} className="text-xs text-muted-foreground">
                     <span className="font-medium text-foreground">{p.productName}</span>
                     {': '}
-                    {p.quantity} × ₹{p.price} = <span className="text-foreground">₹{(p.price! * p.quantity).toLocaleString('en-IN')}</span>
+                    {p.quantity} {p.unit} = <span className="text-foreground">₹{p.price!.toLocaleString('en-IN')}</span>
                   </span>
                 ))}
                 {pricedItems.length === 0 && (

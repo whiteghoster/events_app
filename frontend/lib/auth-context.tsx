@@ -75,8 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isTokenExpired()) {
           const newToken = await tryRefreshToken()
           if (!newToken) {
-            // Refresh failed — clear everything, user must log in again
+            // Refresh failed — clear everything and redirect to login
             clearSession()
+            if (typeof window !== 'undefined') {
+              window.location.href = '/auth/login'
+            }
             return
           }
         }
@@ -206,7 +209,7 @@ export function canDeactivateUser(role: UserRole | undefined): boolean {
 
 export function canCloseEvent(role: UserRole | undefined): boolean {
   if (!role) return false
-  return role === 'admin' || role === 'staff'
+  return role === 'admin'
 }
 
 export function canViewCatalog(role: UserRole | undefined): boolean {
