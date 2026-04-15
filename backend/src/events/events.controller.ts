@@ -22,6 +22,7 @@ import { UserRole } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../common/types';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { FindEventsQueryDto } from './dto/find-events-query.dto';
 
 @Controller('events')
 export class EventsController {
@@ -41,16 +42,12 @@ export class EventsController {
   }
 
   @Get()
-  async findAll(
-    @Query('status') status?: string,
-    @Query('occasion_type') occasionType?: string,
-    @Query() pagination?: PaginationQueryDto,
-  ) {
+  async findAll(@Query() query: FindEventsQueryDto) {
     return await this.eventsService.findEvents(
-      status,
-      occasionType,
-      pagination.page,
-      pagination.page_size,
+      query.status,
+      query.occasion_type,
+      query.page,
+      query.page_size,
     );
   }
 

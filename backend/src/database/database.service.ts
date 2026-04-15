@@ -11,6 +11,7 @@ export class DatabaseService {
     this.supabase = createClient(
       this.configService.get<string>('SUPABASE_URL') || '',
       this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || '',
+      { auth: { autoRefreshToken: false, persistSession: false } },
     );
   }
 

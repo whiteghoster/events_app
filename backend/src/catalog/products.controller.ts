@@ -17,7 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../common/types';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { FindProductsQueryDto } from './dto/find-products-query.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -31,14 +31,11 @@ export class ProductsController {
   }
 
   @Get()
-  async findAll(
-    @Query() pagination: PaginationQueryDto,
-    @Query('category_id') categoryId?: string,
-  ) {
+  async findAll(@Query() query: FindProductsQueryDto) {
     return await this.catalogService.findAllProducts(
-      pagination.page,
-      pagination.page_size,
-      categoryId,
+      query.page,
+      query.page_size,
+      query.category_id,
     );
   }
 

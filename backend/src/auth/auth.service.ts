@@ -24,6 +24,15 @@ export class AuthService {
     return this.databaseService.getClient();
   }
 
+  /** Ephemeral client for user-session operations (login, refresh) to avoid polluting the service-role client */
+  private createAuthClient() {
+    return createClient(
+      this.configService.get<string>('SUPABASE_URL') || '',
+      this.configService.get<string>('SUPABASE_ANON_KEY') || '',
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+  }
+
   async register(registerDto: RegisterDto) {
     const { data: existingUser } = await this.supabase
       .from('users')
@@ -72,13 +81,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    // Use a separate client for signIn to avoid polluting the service-role client's auth state,
-    // which would cause subsequent queries to run under user RLS instead of service role.
-    const authClient = createClient(
-      this.configService.get<string>('SUPABASE_URL') || '',
-      this.configService.get<string>('SUPABASE_ANON_KEY') || '',
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+    const authClient = this.createAuthClient();
 
     const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
       email: loginDto.email,
@@ -132,7 +135,9 @@ export class AuthService {
   }
 
   async refreshToken(refreshToken: string) {
-    const { data, error } = await this.supabase.auth.refreshSession({
+    const authClient = this.createAuthClient();
+
+    const { data, error } = await authClient.auth.refreshSession({
       refresh_token: refreshToken,
     });
 
