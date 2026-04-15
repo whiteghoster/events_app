@@ -62,7 +62,7 @@ export default function CatalogPage() {
     try {
       const [catData, prodData] = await Promise.all([
         catalogApi.getCategories(),
-        catalogApi.getProducts({ pageSize: 1000 })
+        catalogApi.getProducts({ pageSize: 100 })
       ])
       
       setCategories(catData)

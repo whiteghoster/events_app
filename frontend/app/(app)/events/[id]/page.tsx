@@ -4,13 +4,12 @@
 import { useState, useMemo, use, useEffect, useCallback } from 'react'
 
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, Plus, Pencil, Trash2, Check, X, MapPin, Calendar, User, FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, Pencil, Trash2, Check, X, MapPin, Calendar, User } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
-import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canViewAudit } from '@/lib/auth-context'
-import { eventsApi, catalogApi, auditApi } from '@/lib/api'
+import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly } from '@/lib/auth-context'
+import { eventsApi, catalogApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-
 
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -23,12 +22,6 @@ import type { Event, EventProduct, EventStatus, Category, Product } from '@/lib/
 
 const units = ['kg', 'g', 'pcs', 'bunch', 'dozen', 'box', 'bundle', 'set', 'roll', 'metre', 'litre', 'ml']
 
-const roleColors: Record<string, string> = {
-  'admin': 'bg-primary/20 text-primary border-primary/30',
-  'staff': 'bg-info/20 text-info border-info/30',
-  'staff_member': 'bg-finished/20 text-finished border-finished/30',
-}
-
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -38,12 +31,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [eventProductsList, setEventProductsList] = useState<EventProduct[]>([])
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [eventLogs, setEventLogs] = useState<AuditEntry[]>([])
   const [categorySummary, setCategorySummary] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [infoExpanded, setInfoExpanded] = useState(false)
-  const [auditExpanded, setAuditExpanded] = useState(false)
   const [closeModalOpen, setCloseModalOpen] = useState(false)
   const [closeStatus, setCloseStatus] = useState<'hold' | 'finished'>('hold')
 
@@ -69,7 +60,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       const [productsData, catData, prodData, summaryData] = await Promise.all([
         eventsApi.getEventProducts(id).catch(err => { console.error('Products failed:', err); return [] }),
         catalogApi.getCategories().catch(err => { console.error('Categories failed:', err); return [] }),
-        catalogApi.getProducts({ pageSize: 1000 }).catch(err => { console.error('Products list failed:', err); return { data: [] } }),
+        catalogApi.getProducts({ pageSize: 100 }).catch(err => { console.error('Products list failed:', err); return { data: [] } }),
         eventsApi.getCategorySummary(id).catch(err => { console.error('Summary failed:', err); return [] })
       ])
 
@@ -77,21 +68,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       setAllCategories(catData)
       setAllProducts(prodData.data)
       setCategorySummary(summaryData)
-
-      // 3. Conditional Audit Logs (Admin Only)
-      if (user && canViewAudit(user.role)) {
-        try {
-          // Fetch logs specifically for this event ID (and potentially its linked items)
-          const logsData = await auditApi.getAuditLogs({ 
-            entity_id: id,
-            limit: 50 
-          })
-          setEventLogs(logsData.data)
-        } catch (err) {
-          console.warn('Could not load audit logs:', err)
-          setEventLogs([])
-        }
-      }
     } catch (err) {
       console.error('Failed to load event data:', err)
       const msg = err instanceof Error ? err.message : String(err)
@@ -305,21 +281,22 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       />
 
       {/* Event Info Panel */}
-      <Collapsible open={infoExpanded} onOpenChange={setInfoExpanded} className="mb-6">
-        <div className="bg-card rounded-xl border border-border">
-          <CollapsibleTrigger className="w-full p-4 flex items-center justify-between text-left">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                {new Date(event.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-              </span>
-              <span className="hidden sm:flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                {event.venueName}
-              </span>
-            </div>
-            {infoExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-          </CollapsibleTrigger>
+      {event && (
+        <Collapsible open={infoExpanded} onOpenChange={setInfoExpanded} className="mb-6">
+          <div className="bg-card rounded-xl border border-border">
+            <CollapsibleTrigger className="w-full p-4 flex items-center justify-between text-left">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  {new Date(event.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+                <span className="hidden sm:flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  {event.venueName}
+                </span>
+              </div>
+              {infoExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+            </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-2 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
@@ -361,6 +338,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </CollapsibleContent>
         </div>
       </Collapsible>
+      )}
 
       {/* Products Table */}
       <div className="bg-card rounded-xl border border-border mb-6">
@@ -653,54 +631,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* Audit Log Panel (Admin only) */}
-      {user && canViewAudit(user.role) && (
-        <Collapsible open={auditExpanded} onOpenChange={setAuditExpanded}>
-          <div className="bg-card rounded-xl border border-border">
-            <CollapsibleTrigger className="w-full p-4 flex items-center justify-between text-left">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium text-foreground">Change Log</span>
-                <span className="text-muted-foreground text-sm">({eventLogs.length} entries)</span>
-              </div>
-              {auditExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-4 pb-4 space-y-3">
-                {eventLogs.map(entry => (
-                  <div key={entry.id} className="bg-secondary rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-foreground">{entry.userName}</span>
-                      <Badge variant="outline" className={cn('text-[9px] px-1 h-4 uppercase', roleColors[entry.userRole] || 'bg-secondary/50')}>
-                        {entry.userRole?.replace('_', ' ')}
-                      </Badge>
-                      <span className="text-muted-foreground">·</span>
-                      <span className={cn(
-                        'text-xs font-medium',
-                        entry.action === 'Created' && 'text-success',
-                        entry.action === 'Updated' && 'text-warning',
-                        entry.action === 'Deleted' && 'text-destructive'
-                      )}>
-                        {entry.action}
-                      </span>
-                      <span className="text-muted-foreground">·</span>
-                      <span className="text-muted-foreground">{entry.entityType}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">{entry.change}</p>
-                    <p className="text-xs text-muted-foreground font-mono mt-2">
-                      {new Date(entry.timestamp).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                ))}
-                {eventLogs.length === 0 && (
-                  <p className="text-muted-foreground text-sm text-center py-4">No changes recorded for this event.</p>
-                )}
-              </div>
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
-      )}
-
+      
       {/* Close Event Modal */}
       <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
         <DialogContent className="max-w-md">

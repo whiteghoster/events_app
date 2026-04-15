@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Loader2, UserCheck, ShieldAlert, RefreshCw } from 'lucide-react'
+import { Pencil, Trash2, Loader2, UserCheck, ShieldAlert, RefreshCw } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canViewUsers } from '@/lib/auth-context'
 import { usersApi } from '@/lib/api'
@@ -170,12 +170,6 @@ export default function UsersPage() {
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
       <PageHeader
         title="Team Members"
-        action={
-          <Button onClick={() => handleOpenDialog()} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Invite User
-          </Button>
-        }
       />
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -268,9 +262,9 @@ export default function UsersPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingUser ? 'Edit User' : 'Invite User'}</DialogTitle>
+            <DialogTitle>{editingUser ? 'Edit User' : 'Add User'}</DialogTitle>
             <DialogDescription>
-              {editingUser ? 'Update user details and permissions.' : 'Send an invitation to join the team.'}
+              {editingUser ? 'Update user details and permissions.' : 'Create a new team member account.'}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -318,7 +312,7 @@ export default function UsersPage() {
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingUser ? 'Save' : 'Send Invite'}
+              {editingUser ? 'Save' : 'Create User'}
             </Button>
           </DialogFooter>
         </DialogContent>

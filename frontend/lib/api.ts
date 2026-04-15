@@ -148,10 +148,11 @@ function mapAuditEntryFromBackend(log: any): AuditEntry {
     timestamp: log.created_at || new Date().toISOString(),
     userId: log.user_id || '',
     userName: log.users?.name || log.users?.email || 'System',
-    userRole: log.users?.role || 'admin',
+    userRole: (log.users?.role || 'admin').toLowerCase(),
     action: log.action as any,
     entityType: log.entity_type || 'Unknown',
     entityName: entityName,
+    entityId: log.entity_id || '',
     change: change,
   }
 }
