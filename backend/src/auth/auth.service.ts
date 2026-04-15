@@ -5,6 +5,8 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -13,7 +15,10 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly configService: ConfigService,
+  ) {}
 
   private get supabase() {
     return this.databaseService.getClient();
@@ -67,7 +72,15 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
+    // Use a separate client for signIn to avoid polluting the service-role client's auth state,
+    // which would cause subsequent queries to run under user RLS instead of service role.
+    const authClient = createClient(
+      this.configService.get<string>('SUPABASE_URL') || '',
+      this.configService.get<string>('SUPABASE_ANON_KEY') || '',
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
+    const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
       email: loginDto.email,
       password: loginDto.password,
     });
