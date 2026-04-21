@@ -2,186 +2,134 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, LayoutGrid, Users2, ScrollText, Settings as SettingsIcon, LogOut, ChevronLeft, ChevronRight, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useAuth, canViewCatalog, canViewUsers, canViewAudit } from '@/lib/auth-context'
-import { Button } from '@/components/ui/button'
+import { Icon } from '@/components/icon'
+import {
+  Calendar01Icon,
+  CatalogueIcon,
+  UserGroupIcon,
+  Audit01Icon,
+  FlowerIcon,
+  Settings01Icon,
+} from '@hugeicons/core-free-icons'
+import { NavUser } from '@/components/nav-user'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarRail,
+} from '@/components/ui/sidebar'
 import { Badge } from '@/components/ui/badge'
-import { useState, useEffect } from 'react'
+import type { IconSvgElement } from '@hugeicons/react'
 
-const getNavItems = (role: string) => {
-  if (role === 'admin') {
-    // Events in middle (position 3 of 5)
-    return [
-      { href: '/catalog', label: 'Catalog', icon: LayoutGrid, permission: canViewCatalog },
-      { href: '/users', label: 'Users', icon: Users2, permission: canViewUsers },
-      { href: '/events', label: 'Events', icon: CalendarDays, permission: () => true },
-      { href: '/audit', label: 'Audits', icon: ScrollText, permission: canViewAudit },
-      { href: '/account', label: 'Account', icon: SettingsIcon, permission: () => true },
-    ]
-  } else {
-    // Events in second position for karigar/manager
-    return [
-      { href: '/catalog', label: 'Catalog', icon: LayoutGrid, permission: canViewCatalog },
-      { href: '/events', label: 'Events', icon: CalendarDays, permission: () => true },
-      { href: '/users', label: 'Users', icon: Users2, permission: canViewUsers },
-      { href: '/audit', label: 'Audits', icon: ScrollText, permission: canViewAudit },
-      { href: '/account', label: 'Account', icon: SettingsIcon, permission: () => true },
-    ]
-  }
+interface NavItem {
+  title: string
+  href: string
+  icon: IconSvgElement
+  badge?: string
+  show?: boolean
 }
 
-const roleColors = {
-  'admin': 'bg-primary text-primary-foreground',
-  'karigar': 'bg-info text-foreground',
-  'manager': 'bg-finished text-foreground',
-}
-
-export function AppSidebar() {
-  const { user, logout } = useAuth()
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  const navItems = getNavItems(user?.role || 'karigar')
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const { user } = useAuth()
 
   if (!user) return null
-  if (!mounted) return null
+
+  const navMain: NavItem[] = [
+    { title: 'Events', href: '/events', icon: Calendar01Icon },
+    { title: 'Catalog', href: '/catalog', icon: CatalogueIcon, show: canViewCatalog(user.role) },
+    { title: 'Team', href: '/users', icon: UserGroupIcon, show: canViewUsers(user.role) },
+    { title: 'Audit Trail', href: '/audit', icon: Audit01Icon, show: canViewAudit(user.role) },
+  ].filter(item => item.show !== false)
+
+  const navSecondary: NavItem[] = [
+    { title: 'Settings', href: '/account', icon: Settings01Icon },
+  ]
 
   return (
-    <>
-      {/* Desktop Sidebar */}
-      <aside
-        className={cn(
-          'hidden lg:flex flex-col h-screen skeu-panel border-r border-border transition-all duration-250 ease-in-out',
-          collapsed ? 'w-16' : 'w-60'
-        )}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-4 py-5 border-b border-border">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-            <span className="text-primary-foreground font-bold text-sm">F</span>
-          </div>
-          {!collapsed && (
-            <span className="text-xl text-foreground">
-              Flora<span className="text-primary">Event</span>
-            </span>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 py-4">
-          {navItems.map(item => {
-            if (!item.permission(user.role)) return null
-            const isActive = pathname.startsWith(item.href)
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 mx-2 rounded-md transition-all relative',
-                  isActive
-                    ? 'bg-gradient-to-r from-sidebar-accent to-sidebar-accent/50 text-sidebar-accent-foreground shadow-md'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                )}
-              >
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r" />
-                )}
-                <item.icon className="w-5 h-5 shrink-0 stroke-[2.5]" />
-                {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
+    <Sidebar collapsible="offcanvas" {...props}>
+      {/* Branded Header */}
+      <SidebarHeader className="pb-0">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:!p-2">
+              <Link href="/events">
+                <div className="flex items-center justify-center rounded-lg bg-primary text-primary-foreground size-8 shadow-sm">
+                  <Icon icon={FlowerIcon} size={18} />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="font-semibold text-base">FloraEvent</span>
+                  <span className="text-xs text-muted-foreground">Event Management</span>
+                </div>
               </Link>
-            )
-          })}
-        </nav>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
-        {/* Collapse Button */}
-        <div className="px-2 pb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-full justify-center"
-          >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </Button>
-        </div>
-
-        {/* User Section */}
-        <div className="border-t border-border p-4">
-          <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
-              <span className="text-sm font-medium">
-                {user.name.split(' ').map(n => n[0]).join('')}
-              </span>
-            </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user.name}</p>
-                <Badge className={cn('text-xs mt-0.5', roleColors[user.role])}>
-                  {user.role}
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          {!collapsed && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={logout}
-              className="w-full mt-3"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          )}
-        </div>
-      </aside>
-
-      {/* ✅ UPDATED MOBILE NAVBAR */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-[#f3f3f3] border-t border-border">
-        <div className="flex items-center justify-center px-2 py-3 gap-2">
-
-          {navItems
-            .filter(item => item.permission(user.role))
-            .map((item) => {
-              const isActive = pathname.startsWith(item.href)
-
-              if (isActive) {
+      <SidebarContent>
+        {/* Primary Navigation */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="uppercase tracking-wider text-[11px]">
+            Navigation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navMain.map((item) => {
+                const isActive = pathname.startsWith(item.href)
                 return (
-                  <button
-                    key={item.href}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg transition-all duration-200 bg-primary text-primary-foreground cursor-default"
-                    )}
-                  >
-                    <item.icon className="w-5 h-5 stroke-[2.2]" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                  </button>
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link href={item.href}>
+                        <Icon icon={item.icon} size={18} />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 )
-              }
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg transition-all duration-200 text-black hover:bg-gray-300 active:scale-95"
-                  )}
-                >
-                  <item.icon className="w-5 h-5 stroke-[2.2] stroke-black"/>
-                  <span className="text-xs font-medium">{item.label}</span>
-                </Link>
-              )
-            })}
-        </div>
-      </nav>
-    </>
+        {/* Secondary - pushed to bottom */}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupLabel className="uppercase tracking-wider text-[11px]">
+            Support
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navSecondary.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link href={item.href}>
+                        <Icon icon={item.icon} size={18} />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <NavUser user={user} />
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
   )
 }

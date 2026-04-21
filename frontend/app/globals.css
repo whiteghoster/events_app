@@ -2,252 +2,84 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme */
-:root {
-  --background: #FFFFFF;
-  --foreground: #1A1A1A;
-  --card: #FFF5EB;
-  --card-foreground: #1A1A1A;
-  --popover: #FFF5EB;
-  --popover-foreground: #1A1A1A;
-  --primary: #EA580C;
-  --primary-foreground: #FFFFFF;
-  --secondary: #FED7AA;
-  --secondary-foreground: #1A1A1A;
-  --muted: #FED7AA;
-  --muted-foreground: #6B7280;
-  --accent: #F97316;
-  --accent-foreground: #FFFFFF;
-  --destructive: #DC2626;
-  --destructive-foreground: #FFFFFF;
-  --border: #FDBA74;
-  --input: #FDBA74;
-  --ring: #EA580C;
-  --success: #16A34A;
-  --warning: #EA580C;
-  --info: #2563EB;
-  --finished: #6B7280;
-  --radius: 0.625rem;
-  --sidebar: #1A1A1A;
-  --sidebar-foreground: #FED7AA;
-  --sidebar-primary: #EA580C;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #2D2D2D;
-  --sidebar-accent-foreground: #FED7AA;
-  --sidebar-border: #404040;
-  --sidebar-ring: #EA580C;
-}
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 346.8 77.2% 49.8%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 346.8 77.2% 49.8%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 346.8 77.2% 49.8%;
+    --sidebar-primary-foreground: 355.7 100% 97.3%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 346.8 77.2% 49.8%;
+    --chart-1: 347 77% 50%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
 
+  .dark {
+    --background: 20 14.3% 4.1%;
+    --foreground: 0 0% 95%;
+    --card: 24 9.8% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 24 9.8% 12%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 346.8 77.2% 49.8%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 12 6.5% 15.1%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 85.7% 97.3%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 346.8 77.2% 49.8%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 346.8 77.2% 49.8%;
+    --sidebar-primary-foreground: 355.7 100% 97.3%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 346.8 77.2% 49.8%;
+    --chart-1: 347 77% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
 
 @layer base {
   * {
-    border-color: var(--border);
+    @apply border-border;
   }
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    @apply bg-background text-foreground;
   }
-}
-
-/* Custom utility classes */
-.text-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-foreground);
-}
-
-.shimmer {
-  background: linear-gradient(90deg, var(--card) 0%, var(--secondary) 50%, var(--card) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* Skeuomorphic Styles */
-.skeu-button {
-  background: linear-gradient(180deg, #ffffff 0%, #e5e5e5 100%);
-  border: 1px solid #c4c4c4;
-  border-radius: 8px;
-  box-shadow: 
-    0 4px 6px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: all 0.15s ease;
-}
-
-.skeu-button:hover {
-  background: linear-gradient(180deg, #ffffff 0%, #d4d4d4 100%);
-  box-shadow: 
-    0 6px 8px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-.skeu-button:active {
-  background: linear-gradient(180deg, #d4d4d4 0%, #c4c4c4 100%);
-  box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    inset 0 2px 4px rgba(0, 0, 0, 0.15);
-  transform: translateY(2px);
-}
-
-.skeu-card {
-  background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-  border: 1px solid #d4d4d4;
-  border-radius: 12px;
-  box-shadow: 
-    0 8px 16px rgba(0, 0, 0, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.skeu-input {
-  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
-  border: 2px solid #c4c4c4;
-  border-radius: 8px;
-  box-shadow: 
-    inset 0 2px 4px rgba(0, 0, 0, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: all 0.2s ease;
-}
-
-.skeu-input:focus {
-  border-color: var(--primary);
-  box-shadow: 
-    inset 0 2px 4px rgba(0, 0, 0, 0.08),
-    0 0 0 3px rgba(234, 88, 12, 0.2),
-    0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-.skeu-panel {
-  background: linear-gradient(145deg, #f0f0f0 0%, #e0e0e0 100%);
-  border: 1px solid #c0c0c0;
-  border-radius: 16px;
-  box-shadow: 
-    0 12px 24px rgba(0, 0, 0, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.skeu-elevated {
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.2),
-    0 8px 16px rgba(0, 0, 0, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-.skeu-inset {
-  box-shadow: 
-    inset 0 4px 8px rgba(0, 0, 0, 0.12),
-    inset 0 2px 4px rgba(0, 0, 0, 0.08);
-}
-
-.skeu-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-.skeu-metallic {
-  background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 25%, #e8e8e8 50%, #c8c8c8 75%, #e8e8e8 100%);
-  border: 1px solid #a0a0a0;
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.skeu-wood {
-  background: linear-gradient(45deg, #d4a574 0%, #c49a6c 25%, #d4a574 50%, #b8906a 75%, #d4a574 100%);
-  border: 1px solid #8b6914;
-  box-shadow: 
-    0 6px 12px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.skeu-leather {
-  background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
-  border: 2px solid #3d2914;
-  border-radius: 8px;
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-/* Claymorphism Styles */
-.clay-card {
-  background: linear-gradient(145deg, #ffffff 0%, #f5f0eb 100%);
-  border-radius: 24px;
-  box-shadow: 
-    8px 8px 16px rgba(0, 0, 0, 0.1),
-    -8px -8px 16px rgba(255, 255, 255, 0.7),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-  transition: all 0.3s ease;
-}
-
-.clay-card:hover {
-  box-shadow: 
-    12px 12px 24px rgba(0, 0, 0, 0.12),
-    -12px -12px 24px rgba(255, 255, 255, 0.8),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-}
-
-.clay-input {
-  background: linear-gradient(145deg, #ffffff 0%, #f8f4f0 100%);
-  border-radius: 16px;
-  border: none;
-  box-shadow: 
-    inset 4px 4px 8px rgba(0, 0, 0, 0.06),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.8),
-    0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-}
-
-.clay-input:hover {
-  box-shadow: 
-    inset 4px 4px 8px rgba(0, 0, 0, 0.08),
-    inset -4px -4px 8px rgba(255, 255, 255, 0.9),
-    0 4px 8px rgba(0, 0, 0, 0.08);
-}
-
-.clay-input:focus-within {
-  box-shadow: 
-    inset 4px 4px 8px rgba(234, 88, 12, 0.1),
-    inset -4px -4px 8px rgba(255, 255, 255, 1),
-    0 0 0 3px rgba(234, 88, 12, 0.15);
-}
-
-.clay-button {
-  background: linear-gradient(145deg, #ea580c 0%, #dc2626 100%);
-  border-radius: 16px;
-  border: none;
-  box-shadow: 
-    4px 4px 8px rgba(0, 0, 0, 0.2),
-    -2px -2px 4px rgba(255, 255, 255, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transition: all 0.2s ease;
-}
-
-.clay-button:hover {
-  background: linear-gradient(145deg, #f97316 0%, #ea580c 100%);
-  box-shadow: 
-    6px 6px 12px rgba(0, 0, 0, 0.25),
-    -2px -2px 4px rgba(255, 255, 255, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.clay-button:active {
-  box-shadow: 
-    2px 2px 4px rgba(0, 0, 0, 0.2),
-    -1px -1px 2px rgba(255, 255, 255, 0.3),
-    inset 2px 2px 4px rgba(0, 0, 0, 0.2);
 }

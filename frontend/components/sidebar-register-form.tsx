@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { UserPlus, Loader2, Wand2, Shield, User, Mail, Lock } from 'lucide-react'
+import { Icon } from '@/components/icon'
+import { UserAdd01Icon, MagicWand01Icon, Shield01Icon, UserIcon, Mail01Icon, LockIcon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sheet,
   SheetContent,
@@ -41,7 +43,6 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
     role: 'karigar',
   })
 
-  // Only allow admin users to create users
   if (user?.role !== 'admin') {
     return null
   }
@@ -92,14 +93,14 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
           )}
           title="Invite Member"
         >
-          <UserPlus className="w-5 h-5" />
+          <Icon icon={UserAdd01Icon} size={20} />
           {!collapsed && <span className="font-semibold text-sm">Invite Member</span>}
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:w-[450px] bg-card border-l border-border flex flex-col p-0">
         <SheetHeader className="p-6 border-b border-border bg-secondary/30">
           <div className="flex items-center gap-2 text-primary mb-1">
-            <Shield className="w-5 h-5" />
+            <Icon icon={Shield01Icon} size={20} />
             <span className="text-xs font-bold uppercase tracking-wider">Admin Tool</span>
           </div>
           <SheetTitle className="text-2xl">Quick Invite</SheetTitle>
@@ -110,10 +111,9 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="space-y-4">
-            {/* Name */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                <User className="w-3 h-3" /> Full Name
+                <Icon icon={UserIcon} size={12} /> Full Name
               </Label>
               <Input
                 placeholder="John Doe"
@@ -123,10 +123,9 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
               />
             </div>
 
-            {/* Email */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                <Mail className="w-3 h-3" /> Professional Email
+                <Icon icon={Mail01Icon} size={12} /> Professional Email
               </Label>
               <Input
                 type="email"
@@ -137,10 +136,9 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                <Lock className="w-3 h-3" /> Initial Password
+                <Icon icon={LockIcon} size={12} /> Initial Password
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -149,26 +147,25 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
                   onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
                   className="bg-secondary/50 border-border flex-1"
                 />
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   size="icon"
                   className="shrink-0 hover:bg-primary/10 hover:text-primary transition-colors"
                   onClick={generatePassword}
                   title="Generate Secure Password"
                 >
-                  <Wand2 className="w-4 h-4" />
+                  <Icon icon={MagicWand01Icon} size={16} />
                 </Button>
               </div>
             </div>
 
-            {/* Role */}
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
                 System Role
               </Label>
-              <Select 
-                value={formData.role} 
+              <Select
+                value={formData.role}
                 onValueChange={v => setFormData(prev => ({ ...prev, role: v }))}
               >
                 <SelectTrigger className="bg-secondary/50 border-border">
@@ -185,17 +182,19 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
         </form>
 
         <SheetFooter className="p-6 border-t border-border bg-secondary/30">
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={isLoading}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold h-11"
           >
             {isLoading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Skeleton className="h-4 w-24" />
             ) : (
-              <UserPlus className="w-4 h-4 mr-2" />
+              <>
+                <Icon icon={UserAdd01Icon} size={16} className="mr-2" />
+                Send Invitation
+              </>
             )}
-            Send Invitation
           </Button>
         </SheetFooter>
       </SheetContent>

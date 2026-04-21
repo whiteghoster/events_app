@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
   Breadcrumb,
@@ -11,14 +10,14 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 
-interface BreadcrumbItem {
+interface BreadcrumbEntry {
   label: string
   href?: string
 }
 
 interface PageHeaderProps {
   title: string
-  breadcrumbs?: BreadcrumbItem[]
+  breadcrumbs?: BreadcrumbEntry[]
   action?: React.ReactNode
   className?: string
 }
@@ -30,7 +29,7 @@ export function PageHeader({ title, breadcrumbs, action, className }: PageHeader
         <Breadcrumb className="mb-2">
           <BreadcrumbList>
             {breadcrumbs.map((item, index) => (
-              <span key={index}>
+              <span key={index} className="flex items-center gap-1">
                 {item.href ? (
                   <>
                     <BreadcrumbItem>
@@ -48,10 +47,9 @@ export function PageHeader({ title, breadcrumbs, action, className }: PageHeader
           </BreadcrumbList>
         </Breadcrumb>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl md:text-3xl text-foreground leading-tight">{title}</h1>
-        {action && <div className="flex flex-wrap items-center gap-2 shrink-0">{action}</div>}
-      </div>
+      {action && (
+        <div className="flex flex-wrap items-center gap-2 shrink-0">{action}</div>
+      )}
     </header>
   )
 }
