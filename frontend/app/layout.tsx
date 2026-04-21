@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/components/providers'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { ServiceWorkerRegister } from '@/components/sw-register'
 import './globals.css'
 
 const inter = Inter({
@@ -46,6 +47,7 @@ export default function RootLayout({
           </Providers>
         </ErrorBoundary>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <ServiceWorkerRegister />
       </body>
     </html>
   )
