@@ -1,20 +1,15 @@
 import type { Metadata } from 'next'
-import { Poppins, JetBrains_Mono } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import { Providers } from '@/components/providers'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { ServiceWorkerRegister } from '@/components/sw-register'
 import './globals.css'
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
-  weight: ['300', '400', '500', '600', '700'],
-})
-
-const jetBrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-mono',
 })
 
 export const metadata: Metadata = {
@@ -44,9 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${poppins.variable} ${jetBrainsMono.variable} font-sans antialiased`}
-      >
+      <body className={`${inter.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <Providers>
             {children}
@@ -54,6 +47,7 @@ export default function RootLayout({
           </Providers>
         </ErrorBoundary>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <ServiceWorkerRegister />
       </body>
     </html>
   )
