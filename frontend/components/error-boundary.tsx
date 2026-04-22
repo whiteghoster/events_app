@@ -35,11 +35,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary">
-          <div className="bg-card border border-border rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-destructive/10 rounded-full">
-                <HugeiconsIcon icon={AlertCircleIcon} size={32} className="text-destructive" />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-destructive/5">
+          <div className="bg-card border border-destructive/20 rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+            <div className="flex justify-center mb-5">
+              <div className="relative">
+                <div className="p-3 bg-destructive/10 rounded-full">
+                  <img
+                    src="/icon.svg"
+                    alt="FloraEvent"
+                    className="w-10 h-10 rounded-lg opacity-80"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 p-1 bg-card rounded-full border border-destructive/20">
+                  <HugeiconsIcon icon={AlertCircleIcon} size={16} className="text-destructive" />
+                </div>
               </div>
             </div>
 
@@ -52,7 +61,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="bg-destructive/5 border border-destructive/20 rounded p-3 mb-4">
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 mb-4">
                 <p className="text-xs font-mono text-destructive break-words">
                   {this.state.error.message}
                 </p>

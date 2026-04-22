@@ -18,12 +18,21 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardContent className="p-8 text-center space-y-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-destructive/5">
+      <Card className="max-w-md w-full shadow-lg border-destructive/20">
+        <CardContent className="p-8 text-center space-y-5">
           <div className="flex justify-center">
-            <div className="p-3 bg-destructive/10 rounded-full">
-              <Icon icon={AlertCircleIcon} size={32} className="text-destructive" />
+            <div className="relative">
+              <div className="p-3 bg-destructive/10 rounded-full">
+                <img
+                  src="/icon.svg"
+                  alt="FloraEvent"
+                  className="w-10 h-10 rounded-lg opacity-80"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 p-1 bg-card rounded-full border border-destructive/20">
+                <Icon icon={AlertCircleIcon} size={16} className="text-destructive" />
+              </div>
             </div>
           </div>
 
@@ -35,7 +44,7 @@ export default function Error({
           </div>
 
           {process.env.NODE_ENV === 'development' && (
-            <div className="bg-destructive/5 border border-destructive/20 rounded p-3 text-left">
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 text-left">
               <p className="text-xs font-mono text-destructive break-words">
                 {error.message}
               </p>

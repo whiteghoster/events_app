@@ -83,3 +83,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.brand-loader-ring {
+  animation: spin-slow 1.5s linear infinite;
+}
+
+.brand-loader-pulse {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
