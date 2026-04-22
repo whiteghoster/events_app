@@ -150,23 +150,38 @@ export function EventDetailSkeleton() {
 
 export function CatalogSkeleton() {
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="w-full lg:w-64 shrink-0">
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </CardContent>
-        </Card>
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header: Search + Dropdown + Buttons */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Skeleton className="h-9 flex-1 min-w-[200px] max-w-sm" />
+        <Skeleton className="h-9 w-[200px] rounded-md" />
+        <div className="flex gap-2 ml-auto">
+          <Skeleton className="h-9 w-28 rounded-md" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
       </div>
-      <div className="flex-1">
-        <Card>
-          <CardHeader className="py-4">
-            <Skeleton className="h-5 w-40" />
-          </CardHeader>
-          <TableSkeleton rows={6} cols={4} />
-        </Card>
+
+      {/* Table */}
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="px-5 py-4 flex items-center justify-between border-b border-border">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-6 rounded" />
+          </div>
+          <Skeleton className="h-8 w-28 rounded-md" />
+        </div>
+        <div className="p-5 space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <Skeleton className="h-4 w-6 shrink-0" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-12 rounded" />
+              <Skeleton className="h-4 w-14 ml-auto" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

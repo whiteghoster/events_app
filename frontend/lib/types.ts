@@ -272,14 +272,13 @@ export interface CategoryDialogProps {
   saveCategory: () => void
 }
 
-export interface CategoriesSidebarProps {
-  categories: Category[]
+export interface CatalogProductsTableProps {
   products: Product[]
-  selectedCategoryId: string
-  setSelectedCategoryId: (id: string) => void
+  categories: Category[]
   canManage: boolean
-  openCategoryDialog: (category?: Category) => void
-  deleteCategory: (category: Category) => void
+  openProductSheet: (product?: Product) => void
+  deactivateProduct: (product: Product) => void
+  reactivateProduct: (product: Product) => void
 }
 
 export interface DeactivateDialogProps {
@@ -297,15 +296,6 @@ export interface ProductSheetProps {
   setProductFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
   isSaving: boolean
   saveProduct: () => void
-}
-
-export interface ProductsTableProps {
-  selectedCategory: Category | undefined
-  filteredProducts: Product[]
-  canManage: boolean
-  openProductSheet: (product?: Product) => void
-  deactivateProduct: (product: Product) => void
-  reactivateProduct: (product: Product) => void
 }
 
 export interface AuditTableProps {

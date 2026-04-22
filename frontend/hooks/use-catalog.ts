@@ -7,6 +7,7 @@ import type { Category, Product, ProductUnit } from '@/lib/types'
 export function useCatalog() {
   const queryClient = useQueryClient()
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [search, setSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   const [productSheetOpen, setProductSheetOpen] = useState(false)
@@ -40,16 +41,20 @@ export function useCatalog() {
   const products = productsData?.data || []
   const isPageLoading = categoriesLoading || productsLoading
 
-  // Auto-select first category
-  if (!selectedCategoryId && categories.length > 0) {
-    setSelectedCategoryId(categories[0].id)
-  }
+  // No auto-select — show all products by default
 
   const selectedCategory = categories.find(c => c.id === selectedCategoryId)
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => p.categoryId === selectedCategoryId)
-  }, [products, selectedCategoryId])
+    let filtered = selectedCategoryId
+      ? products.filter(p => p.categoryId === selectedCategoryId)
+      : products
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(q))
+    }
+    return filtered
+  }, [products, selectedCategoryId, search])
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['categories'] })
@@ -197,6 +202,8 @@ export function useCatalog() {
     selectedCategory,
     filteredProducts,
     isPageLoading,
+    search,
+    setSearch,
     isSaving,
     productSheetOpen,
     setProductSheetOpen,
