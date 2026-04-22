@@ -35,7 +35,7 @@ export default function NewEventPage() {
       />
 
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-        <div className="bg-card rounded-xl border border-border p-6 space-y-8">
+        <div className="bg-card rounded-md border border-border p-6 space-y-8">
           {/* Section 1: Client Details */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Client Details</h2>
