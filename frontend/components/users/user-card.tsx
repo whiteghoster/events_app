@@ -39,19 +39,19 @@ export function UserCard({ user, currentUser, onEdit, onDeactivate, onActivate, 
 
         <Badge variant="secondary" className="text-[10px] capitalize shrink-0">{user.role}</Badge>
 
-        {isAdmin && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0"
-              >
-                <Icon icon={MoreVerticalIcon} size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              {!isInactive ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+            >
+              <Icon icon={MoreVerticalIcon} size={14} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            {isAdmin ? (
+              !isInactive ? (
                 <>
                   <DropdownMenuItem onClick={() => onEdit(user)}>
                     <Icon icon={PencilEdit01Icon} size={14} className="mr-2" /> Edit
@@ -71,10 +71,14 @@ export function UserCard({ user, currentUser, onEdit, onDeactivate, onActivate, 
                     <Icon icon={Shield01Icon} size={14} className="mr-2" /> Delete
                   </DropdownMenuItem>
                 </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+              )
+            ) : (
+              <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                Admin access required
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardContent>
     </Card>
   )

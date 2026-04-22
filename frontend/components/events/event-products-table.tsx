@@ -11,8 +11,8 @@ import {
 } from '@tanstack/react-table'
 import { Pencil, Trash2, Check, X, Plus, Package, ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -20,6 +20,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { EventProduct, Category, Product } from '@/lib/types'
 
@@ -166,23 +167,23 @@ export function EventProductsTable({
       })
     }
 
-    if (canEditQuantity && isEditable) {
-      cols.push({
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => {
-          if (editingRow === row.original.id) {
-            return (
-              <div className="flex items-center justify-end gap-1">
-                <Button size="icon" variant="ghost" onClick={() => onSaveEdit(!!quantityOnly)} className="h-7 w-7 text-emerald-600 hover:text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-950 rounded-md">
-                  <Check className="w-3.5 h-3.5" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={onCancelEdit} className="h-7 w-7 text-muted-foreground rounded-md">
-                  <X className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            )
-          }
+    cols.push({
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => {
+        if (editingRow === row.original.id) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Button size="icon" variant="ghost" onClick={() => onSaveEdit(!!quantityOnly)} className="h-7 w-7 text-emerald-600 hover:text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-950 rounded-md">
+                <Check className="w-3.5 h-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={onCancelEdit} className="h-7 w-7 text-muted-foreground rounded-md">
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )
+        }
+        if (canEditQuantity && isEditable) {
           return (
             <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 transition-opacity">
               <Button size="icon" variant="ghost" onClick={() => onStartEdit(row.original)} className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md">
@@ -195,11 +196,18 @@ export function EventProductsTable({
               )}
             </div>
           )
-        },
-        size: 72,
-        enableSorting: false,
-      })
-    }
+        }
+        return (
+          <div className="flex items-center justify-end">
+            <span className="text-[10px] text-muted-foreground opacity-0 group-hover/row:opacity-100">
+              {!canEditQuantity ? 'Staff view only' : 'Locked'}
+            </span>
+          </div>
+        )
+      },
+      size: 80,
+      enableSorting: false,
+    })
 
     return cols
   }, [editingRow, editingData, quantityOnly, canEdit, canEditQuantity, isEditable, allCategories, allProducts, units, setEditingData, onStartEdit, onSaveEdit, onCancelEdit, onDeleteProduct])
@@ -224,17 +232,34 @@ export function EventProductsTable({
             {products.length}
           </Badge>
         </div>
-        {canEdit && isEditable && (
-          <>
-            <Button size="sm" onClick={() => setAddingNew(true)} className="hidden sm:flex">
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Product
-            </Button>
-            <Button size="icon" onClick={() => setAddingNew(true)} className="sm:hidden h-8 w-8">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </>
-        )}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button
+                  size="sm"
+                  onClick={() => setAddingNew(true)}
+                  disabled={!canEdit || !isEditable}
+                  className="hidden sm:flex"
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Add Product
+                </Button>
+                <Button
+                  size="icon"
+                  onClick={() => setAddingNew(true)}
+                  disabled={!canEdit || !isEditable}
+                  className="sm:hidden h-8 w-8"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!canEdit ? 'Admin/Manager/Karigar can add products' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* ─── Mobile card layout ───────────────────────────────── */}
@@ -245,12 +270,26 @@ export function EventProductsTable({
               <Package className="w-6 h-6" />
             </div>
             <p className="text-sm">No products assigned yet</p>
-            {canEdit && isEditable && (
-              <Button variant="outline" size="sm" onClick={() => setAddingNew(true)}>
-                <Plus className="w-4 h-4 mr-1.5" />
-                Add first product
-              </Button>
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAddingNew(true)}
+                      disabled={!canEdit || !isEditable}
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      Add first product
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!canEdit ? 'Admin/Manager/Karigar can add products' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
 
@@ -307,27 +346,33 @@ export function EventProductsTable({
                       {product.price ? ` · ₹${product.price.toLocaleString('en-IN')}` : ''}
                     </p>
                   </div>
-                  {canEditQuantity && isEditable && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-36">
-                        <DropdownMenuItem onClick={() => onStartEdit(product)}>
-                          <Pencil className="w-3.5 h-3.5 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        {canEdit && (
-                          <DropdownMenuItem onClick={() => onDeleteProduct(product.id)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            Delete
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      {canEditQuantity && isEditable ? (
+                        <>
+                          <DropdownMenuItem onClick={() => onStartEdit(product)}>
+                            <Pencil className="w-3.5 h-3.5 mr-2" />
+                            Edit
                           </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                          {canEdit && (
+                            <DropdownMenuItem onClick={() => onDeleteProduct(product.id)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="w-3.5 h-3.5 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </>
+                      ) : (
+                        <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                          {!canEditQuantity ? 'Staff cannot edit products' : 'Event is locked'}
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               )}
             </div>
@@ -473,11 +518,25 @@ export function EventProductsTable({
                   <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
                     <div className="p-3 rounded-full bg-muted/50"><Package className="w-6 h-6" /></div>
                     <p className="text-sm">No products assigned yet</p>
-                    {canEdit && isEditable && (
-                      <Button variant="outline" size="sm" onClick={() => setAddingNew(true)}>
-                        <Plus className="w-4 h-4 mr-1.5" />Add first product
-                      </Button>
-                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAddingNew(true)}
+                              disabled={!canEdit || !isEditable}
+                            >
+                              <Plus className="w-4 h-4 mr-1.5" />Add first product
+                            </Button>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {!canEdit ? 'Admin/Manager/Karigar can add products' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </TableCell>
               </TableRow>

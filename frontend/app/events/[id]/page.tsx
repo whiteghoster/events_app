@@ -21,6 +21,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Event as EventType, EventProduct } from '@/lib/types'
 
 export default function EventDetailPage({ params }: { params: { id: string } }) {
@@ -28,6 +29,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   const router = useRouter()
   const { user } = useAuth()
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false)
+  const [actionsDialogOpen, setActionsDialogOpen] = useState(false)
   const {
     event, isLoading, eventProductsList, categorySummary,
     allCategories, allProducts, filteredProducts, units,
@@ -51,9 +53,10 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   }
 
   const isEditable = event.status !== 'finished'
-  const canEdit = user && canEditProductRow(user.role)
-  const quantityOnly = user && canEditQuantityOnly(user.role)
-  const canEditQuantity = user && (canEditProductRow(user.role) || canEditQuantityOnly(user.role))
+  // Allow all users to edit products (only event status changes are restricted)
+  const canEdit = !!user && isEditable
+  const canEditQuantity = !!user && isEditable
+  const quantityOnly = false
   const pricedItems = eventProductsList.filter(p => p.price && p.price > 0)
   const grandTotal = eventProductsList.reduce((sum, p) => sum + (p.price || 0), 0)
 
@@ -90,36 +93,15 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                 <Pencil className="w-4 h-4" />
               </Button>
             )}
-            {user && canCloseEvent(user.role) && isEditable && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {event.status !== 'hold' && (
-                    <DropdownMenuItem onClick={() => { setCloseStatus('hold'); setCloseModalOpen(true) }}>
-                      <Pause className="w-4 h-4 mr-2" />
-                      Put on Hold
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => { setCloseStatus('finished'); setCloseModalOpen(true) }}>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Mark as Finished
-                  </DropdownMenuItem>
-                  {user.role === 'admin' && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleDeleteEvent} className="text-destructive focus:text-destructive">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Event
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 rounded-md gap-1"
+              onClick={() => setActionsDialogOpen(true)}
+            >
+              <MoreVertical className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs">Actions</span>
+            </Button>
           </div>
         </div>
 
@@ -217,6 +199,81 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setCloseModalOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
             <Button onClick={handleCloseEvent} className="flex-1 sm:flex-none">Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Actions Dialog ─────────────────────────────────────── */}
+      <Dialog open={actionsDialogOpen} onOpenChange={setActionsDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Event Actions</DialogTitle>
+            <DialogDescription>
+              Manage event status for &quot;{event.clientName}&quot;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-2">
+            {user && canCloseEvent(user.role) && isEditable ? (
+              <>
+                {event.status !== 'hold' && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => {
+                      setActionsDialogOpen(false)
+                      setCloseStatus('hold')
+                      setCloseModalOpen(true)
+                    }}
+                  >
+                    <Pause className="w-5 h-5 text-amber-500" />
+                    <div className="text-left">
+                      <p className="font-medium">Put on Hold</p>
+                      <p className="text-xs text-muted-foreground">Pause the event - admin can still edit</p>
+                    </div>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3 h-auto py-3"
+                  onClick={() => {
+                    setActionsDialogOpen(false)
+                    setCloseStatus('finished')
+                    setCloseModalOpen(true)
+                  }}
+                >
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  <div className="text-left">
+                    <p className="font-medium">Mark as Finished</p>
+                    <p className="text-xs text-muted-foreground">Complete the event - becomes read-only</p>
+                  </div>
+                </Button>
+                {user.role === 'admin' && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3 border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setActionsDialogOpen(false)
+                      handleDeleteEvent()
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <div className="text-left">
+                      <p className="font-medium">Delete Event</p>
+                      <p className="text-xs text-muted-foreground">Permanently remove this event</p>
+                    </div>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                {!user ? 'Please log in to manage events' : !canCloseEvent(user.role) ? `Your role "${user.role}" cannot change event status` : 'Event is finished and locked'}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActionsDialogOpen(false)} className="w-full">
+              Cancel
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
