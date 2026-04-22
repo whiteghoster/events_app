@@ -135,7 +135,7 @@ export function ProductsTable({
   })
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden min-w-0 w-full">
+    <div className="bg-card rounded-md border border-border overflow-hidden min-w-0 w-full">
 
       {/* Mobile card layout */}
       <div className="sm:hidden">

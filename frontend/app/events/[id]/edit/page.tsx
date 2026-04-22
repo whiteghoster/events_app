@@ -42,7 +42,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
       />
 
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto pb-10 px-4 sm:px-0">
-        <div className="bg-card rounded-xl border border-border p-4 sm:p-6 space-y-6 sm:space-y-8">
+        <div className="bg-card rounded-md border border-border p-4 sm:p-6 space-y-6 sm:space-y-8">
           {/* Section 1: Event Identity */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Event Identity</h2>

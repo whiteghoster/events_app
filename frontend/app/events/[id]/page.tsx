@@ -230,7 +230,7 @@ function EventInfoPanel({ event, categorySummary, eventProductsList, grandTotal,
 }) {
   return (
     <>
-      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+      <div className="bg-card rounded-md border border-border p-4 space-y-4">
         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Event Details</h3>
         <div className="space-y-3">
           {event.venue && <InfoRow icon={<MapPin className="w-4 h-4" />} label="Venue"><span>{event.venue}</span>{event.city && <span className="text-muted-foreground text-xs"> ({event.city})</span>}</InfoRow>}
@@ -249,7 +249,7 @@ function EventInfoPanel({ event, categorySummary, eventProductsList, grandTotal,
       </div>
 
       {categorySummary.length > 0 && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="bg-card rounded-md border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Category Summary</h3>
           </div>
@@ -272,7 +272,7 @@ function EventInfoPanel({ event, categorySummary, eventProductsList, grandTotal,
       )}
 
       {eventProductsList.length > 0 && (
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-md border border-border p-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Total Amount</span>
             <span className="text-xl font-bold text-primary tabular-nums">₹{grandTotal.toLocaleString('en-IN')}</span>

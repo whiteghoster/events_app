@@ -215,7 +215,7 @@ export function EventProductsTable({
   })
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-md border border-border overflow-hidden">
       {/* Header */}
       <div className="px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">

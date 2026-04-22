@@ -100,7 +100,7 @@ export function EventDetailSkeleton() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <div className="hidden lg:block w-72 xl:w-80 shrink-0 space-y-4">
-          <div className="rounded-xl border border-border p-4 space-y-4">
+          <div className="rounded-md border border-border p-4 space-y-4">
             <Skeleton className="h-3 w-20" />
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex gap-3">
@@ -112,7 +112,7 @@ export function EventDetailSkeleton() {
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-border p-4">
+          <div className="rounded-md border border-border p-4">
             <div className="flex items-center justify-between">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-6 w-16" />
@@ -122,7 +122,7 @@ export function EventDetailSkeleton() {
 
         {/* Table */}
         <div className="flex-1 min-w-0">
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-md border border-border overflow-hidden">
             <div className="px-5 py-4 flex items-center justify-between border-b border-border">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-5 w-20" />
@@ -162,7 +162,7 @@ export function CatalogSkeleton() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="rounded-md border border-border overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-20" />
