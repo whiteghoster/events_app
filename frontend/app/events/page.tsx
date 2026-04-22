@@ -24,40 +24,51 @@ export default function EventsPage() {
 
   return (
     <PageTransition>
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="relative flex-1 min-w-0">
-          <Icon icon={Search01Icon} size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by client or venue..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
-        </div>
+      {/* Desktop: single row | Mobile: search full-width, tabs+buttons below */}
+      <div className="mb-6 space-y-3 sm:space-y-0">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-0">
+            <Icon icon={Search01Icon} size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by client or venue..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList>
-            <TabsTrigger value="live">Live</TabsTrigger>
-            <TabsTrigger value="hold">Hold</TabsTrigger>
-            <TabsTrigger value="finished">Finished</TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 sm:flex-none">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="live" className="flex-1 sm:flex-none">Live</TabsTrigger>
+              <TabsTrigger value="hold" className="flex-1 sm:flex-none">Hold</TabsTrigger>
+              <TabsTrigger value="finished" className="flex-1 sm:flex-none">Finished</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        <div className="ml-auto flex items-center gap-2">
-          {user && canCreateEvent(user.role) && (
-            <Link href={activeTab === 'live' ? '/events/new' : '#'} onClick={(e) => activeTab !== 'live' && e.preventDefault()}>
-              <Button size="sm" disabled={activeTab !== 'live'}>
-                <Icon icon={Add01Icon} size={16} className="mr-1.5" />
-                New Event
-              </Button>
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={activeTab !== 'finished'}>
-              <Icon icon={Download01Icon} size={16} className="mr-1.5" />
-              Export CSV
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {user && canCreateEvent(user.role) && (
+              <Link href={activeTab === 'live' ? '/events/new' : '#'} onClick={(e) => activeTab !== 'live' && e.preventDefault()}>
+                <Button size="sm" disabled={activeTab !== 'live'} className="hidden sm:flex">
+                  <Icon icon={Add01Icon} size={16} className="mr-1.5" />
+                  New Event
+                </Button>
+                <Button size="icon" disabled={activeTab !== 'live'} className="sm:hidden h-8 w-8">
+                  <Icon icon={Add01Icon} size={16} />
+                </Button>
+              </Link>
+            )}
+            {user?.role === 'admin' && (
+              <>
+                <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={activeTab !== 'finished'} className="hidden sm:flex">
+                  <Icon icon={Download01Icon} size={16} className="mr-1.5" />
+                  Export CSV
+                </Button>
+                <Button variant="outline" size="icon" onClick={handleExportCSV} disabled={activeTab !== 'finished'} className="sm:hidden h-8 w-8">
+                  <Icon icon={Download01Icon} size={16} />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

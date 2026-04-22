@@ -80,29 +80,70 @@ export function FormSkeleton() {
 
 export function EventDetailSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-48" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-9 rounded-md shrink-0" />
+          <Skeleton className="h-6 w-44" />
+          <div className="ml-auto">
+            <Skeleton className="h-8 w-28 rounded-lg" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pl-11">
+          <Skeleton className="h-5 w-12 rounded-full" />
+          <Skeleton className="h-4 w-14 rounded" />
         </div>
       </div>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-4 w-32" />
+
+      {/* Two-column layout */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Sidebar */}
+        <div className="hidden lg:block w-72 xl:w-80 shrink-0 space-y-4">
+          <div className="rounded-xl border border-border p-4 space-y-4">
+            <Skeleton className="h-3 w-20" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex gap-3">
+                <Skeleton className="h-4 w-4 rounded shrink-0 mt-0.5" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-2.5 w-12" />
+                  <Skeleton className="h-4 w-full max-w-[10rem]" />
+                </div>
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="py-4">
-          <Skeleton className="h-5 w-24" />
-        </CardHeader>
-        <TableSkeleton rows={4} cols={6} />
-      </Card>
+          <div className="rounded-xl border border-border p-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-6 w-16" />
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 min-w-0">
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="px-5 py-4 flex items-center justify-between border-b border-border">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-6 rounded" />
+              </div>
+              <Skeleton className="h-8 w-28 rounded-md" />
+            </div>
+            <div className="p-5 space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-6 shrink-0" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-10 ml-auto" />
+                  <Skeleton className="h-4 w-8" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

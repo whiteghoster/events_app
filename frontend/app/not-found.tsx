@@ -4,7 +4,7 @@ import { FileNotFoundIcon, Home01Icon, ArrowLeft01Icon } from '@hugeicons/core-f
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/30">
+    <div className="flex items-center justify-center py-20">
       <div className="text-center max-w-md w-full mx-4 space-y-6">
         <div className="flex justify-center">
           <div className="p-4 bg-primary/10 rounded-full">
