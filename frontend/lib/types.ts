@@ -311,8 +311,6 @@ export interface AuditPaginationProps {
 }
 
 export interface AuditFiltersProps {
-  roleFilter: string
-  setRoleFilter: (value: string) => void
   entityFilter: string
   setEntityFilter: (value: string) => void
   actionFilter: AuditAction | 'All'

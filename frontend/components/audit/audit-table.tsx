@@ -47,15 +47,15 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
 
       {/* Desktop View */}
       <div className="hidden lg:block overflow-x-auto">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[180px]">When</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Entity</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead className="w-[120px]">When</TableHead>
+              <TableHead className="w-[110px]">User</TableHead>
+              <TableHead className="w-[70px]">Role</TableHead>
+              <TableHead className="w-[80px]">Action</TableHead>
+              <TableHead className="w-[70px]">Entity</TableHead>
+              <TableHead className="w-[160px]">Name</TableHead>
               <TableHead>Changes</TableHead>
             </TableRow>
           </TableHeader>
@@ -77,8 +77,8 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
                   <TableCell><Badge variant="secondary" className="text-xs capitalize">{entry.userRole}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{actionLabel[entry.action] || entry.action}</Badge></TableCell>
                   <TableCell className="text-xs text-muted-foreground uppercase font-semibold">{entry.entityType}</TableCell>
-                  <TableCell className="font-medium">{entry.entityName}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm max-w-md truncate">{entry.change}</TableCell>
+                  <TableCell className="font-medium truncate">{entry.entityName}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm truncate">{entry.change}</TableCell>
                 </TableRow>
               ))
             ) : (

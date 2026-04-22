@@ -72,13 +72,6 @@ export default function EventsPage() {
         </div>
       </div>
 
-      {!isLoading && filteredEvents.length > 0 && (
-        <p className="text-sm text-muted-foreground mb-4">
-          {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
-          {search && ` matching "${search}"`}
-        </p>
-      )}
-
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
