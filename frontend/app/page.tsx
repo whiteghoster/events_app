@@ -13,18 +13,5 @@ export default function Home() {
     router.replace(isAuthenticated ? '/events' : '/login')
   }, [isAuthenticated, isLoading, router])
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="relative flex items-center justify-center">
-        <div className="absolute w-20 h-20 rounded-full border-[3px] border-primary/20" />
-        <div className="absolute w-20 h-20 rounded-full border-[3px] border-transparent border-t-primary brand-loader-ring" />
-        <div className="absolute w-24 h-24 rounded-full bg-primary/5 brand-loader-pulse" />
-        <img
-          src="/icon.svg"
-          alt="FloraEvent"
-          className="w-10 h-10 rounded-lg"
-        />
-      </div>
-    </div>
-  )
+  return null
 }

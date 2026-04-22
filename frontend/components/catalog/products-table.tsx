@@ -8,16 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import type { Category, Product } from '@/lib/types'
-
-interface ProductsTableProps {
-  selectedCategory: Category | undefined
-  filteredProducts: Product[]
-  canManage: boolean
-  openProductSheet: (product?: Product) => void
-  deactivateProduct: (product: Product) => void
-  reactivateProduct: (product: Product) => void
-}
+import type { ProductsTableProps } from '@/lib/types'
 
 export function ProductsTable({
   selectedCategory,

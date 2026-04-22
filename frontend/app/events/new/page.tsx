@@ -1,133 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
-import { eventsApi, usersApi } from '@/lib/api'
+import { useEventForm } from '@/hooks/use-event-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { toast } from 'sonner'
-import type { User, Client } from '@/lib/types'
-
-
-
 
 export default function NewEventPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
-  const [staffList, setStaffList] = useState<User[]>([])
-
-  const [formData, setFormData] = useState({
-    clientName: '',
-    companyName: '',
-    contactPhone: '',
-    eventDate: '',
-    venue: '',
-    venueAddress: '',
-    city: '',
-    headKarigarName: 'unassigned',
-    managerName: 'unassigned',
-    deliveryFromDate: '',
-    deliveryToDate: '',
-  })
-  const [clients, setClients] = useState<Client[]>([])
-  const [selectedDropdownClient, setSelectedDropdownClient] = useState('')
-
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const { data } = await usersApi.getUsers(1, 100)
-        setStaffList(data.filter(u => u.role === 'karigar' || u.role === 'manager'))
-      } catch (err) {
-        console.error('Failed to fetch staff:', err)
-      }
-    }
-    const fetchClients = async () => {
-      try {
-        const data = await eventsApi.getClients()
-        setClients(data)
-      } catch (err) {
-        console.error('Failed to fetch clients:', err)
-        setClients([])
-      }
-    }
-    fetchStaff()
-    fetchClients()
-  }, [])
+  const {
+    formData, errors, isLoading, clients, selectedDropdownClient,
+    karigars, managers, handleChange, handleClientSelect, handleSubmit,
+  } = useEventForm()
 
   if (!user || !canCreateEvent(user.role)) {
     router.replace('/events')
     return null
-  }
-
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
-  }
-
-  const handleClientSelect = (clientName: string) => {
-    setSelectedDropdownClient(clientName)
-    const selectedClient = clients.find(c => c.client_name === clientName)
-    if (selectedClient) {
-      setFormData(prev => ({
-        ...prev,
-        clientName: selectedClient.client_name,
-        companyName: selectedClient.company_name || '',
-        contactPhone: selectedClient.contact_phone || '',
-      }))
-    }
-    if (errors.clientName) {
-      setErrors(prev => ({ ...prev, clientName: '' }))
-    }
-  }
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.clientName.trim()) newErrors.clientName = 'Client name is required'
-    if (!formData.eventDate) newErrors.eventDate = 'Event date is required'
-    if (!formData.venue.trim()) newErrors.venue = 'Venue is required'
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) return
-
-    setIsLoading(true)
-    try {
-      await eventsApi.createEvent({
-        clientName: formData.clientName,
-        companyName: formData.companyName || undefined,
-        contactPhone: formData.contactPhone || undefined,
-        eventDate: formData.eventDate,
-        venue: formData.venue,
-        venueAddress: formData.venueAddress || undefined,
-        city: formData.city || undefined,
-        headKarigarName: formData.headKarigarName === 'unassigned' ? undefined : formData.headKarigarName,
-        managerName: formData.managerName === 'unassigned' ? undefined : formData.managerName,
-        deliveryFromDate: formData.deliveryFromDate || undefined,
-        deliveryToDate: formData.deliveryToDate || undefined,
-      })
-      toast.success('Event created successfully')
-      router.push('/events')
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to create event')
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   return (
@@ -314,8 +208,8 @@ export default function NewEventPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="headKarigarName" className="text-label">Head Karigar</Label>
-                <Select 
-                  value={formData.headKarigarName} 
+                <Select
+                  value={formData.headKarigarName}
                   onValueChange={(v) => handleChange('headKarigarName', v)}
                 >
                   <SelectTrigger>
@@ -323,7 +217,7 @@ export default function NewEventPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {staffList.filter(s => s.role === 'karigar').map(s => (
+                    {karigars.map(s => (
                       <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -331,8 +225,8 @@ export default function NewEventPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="managerName" className="text-label">Manager</Label>
-                <Select 
-                  value={formData.managerName} 
+                <Select
+                  value={formData.managerName}
                   onValueChange={(v) => handleChange('managerName', v)}
                 >
                   <SelectTrigger>
@@ -340,7 +234,7 @@ export default function NewEventPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {staffList.filter(s => s.role === 'manager').map(s => (
+                    {managers.map(s => (
                       <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>

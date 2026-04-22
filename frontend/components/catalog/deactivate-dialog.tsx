@@ -2,12 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-
-interface DeactivateDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  confirmDeactivate: () => void
-}
+import type { DeactivateDialogProps } from '@/lib/types'
 
 export function DeactivateDialog({
   open,

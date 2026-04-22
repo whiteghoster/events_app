@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Icon } from '@/components/icon'
-import { Add01Icon, Search01Icon, Download01Icon, Calendar01Icon, PauseIcon, CheckmarkCircle01Icon } from '@hugeicons/core-free-icons'
+import { Add01Icon, Search01Icon, Download01Icon } from '@hugeicons/core-free-icons'
 import { EventCard } from '@/components/event-card'
 import { EmptyState } from '@/components/empty-state'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
@@ -37,32 +37,23 @@ export default function EventsPage() {
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
           <TabsList>
-            <TabsTrigger value="live" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Icon icon={Calendar01Icon} size={14} />
-              Live
-            </TabsTrigger>
-            <TabsTrigger value="hold" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Icon icon={PauseIcon} size={14} />
-              Hold
-            </TabsTrigger>
-            <TabsTrigger value="finished" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Icon icon={CheckmarkCircle01Icon} size={14} />
-              Finished
-            </TabsTrigger>
+            <TabsTrigger value="live">Live</TabsTrigger>
+            <TabsTrigger value="hold">Hold</TabsTrigger>
+            <TabsTrigger value="finished">Finished</TabsTrigger>
           </TabsList>
         </Tabs>
 
         <div className="ml-auto flex items-center gap-2">
-          {user && canCreateEvent(user.role) && activeTab === 'live' && (
-            <Link href="/events/new">
-              <Button size="sm">
+          {user && canCreateEvent(user.role) && (
+            <Link href={activeTab === 'live' ? '/events/new' : '#'} onClick={(e) => activeTab !== 'live' && e.preventDefault()}>
+              <Button size="sm" disabled={activeTab !== 'live'}>
                 <Icon icon={Add01Icon} size={16} className="mr-1.5" />
                 New Event
               </Button>
             </Link>
           )}
-          {user?.role === 'admin' && activeTab === 'finished' && (
-            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+          {user?.role === 'admin' && (
+            <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={activeTab !== 'finished'}>
               <Icon icon={Download01Icon} size={16} className="mr-1.5" />
               Export CSV
             </Button>

@@ -9,18 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-
-interface BreadcrumbEntry {
-  label: string
-  href?: string
-}
-
-interface PageHeaderProps {
-  title: string
-  breadcrumbs?: BreadcrumbEntry[]
-  action?: React.ReactNode
-  className?: string
-}
+import type { PageHeaderProps } from '@/lib/types'
 
 export function PageHeader({ title, breadcrumbs, action, className }: PageHeaderProps) {
   return (

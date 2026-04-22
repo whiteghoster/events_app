@@ -3,16 +3,11 @@
 import Link from 'next/link'
 import { Icon } from '@/components/icon'
 import { Location01Icon, Calendar01Icon, UserIcon, FlowerIcon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
-import type { Event, EventProduct } from '@/lib/types'
+import type { EventCardProps } from '@/lib/types'
 import { StatusBadge } from '@/components/status-badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-
-interface EventCardProps {
-  event: Event
-  products?: EventProduct[]
-}
 
 export function EventCard({ event }: EventCardProps) {
   return (

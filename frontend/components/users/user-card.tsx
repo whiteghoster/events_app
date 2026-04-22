@@ -7,16 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import type { User } from '@/lib/types'
-
-interface UserCardProps {
-  user: User
-  currentUser: { id: string; role: string }
-  onEdit: (user: User) => void
-  onDeactivate: (user: User) => void
-  onActivate: (user: User) => void
-  onPermanentlyDelete: (user: User) => void
-}
+import type { UserCardProps } from '@/lib/types'
 
 export function UserCard({ user, currentUser, onEdit, onDeactivate, onActivate, onPermanentlyDelete }: UserCardProps) {
   const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase()

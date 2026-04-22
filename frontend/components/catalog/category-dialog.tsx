@@ -5,17 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import type { Category } from '@/lib/types'
-
-interface CategoryDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  editingCategory: Category | null
-  newCategoryName: string
-  setNewCategoryName: (name: string) => void
-  isSaving: boolean
-  saveCategory: () => void
-}
+import type { Category, CategoryDialogProps } from '@/lib/types'
 
 export function CategoryDialog({
   open,

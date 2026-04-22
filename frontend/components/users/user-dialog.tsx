@@ -8,29 +8,13 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { User, UserRole } from '@/lib/types'
+import type { UserRole, UserDialogProps } from '@/lib/types'
 
 const roles: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'karigar', label: 'Karigar' },
   { value: 'manager', label: 'Manager' },
 ]
-
-interface UserDialogProps {
-  dialogOpen: boolean
-  setDialogOpen: (open: boolean) => void
-  editingUser: User | null
-  isLoading: boolean
-  formData: {
-    name: string
-    email: string
-    password: string
-    role: UserRole
-  }
-  setFormData: (updater: (prev: { name: string; email: string; password: string; role: UserRole }) => { name: string; email: string; password: string; role: UserRole }) => void
-  generatePassword: () => void
-  saveUser: () => void
-}
 
 export function UserDialog({
   dialogOpen,

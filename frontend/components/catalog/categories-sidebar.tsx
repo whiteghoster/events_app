@@ -6,17 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { Category, Product } from '@/lib/types'
-
-interface CategoriesSidebarProps {
-  categories: Category[]
-  products: Product[]
-  selectedCategoryId: string
-  setSelectedCategoryId: (id: string) => void
-  canManage: boolean
-  openCategoryDialog: (category?: Category) => void
-  deleteCategory: (category: Category) => void
-}
+import type { Category, Product, CategoriesSidebarProps } from '@/lib/types'
 
 export function CategoriesSidebar({
   categories,

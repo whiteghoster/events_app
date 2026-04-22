@@ -2,14 +2,7 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Icon } from '@/components/icon'
 import { InboxIcon } from '@hugeicons/core-free-icons'
-
-interface EmptyStateProps {
-  icon?: React.ReactNode
-  title: string
-  description?: string
-  action?: React.ReactNode
-  className?: string
-}
+import type { EmptyStateProps } from '@/lib/types'
 
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (

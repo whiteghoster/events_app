@@ -1,13 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-
-interface AuditPaginationProps {
-  page: number
-  totalPages: number
-  total: number
-  setPage: (page: number | ((prev: number) => number)) => void
-}
+import type { AuditPaginationProps } from '@/lib/types'
 
 export function AuditPagination({ page, totalPages, total, setPage }: AuditPaginationProps) {
   if (total <= 0) return null

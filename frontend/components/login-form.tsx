@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Loader2 } from 'lucide-react'
 import { Icon } from '@/components/icon'
 import { ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 import { useLogin } from '@/hooks/use-login'
@@ -24,7 +24,7 @@ export function LoginForm({
     email, setEmail,
     password, setPassword,
     showPassword, setShowPassword,
-    isLoading, error,
+    isLoading, isRedirecting, error,
     handleSubmit,
   } = useLogin()
 
@@ -87,9 +87,17 @@ export function LoginForm({
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || isRedirecting}>
                 {isLoading ? (
-                  <Skeleton className="h-4 w-16" />
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : isRedirecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Redirecting...
+                  </>
                 ) : (
                   'Sign In'
                 )}

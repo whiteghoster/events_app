@@ -9,6 +9,7 @@ export function useLogin() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,12 +21,13 @@ export function useLogin() {
 
     if (success) {
       localStorage.setItem('user_password', password)
+      setIsLoading(false)
+      setIsRedirecting(true)
       router.push('/events')
     } else {
       setError('Invalid credentials')
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return {
@@ -36,6 +38,7 @@ export function useLogin() {
     showPassword,
     setShowPassword,
     isLoading,
+    isRedirecting,
     error,
     handleSubmit,
   }

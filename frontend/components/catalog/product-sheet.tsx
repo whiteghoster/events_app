@@ -8,26 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { PRODUCT_UNITS } from '@/lib/types'
-import type { Category, Product, ProductUnit } from '@/lib/types'
-
-interface ProductFormData {
-  name: string
-  categoryId: string
-  defaultUnit: ProductUnit
-  price: string
-  isActive: boolean
-}
-
-interface ProductSheetProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  editingProduct: Product | null
-  categories: Category[]
-  productFormData: ProductFormData
-  setProductFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
-  isSaving: boolean
-  saveProduct: () => void
-}
+import type { Category, Product, ProductUnit, ProductFormData, ProductSheetProps } from '@/lib/types'
 
 export function ProductSheet({
   open,

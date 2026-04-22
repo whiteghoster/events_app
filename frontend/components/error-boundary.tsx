@@ -41,7 +41,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <div className="relative">
                 <div className="p-3 bg-destructive/10 rounded-full">
                   <img
-                    src="/icon.svg"
+                    src="/download.png"
                     alt="FloraEvent"
                     className="w-10 h-10 rounded-lg opacity-80"
                   />

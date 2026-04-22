@@ -2,21 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { eventsApi, usersApi } from '@/lib/api'
-import type { User, Client } from '@/lib/types'
-
-interface EventFormData {
-  clientName: string
-  companyName: string
-  contactPhone: string
-  eventDate: string
-  venue: string
-  venueAddress: string
-  city: string
-  headKarigarName: string
-  managerName: string
-  deliveryFromDate: string
-  deliveryToDate: string
-}
+import type { User, Client, EventFormData } from '@/lib/types'
 
 const DEFAULT_FORM_DATA: EventFormData = {
   clientName: '',

@@ -1,10 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import type { EventStatus } from '@/lib/types'
-
-interface StatusBadgeProps {
-  status: EventStatus | 'active' | 'inactive' | 'Active' | 'Inactive'
-  className?: string
-}
+import type { StatusBadgeProps } from '@/lib/types'
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const normalized = (status || 'live').toLowerCase()

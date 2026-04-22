@@ -161,12 +161,175 @@ export type AuditAction = 'create' | 'update' | 'delete'
 export interface AuditEntry {
   id: string
   timestamp: string
-  userId: string
+  userId?: string
   userName: string
-  userRole: UserRole
+  userRole: string
   action: AuditAction
   entityType: string
-  entityName: string
-  entityId: string
-  change: string
+  entityName?: string
+  entityId?: string
+  change?: string
+}
+
+// ─── Form types ──────────────────────────────────────────────────────────────
+
+export interface EventFormData {
+  clientName: string
+  companyName: string
+  contactPhone: string
+  eventDate: string
+  venue: string
+  venueAddress: string
+  city: string
+  headKarigarName: string
+  managerName: string
+  deliveryFromDate: string
+  deliveryToDate: string
+}
+
+export interface ProductFormData {
+  name: string
+  categoryId: string
+  defaultUnit: ProductUnit
+  price: string
+  isActive: boolean
+}
+
+// ─── Component prop types ────────────────────────────────────────────────────
+
+export interface BreadcrumbEntry {
+  label: string
+  href?: string
+}
+
+export interface PageHeaderProps {
+  title: string
+  breadcrumbs?: BreadcrumbEntry[]
+  action?: React.ReactNode
+  className?: string
+}
+
+export interface EventCardProps {
+  event: Event
+  products?: EventProduct[]
+}
+
+export interface EmptyStateProps {
+  icon?: React.ReactNode
+  title: string
+  description?: string
+  action?: React.ReactNode
+  className?: string
+}
+
+export interface StatusBadgeProps {
+  status: EventStatus | 'active' | 'inactive' | 'Active' | 'Inactive'
+  className?: string
+}
+
+export interface UserFormData {
+  name: string
+  email: string
+  password: string
+  role: UserRole
+}
+
+export interface UserDialogProps {
+  dialogOpen: boolean
+  setDialogOpen: (open: boolean) => void
+  editingUser: User | null
+  isLoading: boolean
+  formData: UserFormData
+  setFormData: (updater: (prev: UserFormData) => UserFormData) => void
+  generatePassword: () => void
+  saveUser: () => void
+}
+
+export interface UserCardProps {
+  user: User
+  currentUser: { id: string; role: string }
+  onEdit: (user: User) => void
+  onDeactivate: (user: User) => void
+  onActivate: (user: User) => void
+  onPermanentlyDelete: (user: User) => void
+}
+
+export interface SidebarRegisterFormProps {
+  collapsed?: boolean
+}
+
+export interface AuthenticatedLayoutProps {
+  children: React.ReactNode
+}
+
+export interface CategoryDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  editingCategory: Category | null
+  newCategoryName: string
+  setNewCategoryName: (name: string) => void
+  isSaving: boolean
+  saveCategory: () => void
+}
+
+export interface CategoriesSidebarProps {
+  categories: Category[]
+  products: Product[]
+  selectedCategoryId: string
+  setSelectedCategoryId: (id: string) => void
+  canManage: boolean
+  openCategoryDialog: (category?: Category) => void
+  deleteCategory: (category: Category) => void
+}
+
+export interface DeactivateDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  confirmDeactivate: () => void
+}
+
+export interface ProductSheetProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  editingProduct: Product | null
+  categories: Category[]
+  productFormData: ProductFormData
+  setProductFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
+  isSaving: boolean
+  saveProduct: () => void
+}
+
+export interface ProductsTableProps {
+  selectedCategory: Category | undefined
+  filteredProducts: Product[]
+  canManage: boolean
+  openProductSheet: (product?: Product) => void
+  deactivateProduct: (product: Product) => void
+  reactivateProduct: (product: Product) => void
+}
+
+export interface AuditTableProps {
+  logs: AuditEntry[]
+  isLoading: boolean
+}
+
+export interface AuditPaginationProps {
+  page: number
+  totalPages: number
+  total: number
+  setPage: (page: number | ((prev: number) => number)) => void
+}
+
+export interface AuditFiltersProps {
+  roleFilter: string
+  setRoleFilter: (value: string) => void
+  entityFilter: string
+  setEntityFilter: (value: string) => void
+  actionFilter: AuditAction | 'All'
+  setActionFilter: (value: AuditAction | 'All') => void
+  dateFrom: string
+  setDateFrom: (value: string) => void
+  dateTo: string
+  setDateTo: (value: string) => void
+  setPage: (page: number) => void
 }

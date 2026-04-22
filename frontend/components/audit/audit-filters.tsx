@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { AuditAction } from '@/lib/types'
+import type { AuditAction, AuditFiltersProps } from '@/lib/types'
 
 const entityTypes = ['All', 'Event', 'Product', 'Category', 'Event Product', 'User']
 const actions: (AuditAction | 'All')[] = ['All', 'create', 'update', 'delete']
@@ -16,20 +16,6 @@ const actionLabel: Record<AuditAction, string> = {
   create: 'Created',
   update: 'Updated',
   delete: 'Deleted',
-}
-
-interface AuditFiltersProps {
-  roleFilter: string
-  setRoleFilter: (value: string) => void
-  entityFilter: string
-  setEntityFilter: (value: string) => void
-  actionFilter: AuditAction | 'All'
-  setActionFilter: (value: AuditAction | 'All') => void
-  dateFrom: string
-  setDateFrom: (value: string) => void
-  dateTo: string
-  setDateTo: (value: string) => void
-  setPage: (page: number) => void
 }
 
 export function AuditFilters({

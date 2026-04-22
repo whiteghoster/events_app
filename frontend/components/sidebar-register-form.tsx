@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import { Icon } from '@/components/icon'
 import { UserAdd01Icon, MagicWand01Icon, Shield01Icon, UserIcon, Mail01Icon, LockIcon } from '@hugeicons/core-free-icons'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sheet,
   SheetContent,
@@ -23,63 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { usersApi } from '@/lib/api'
-import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth-context'
-
-interface SidebarRegisterFormProps {
-  collapsed?: boolean
-}
+import { useRegisterForm } from '@/hooks/use-register-form'
+import type { SidebarRegisterFormProps } from '@/lib/types'
 
 export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
   const { user } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'karigar',
-  })
+  const {
+    isOpen, setIsOpen, isLoading, formData,
+    handleChange, generatePassword, handleSubmit,
+  } = useRegisterForm()
 
   if (user?.role !== 'admin') {
     return null
-  }
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-    let password = ''
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    setFormData(prev => ({ ...prev, password }))
-    toast.success('Secure password generated')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await usersApi.createUser({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-      })
-      toast.success('Team member invited successfully')
-      setIsOpen(false)
-      setFormData({ name: '', email: '', password: '', role: 'karigar' })
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create user')
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   return (
@@ -118,7 +74,7 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
               <Input
                 placeholder="John Doe"
                 value={formData.name}
-                onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={e => handleChange('name', e.target.value)}
                 className="bg-secondary/50 border-border focus:ring-primary/20"
               />
             </div>
@@ -131,7 +87,7 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
                 type="email"
                 placeholder="john@floraindia.com"
                 value={formData.email}
-                onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={e => handleChange('email', e.target.value)}
                 className="bg-secondary/50 border-border focus:ring-primary/20"
               />
             </div>
@@ -144,7 +100,7 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
                 <Input
                   placeholder="Minimum 6 characters"
                   value={formData.password}
-                  onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={e => handleChange('password', e.target.value)}
                   className="bg-secondary/50 border-border flex-1"
                 />
                 <Button
@@ -166,7 +122,7 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
               </Label>
               <Select
                 value={formData.role}
-                onValueChange={v => setFormData(prev => ({ ...prev, role: v }))}
+                onValueChange={v => handleChange('role', v)}
               >
                 <SelectTrigger className="bg-secondary/50 border-border">
                   <SelectValue placeholder="Select a role" />
@@ -188,7 +144,10 @@ export function SidebarRegisterForm({ collapsed }: SidebarRegisterFormProps) {
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold h-11"
           >
             {isLoading ? (
-              <Skeleton className="h-4 w-24" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Sending...
+              </>
             ) : (
               <>
                 <Icon icon={UserAdd01Icon} size={16} className="mr-2" />

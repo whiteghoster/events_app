@@ -1,156 +1,34 @@
 'use client'
 
-import { useState, use, useEffect, useCallback } from 'react'
+import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canEditEvent } from '@/lib/auth-context'
-import { eventsApi, usersApi } from '@/lib/api'
+import { useEventForm } from '@/hooks/use-event-form'
+import { FormSkeleton } from '@/components/skeletons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { toast } from 'sonner'
-import { OCCASION_TYPES, type User, type Client } from '@/lib/types'
 
 export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const { user } = useAuth()
-  
-  const [isPageLoading, setIsPageLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [staffList, setStaffList] = useState<User[]>([])
-  const [formData, setFormData] = useState({
-    clientName: '',
-    companyName: '',
-    contactPhone: '',
-    eventDate: '',
-    venue: '',
-    venueAddress: '',
-    city: '',
-    headKarigarName: '',
-    managerName: '',
-    deliveryFromDate: '',
-    deliveryToDate: '',
-  })
-  const [clients, setClients] = useState<Client[]>([])
-  const [selectedDropdownClient, setSelectedDropdownClient] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const {
+    formData, errors, isLoading, isPageLoading, clients, selectedDropdownClient,
+    karigars, managers, handleChange, handleClientSelect, handleSubmit,
+  } = useEventForm(id)
 
-  const loadEvent = useCallback(async () => {
-    try {
-      const data = await eventsApi.getEventById(id)
-      
-      // Prevent editing finished events
-      if (data.status === 'finished') {
-        toast.error('Finished events cannot be edited')
-        router.push(`/events/${id}`)
-        return
-      }
-      
-      setFormData({
-        clientName: data.clientName,
-        companyName: data.companyName || '',
-        contactPhone: data.contactPhone || '',
-        eventDate: data.eventDate ? data.eventDate.split('T')[0] : '',
-        venue: data.venue,
-        venueAddress: data.venueAddress || '',
-        city: data.city || '',
-        headKarigarName: data.headKarigarName || 'unassigned',
-        managerName: data.managerName || 'unassigned',
-        deliveryFromDate: data.deliveryFromDate ? data.deliveryFromDate.split('T')[0] : '',
-        deliveryToDate: data.deliveryToDate ? data.deliveryToDate.split('T')[0] : '',
-      })
-    } catch (err) {
-      toast.error('Failed to load event details')
-      router.push('/events')
-    } finally {
-      setIsPageLoading(false)
-    }
-  }, [id, router])
-
-  useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const { data } = await usersApi.getUsers(1, 100)
-        setStaffList(data.filter(u => u.role === 'karigar' || u.role === 'manager'))
-      } catch (err) {
-        console.error('Failed to fetch staff:', err)
-      }
-    }
-    const fetchClients = async () => {
-      try {
-        const data = await eventsApi.getClients()
-        setClients(data)
-      } catch (err) {
-        console.error('Failed to fetch clients:', err)
-        setClients([])
-      }
-    }
-    fetchStaff()
-    fetchClients()
-  }, [])
-
-  useEffect(() => {
-    if (user && !canEditEvent(user.role)) {
-      router.replace('/events')
-      return
-    }
-    loadEvent()
-  }, [user, loadEvent, router])
+  if (user && !canEditEvent(user.role)) {
+    router.replace('/events')
+    return null
+  }
 
   if (isPageLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
-  }
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-    if (!formData.clientName.trim()) newErrors.clientName = 'Client name is required'
-    if (!formData.eventDate) newErrors.eventDate = 'Event date is required'
-    if (!formData.venue.trim()) newErrors.venue = 'Venue is required'
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) return
-
-    setIsSaving(true)
-    try {
-      await eventsApi.updateEvent(id, {
-        clientName: formData.clientName,
-        companyName: formData.companyName,
-        contactPhone: formData.contactPhone,
-        eventDate: formData.eventDate,
-        venue: formData.venue,
-        venueAddress: formData.venueAddress,
-        city: formData.city,
-        headKarigarName: formData.headKarigarName === 'unassigned' ? '' : formData.headKarigarName,
-        managerName: formData.managerName === 'unassigned' ? '' : formData.managerName,
-        deliveryFromDate: formData.deliveryFromDate || undefined,
-        deliveryToDate: formData.deliveryToDate || undefined,
-      })
-      toast.success('Event updated successfully')
-      router.push(`/events/${id}`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update event')
-    } finally {
-      setIsSaving(false)
-    }
+    return <FormSkeleton />
   }
 
   return (
@@ -169,25 +47,14 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           {/* Section 1: Event Identity */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Event Identity</h2>
-            
+
             <div className="space-y-2">
               <Label htmlFor="clientName" className="text-label">
                 Client Name <span className="text-primary">*</span>
               </Label>
               <Select
                 value={selectedDropdownClient}
-                onValueChange={(value) => {
-                  setSelectedDropdownClient(value)
-                  const selectedClient = clients.find(c => c.client_name === value)
-                  if (selectedClient) {
-                    setFormData(prev => ({
-                      ...prev,
-                      clientName: selectedClient.client_name,
-                      companyName: selectedClient.company_name || '',
-                      contactPhone: selectedClient.contact_phone || '',
-                    }))
-                  }
-                }}
+                onValueChange={handleClientSelect}
               >
                 <SelectTrigger className={errors.clientName ? 'border-destructive' : ''}>
                   <SelectValue placeholder="Select or type client name" />
@@ -261,9 +128,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="deliveryFromDate" className="text-label">
-                  Delivery From
-                </Label>
+                <Label htmlFor="deliveryFromDate" className="text-label">Delivery From</Label>
                 <Input
                   id="deliveryFromDate"
                   type="date"
@@ -272,9 +137,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryToDate" className="text-label">
-                  Delivery To
-                </Label>
+                <Label htmlFor="deliveryToDate" className="text-label">Delivery To</Label>
                 <Input
                   id="deliveryToDate"
                   type="date"
@@ -290,7 +153,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           {/* Section 3: Venue */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Venue</h2>
-            
+
             <div className="space-y-2">
               <Label htmlFor="venue" className="text-label">
                 Venue <span className="text-primary">*</span>
@@ -329,12 +192,12 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           {/* Section 4: Staff Assignment */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Staff Assignment</h2>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="headKarigarName" className="text-label">Head Karigar</Label>
-                <Select 
-                  value={formData.headKarigarName} 
+                <Select
+                  value={formData.headKarigarName}
                   onValueChange={(v) => handleChange('headKarigarName', v)}
                 >
                   <SelectTrigger>
@@ -342,7 +205,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {staffList.filter(s => s.role === 'karigar').map(s => (
+                    {karigars.map(s => (
                       <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -350,8 +213,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               </div>
               <div className="space-y-2">
                 <Label htmlFor="managerName" className="text-label">Manager</Label>
-                <Select 
-                  value={formData.managerName} 
+                <Select
+                  value={formData.managerName}
                   onValueChange={(v) => handleChange('managerName', v)}
                 >
                   <SelectTrigger>
@@ -359,7 +222,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {staffList.filter(s => s.role === 'manager').map(s => (
+                    {managers.map(s => (
                       <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -368,8 +231,6 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
             </div>
           </section>
 
-          <div className="border-t border-border" />
-
         </div>
 
         {/* Footer Actions */}
@@ -377,8 +238,8 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
           <Button type="button" variant="ghost" onClick={() => router.push(`/events/${id}`)} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button type="submit" disabled={isSaving} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          <Button type="submit" disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Save Changes
           </Button>
         </div>

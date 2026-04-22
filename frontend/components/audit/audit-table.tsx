@@ -3,28 +3,12 @@
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSkeleton } from '@/components/skeletons'
-import type { AuditAction } from '@/lib/types'
+import type { AuditAction, AuditEntry, AuditTableProps } from '@/lib/types'
 
 const actionLabel: Record<AuditAction, string> = {
   create: 'Created',
   update: 'Updated',
   delete: 'Deleted',
-}
-
-interface AuditEntry {
-  id: string
-  action: AuditAction
-  timestamp: string
-  userName: string
-  userRole: string
-  entityType: string
-  entityName?: string
-  change?: string
-}
-
-interface AuditTableProps {
-  logs: AuditEntry[]
-  isLoading: boolean
 }
 
 export function AuditTable({ logs, isLoading }: AuditTableProps) {

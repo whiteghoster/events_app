@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils'
 
 interface IconProps {
   icon: IconSvgElement
-  className?: string
   size?: number
+  className?: string
   strokeWidth?: number
 }
 
