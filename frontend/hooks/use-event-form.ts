@@ -108,7 +108,8 @@ export function useEventForm(eventId?: string) {
   const validate = () => {
     const newErrors: Record<string, string> = {}
     if (!formData.clientName.trim()) newErrors.clientName = 'Client name is required'
-    if (!formData.eventDate) newErrors.eventDate = 'Event date is required'
+    if (!formData.deliveryFromDate) newErrors.deliveryFromDate = 'Delivery start date is required'
+    if (!formData.deliveryToDate) newErrors.deliveryToDate = 'Delivery end date is required'
     if (!formData.venue.trim()) newErrors.venue = 'Venue is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -124,14 +125,14 @@ export function useEventForm(eventId?: string) {
         clientName: formData.clientName,
         companyName: formData.companyName || undefined,
         contactPhone: formData.contactPhone || undefined,
-        eventDate: formData.eventDate,
+        eventDate: formData.deliveryFromDate,
         venue: formData.venue,
         venueAddress: formData.venueAddress || undefined,
         city: formData.city || undefined,
         headKarigarName: formData.headKarigarName === 'unassigned' ? undefined : formData.headKarigarName,
         managerName: formData.managerName === 'unassigned' ? undefined : formData.managerName,
-        deliveryFromDate: formData.deliveryFromDate || undefined,
-        deliveryToDate: formData.deliveryToDate || undefined,
+        deliveryFromDate: formData.deliveryFromDate,
+        deliveryToDate: formData.deliveryToDate,
       }
 
       if (eventId) {

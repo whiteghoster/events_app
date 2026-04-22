@@ -32,7 +32,8 @@ interface FormData {
 
 interface FormErrors {
   clientName?: string
-  eventDate?: string
+  deliveryFromDate?: string
+  deliveryToDate?: string
   venue?: string
 }
 
@@ -108,60 +109,32 @@ export function EventFormFields({
           </div>
         </div>
 
-        {!isNew && (
-          <div className="space-y-2">
-            <Label>Event Date *</Label>
-            <Input
-              type="date"
-              value={formData.eventDate}
-              onChange={(e) => handleChange('eventDate', e.target.value)}
-              className={errors.eventDate ? 'border-destructive' : ''}
-            />
-            {errors.eventDate && <p className="text-destructive text-sm">{errors.eventDate}</p>}
-          </div>
-        )}
       </section>
-
-      {isNew && (
-        <>
-          <Separator />
-          <section className="space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide">Event Date</h2>
-            <div className="space-y-2">
-              <Label>Event Date *</Label>
-              <Input
-                type="date"
-                value={formData.eventDate}
-                onChange={(e) => handleChange('eventDate', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className={errors.eventDate ? 'border-destructive' : ''}
-              />
-              {errors.eventDate && <p className="text-destructive text-sm">{errors.eventDate}</p>}
-            </div>
-          </section>
-        </>
-      )}
 
       <Separator />
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide">Delivery Dates</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide">Event Dates</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Delivery From</Label>
+            <Label>Delivery From *</Label>
             <Input
               type="date"
               value={formData.deliveryFromDate}
               onChange={(e) => handleChange('deliveryFromDate', e.target.value)}
+              className={errors.deliveryFromDate ? 'border-destructive' : ''}
             />
+            {errors.deliveryFromDate && <p className="text-destructive text-sm">{errors.deliveryFromDate}</p>}
           </div>
           <div className="space-y-2">
-            <Label>Delivery To</Label>
+            <Label>Delivery To *</Label>
             <Input
               type="date"
               value={formData.deliveryToDate}
               onChange={(e) => handleChange('deliveryToDate', e.target.value)}
+              className={errors.deliveryToDate ? 'border-destructive' : ''}
             />
+            {errors.deliveryToDate && <p className="text-destructive text-sm">{errors.deliveryToDate}</p>}
           </div>
         </div>
       </section>

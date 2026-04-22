@@ -1,6 +1,5 @@
 'use client'
 
-import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
@@ -13,8 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-export default function EditEventPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function EditEventPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const router = useRouter()
   const { user } = useAuth()
   const {
@@ -104,46 +103,40 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="eventDate" className="text-label">
-                Event Date <span className="text-primary">*</span>
-              </Label>
-              <Input
-                id="eventDate"
-                type="date"
-                value={formData.eventDate}
-                onChange={(e) => handleChange('eventDate', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className={errors.eventDate ? 'border-destructive' : ''}
-              />
-              {errors.eventDate && <p className="text-destructive text-sm">{errors.eventDate}</p>}
-            </div>
           </section>
 
           <div className="border-t border-border" />
 
-          {/* Section: Delivery Dates */}
+          {/* Section: Event Dates */}
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Delivery Dates</h2>
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Event Dates *</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="deliveryFromDate" className="text-label">Delivery From</Label>
+                <Label htmlFor="deliveryFromDate" className="text-label">
+                  Delivery From <span className="text-primary">*</span>
+                </Label>
                 <Input
                   id="deliveryFromDate"
                   type="date"
                   value={formData.deliveryFromDate}
                   onChange={(e) => handleChange('deliveryFromDate', e.target.value)}
+                  className={errors.deliveryFromDate ? 'border-destructive' : ''}
                 />
+                {errors.deliveryFromDate && <p className="text-destructive text-sm">{errors.deliveryFromDate}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="deliveryToDate" className="text-label">Delivery To</Label>
+                <Label htmlFor="deliveryToDate" className="text-label">
+                  Delivery To <span className="text-primary">*</span>
+                </Label>
                 <Input
                   id="deliveryToDate"
                   type="date"
                   value={formData.deliveryToDate}
                   onChange={(e) => handleChange('deliveryToDate', e.target.value)}
+                  className={errors.deliveryToDate ? 'border-destructive' : ''}
                 />
+                {errors.deliveryToDate && <p className="text-destructive text-sm">{errors.deliveryToDate}</p>}
               </div>
             </div>
           </section>
