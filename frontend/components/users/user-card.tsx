@@ -45,7 +45,7 @@ export function UserCard({ user, currentUser, onEdit, onDeactivate, onActivate, 
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                className="h-7 w-7 shrink-0"
               >
                 <Icon icon={MoreVerticalIcon} size={14} />
               </Button>

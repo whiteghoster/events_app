@@ -1,7 +1,7 @@
 
 'use client'
 
-import { use, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Pencil, Trash2,
@@ -23,8 +23,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { Event as EventType, EventProduct } from '@/lib/types'
 
-export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function EventDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const router = useRouter()
   const { user } = useAuth()
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false)
