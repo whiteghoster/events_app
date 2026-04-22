@@ -36,7 +36,7 @@ export default function CatalogPage() {
           <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-0">
             <Icon icon={Search01Icon} size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search products..."
+              placeholder="Search products.."
               value={catalog.search}
               onChange={(e) => catalog.setSearch(e.target.value)}
               className="pl-9 h-9"
