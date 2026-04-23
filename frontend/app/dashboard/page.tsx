@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useDashboard } from '@/hooks/use-dashboard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   ChartConfig,
   ChartContainer,
@@ -11,8 +12,15 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { Loader2, Calendar, Users, Package, Grid3X3 } from 'lucide-react'
-import { PageHeader } from '@/components/page-header'
+import { Icon } from '@/components/icon'
+import {
+  DashboardSquare01Icon,
+  Calendar01Icon,
+  UserGroupIcon,
+  CatalogueIcon,
+  GridViewIcon,
+} from '@hugeicons/core-free-icons'
+import { Loader2 } from 'lucide-react'
 import { PageTransition } from '@/components/page-transition'
 
 const COLORS = {
@@ -35,18 +43,33 @@ const chartConfig: ChartConfig = {
 }
 
 // Simple stat card component for faster rendering
-function StatCard({ title, value, subtext, icon: Icon, color = 'text-muted-foreground' }: {
+function StatCard({ title, value, subtext, icon, color = 'text-primary', isLoading = false }: {
   title: string
   value: number
   subtext: string
-  icon: React.ElementType
+  icon: typeof DashboardSquare01Icon
   color?: string
+  isLoading?: boolean
 }) {
+  if (isLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-1 md:pb-2 p-3 md:p-6">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-4 rounded-full" />
+        </CardHeader>
+        <CardContent className="p-3 md:p-6 pt-0 md:pt-0 space-y-2">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-3 w-24" />
+        </CardContent>
+      </Card>
+    )
+  }
   return (
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-1 md:pb-2 p-3 md:p-6">
         <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
-        <Icon className={`h-3 w-3 md:h-4 md:w-4 ${color}`} />
+        <Icon icon={icon} className={`h-4 w-4 md:h-5 md:w-5 ${color}`} />
       </CardHeader>
       <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
         <div className="text-xl md:text-2xl font-bold">{value}</div>
@@ -104,7 +127,6 @@ export default function DashboardPage() {
   if (error) {
     return (
       <PageTransition>
-        <PageHeader title="Dashboard" breadcrumbs={[{ label: 'Dashboard' }]} />
         <div className="text-center py-20">
           <p className="text-muted-foreground">{error}</p>
         </div>
@@ -114,37 +136,35 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <PageHeader
-        title="Dashboard"
-        description="Overview of your EventOS system"
-        breadcrumbs={[{ label: 'Dashboard' }]}
-      />
-
-      {/* Summary Cards - Always show immediately */}
+      {/* Summary Cards - Show skeleton while loading */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <StatCard
           title="Events"
           value={displayStats.totalEvents}
           subtext={`${displayStats.activeEvents} live, ${displayStats.holdEvents} hold`}
-          icon={Calendar}
+          icon={Calendar01Icon}
+          isLoading={isLoading}
         />
         <StatCard
           title="Users"
           value={displayStats.totalUsers}
           subtext={`${displayStats.activeUsers} active, ${displayStats.inactiveUsers} inactive`}
-          icon={Users}
+          icon={UserGroupIcon}
+          isLoading={isLoading}
         />
         <StatCard
           title="Products"
           value={displayStats.totalProducts}
           subtext={`${displayStats.activeProducts} active, ${displayStats.inactiveProducts} inactive`}
-          icon={Package}
+          icon={CatalogueIcon}
+          isLoading={isLoading}
         />
         <StatCard
           title="Categories"
           value={displayStats.totalCategories}
           subtext="Product groups"
-          icon={Grid3X3}
+          icon={GridViewIcon}
+          isLoading={isLoading}
         />
       </div>
 
