@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Icon } from '@/components/icon'
 import { Add01Icon, Search01Icon, Download01Icon } from '@hugeicons/core-free-icons'
@@ -20,7 +21,30 @@ export default function EventsPage() {
     activeTab, setActiveTab,
     filteredEvents, prefetchEvent,
     handleExportCSV,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useEvents()
+
+  // Infinite scroll with IntersectionObserver
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (observerRef.current) observerRef.current.disconnect()
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    }, { threshold: 0.1 })
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current)
+    }
+
+    return () => observerRef.current?.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <PageTransition>
@@ -77,17 +101,25 @@ export default function EventsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : filteredEvents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredEvents.map(event => (
-            <div
-              key={event.id}
-              onMouseEnter={() => prefetchEvent(event.id)}
-              onTouchStart={() => prefetchEvent(event.id)}
-            >
-              <EventCard event={event} />
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredEvents.map(event => (
+              <div
+                key={event.id}
+                onMouseEnter={() => prefetchEvent(event.id)}
+                onTouchStart={() => prefetchEvent(event.id)}
+              >
+                <EventCard event={event} />
+              </div>
+            ))}
+          </div>
+          {/* Infinite scroll trigger */}
+          <div ref={loadMoreRef} className="h-10 flex items-center justify-center py-4">
+            {isFetchingNextPage && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+          </div>
+        </>
       ) : (
         <EmptyState
           title="No events found"

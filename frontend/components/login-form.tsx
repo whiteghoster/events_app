@@ -33,7 +33,7 @@ export function LoginForm({
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
-            <img src="/download.png" alt="Logo" className="w-8 h-8 object-contain" />
+            <img src="/favicon-32x32.png" alt="Logo" className="w-8 h-8 object-contain" />
             <span className="text-xl font-bold tracking-tight">Zevan</span>
           </div>
           <CardTitle>Welcome back</CardTitle>

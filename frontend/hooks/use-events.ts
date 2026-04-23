@@ -1,24 +1,37 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { eventsApi } from '@/lib/api'
 import type { Event, EventStatus } from '@/lib/types'
 
+const PAGE_SIZE = 20
+
 export function useEvents() {
   const queryClient = useQueryClient()
-  const [page, setPage] = useState(1)
-  const pageSize = 20
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<EventStatus>('live')
 
-  const { data: eventsData, isLoading } = useQuery({
-    queryKey: ['events', 'list', page, pageSize],
-    queryFn: () => eventsApi.getEvents(undefined, page, pageSize),
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ['events', 'list', activeTab],
+    queryFn: ({ pageParam }) => eventsApi.getEvents(undefined, activeTab, pageParam, PAGE_SIZE),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.pagination
+      return page < totalPages ? page + 1 : undefined
+    },
     staleTime: 1000 * 60 * 2,
-    placeholderData: (previousData) => previousData,
   })
 
-  const apiEvents = eventsData?.events || []
+  const apiEvents = useMemo(() => {
+    return data?.pages.flatMap((page) => page.events) || []
+  }, [data])
 
   const prefetchEvent = useCallback((eventId: string) => {
     queryClient.prefetchQuery({
@@ -41,23 +54,15 @@ export function useEvents() {
     }
   }
 
+  // Status filtering is now done server-side
+  // Only client-side search filtering remains
   const filteredEvents = useMemo<Event[]>(() => {
-    let filtered = apiEvents
-    if (activeTab === 'live') {
-      filtered = filtered.filter(e => !e.status || e.status === 'live')
-    } else if (activeTab === 'hold') {
-      filtered = filtered.filter(e => e.status === 'hold')
-    } else if (activeTab === 'finished') {
-      filtered = filtered.filter(e => e.status === 'finished')
-    }
-    if (search) {
-      filtered = filtered.filter(e =>
-        e.clientName.toLowerCase().includes(search.toLowerCase()) ||
-        e.venue.toLowerCase().includes(search.toLowerCase())
-      )
-    }
-    return filtered
-  }, [apiEvents, search, activeTab])
+    if (!search) return apiEvents
+    return apiEvents.filter(e =>
+      e.clientName.toLowerCase().includes(search.toLowerCase()) ||
+      e.venue.toLowerCase().includes(search.toLowerCase())
+    )
+  }, [apiEvents, search])
 
   const handleExportCSV = async () => {
     const finishedEvents = apiEvents.filter(e => e.status === 'finished')
@@ -140,7 +145,10 @@ export function useEvents() {
     prefetchEvent,
     handleDeleteEvent,
     handleExportCSV,
-    page,
-    setPage,
+    // Infinite scroll
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
   }
 }

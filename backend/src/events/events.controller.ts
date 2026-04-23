@@ -18,7 +18,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../common/types';
+import { UserRole, EventStatus } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../common/types';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -48,6 +48,7 @@ export class EventsController {
   ) {
     return await this.eventsService.findEvents(
       query.occasion_type,
+      query.status,
       query.page,
       query.page_size,
     );

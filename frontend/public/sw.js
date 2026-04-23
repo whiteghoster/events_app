@@ -5,8 +5,8 @@ const OFFLINE_URL = '/'
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
+  '/android-chrome-192x192.png',
+  '/android-chrome-512x512.png',
 ]
 
 self.addEventListener('install', (event) => {

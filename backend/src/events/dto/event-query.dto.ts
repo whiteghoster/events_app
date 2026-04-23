@@ -1,10 +1,11 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { EventStatus } from '../../common/types';
 
 export class EventQueryDto extends PaginationQueryDto {
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(EventStatus)
+  status?: EventStatus;
 
   @IsOptional()
   @IsString()

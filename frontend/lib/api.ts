@@ -202,9 +202,10 @@ export const authApi = {
 // -------------------------------------------------------------------
 
 export const eventsApi = {
-  async getEvents(occasionType?: string, page = 1, pageSize = 20): Promise<EventsResponse> {
+  async getEvents(occasionType?: string, status?: string, page = 1, pageSize = 20): Promise<EventsResponse> {
     const params = new URLSearchParams()
     if (occasionType) params.set('occasion_type', occasionType)
+    if (status) params.set('status', status)
     params.set('page', page.toString())
     params.set('page_size', pageSize.toString())
 
