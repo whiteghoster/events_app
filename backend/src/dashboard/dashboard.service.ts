@@ -25,85 +25,45 @@ export class DashboardService {
     try {
       const supabase = this.databaseService.getClient();
       
-      // Get total events
-      const { count: totalEvents, error: eventsError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true });
+      // Run all count queries in parallel for better performance
+      const [
+        { count: totalEvents, error: eventsError },
+        { count: activeEvents, error: activeEventsError },
+        { count: holdEvents, error: holdEventsError },
+        { count: finishedEvents, error: finishedEventsError },
+        { count: totalUsers, error: usersError },
+        { count: activeUsers, error: activeUsersError },
+        { count: inactiveUsers, error: inactiveUsersError },
+        { count: totalProducts, error: productsError },
+        { count: activeProducts, error: activeProductsError },
+        { count: inactiveProducts, error: inactiveProductsError },
+        { count: totalCategories, error: categoriesError },
+      ] = await Promise.all([
+        supabase.from('events').select('*', { count: 'exact', head: true }),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'live'),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'hold'),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'finished'),
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('users').select('*', { count: 'exact', head: true }).eq('is_active', false),
+        supabase.from('products').select('*', { count: 'exact', head: true }),
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', false),
+        supabase.from('categories').select('*', { count: 'exact', head: true }),
+      ]);
 
-      if (eventsError) throw eventsError;
+      // Check for errors
+      const errors = [
+        eventsError, activeEventsError, holdEventsError, finishedEventsError,
+        usersError, activeUsersError, inactiveUsersError,
+        productsError, activeProductsError, inactiveProductsError,
+        categoriesError,
+      ].filter(Boolean);
 
-      // Get events by status
-      const { count: activeEvents, error: activeEventsError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'live');
-
-      if (activeEventsError) throw activeEventsError;
-
-      const { count: holdEvents, error: holdEventsError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'hold');
-
-      if (holdEventsError) throw holdEventsError;
-
-      const { count: finishedEvents, error: finishedEventsError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'finished');
-
-      if (finishedEventsError) throw finishedEventsError;
-
-      // Get total users
-      const { count: totalUsers, error: usersError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
-      if (usersError) throw usersError;
-
-      // Get users by status
-      const { count: activeUsers, error: activeUsersError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
-
-      if (activeUsersError) throw activeUsersError;
-
-      const { count: inactiveUsers, error: inactiveUsersError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', false);
-
-      if (inactiveUsersError) throw inactiveUsersError;
-
-      // Get total products
-      const { count: totalProducts, error: productsError } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true });
-
-      if (productsError) throw productsError;
-
-      // Get products by status
-      const { count: activeProducts, error: activeProductsError } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
-
-      if (activeProductsError) throw activeProductsError;
-
-      const { count: inactiveProducts, error: inactiveProductsError } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', false);
-
-      if (inactiveProductsError) throw inactiveProductsError;
-
-      // Get total categories
-      const { count: totalCategories, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*', { count: 'exact', head: true });
-
-      if (categoriesError) throw categoriesError;
+      if (errors.length > 0) {
+        this.logger.error('Database errors:', errors);
+        throw new Error('Failed to fetch some dashboard stats');
+      }
 
       return {
         totalEvents: totalEvents || 0,
