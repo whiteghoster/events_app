@@ -14,13 +14,13 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'FloraEvent - Event Organisation System',
+  title: 'Zevan - Event Organisation System',
   description: 'Professional event management system for organizing events',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'FloraEvent',
+    title: 'Zevan',
   },
   icons: {
     icon: [

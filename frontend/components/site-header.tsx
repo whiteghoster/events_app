@@ -18,7 +18,7 @@ export function SiteHeader() {
   const title = pageTitles[pathname]
     || (pathname.startsWith('/events/') && pathname.endsWith('/edit') ? 'Edit Event' : '')
     || (pathname.startsWith('/events/') ? 'Event Details' : '')
-    || 'FloraEvent'
+    || 'Zevan'
 
   return (
     <header className="flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-[var(--header-height)]">

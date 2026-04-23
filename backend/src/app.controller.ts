@@ -5,7 +5,7 @@ export class AppController {
   @Get()
   getRoot() {
     return {
-      message: 'FloraEvent API',
+      message: 'Zevan API',
       version: '1.0.0',
       status: 'running',
       endpoints: {

@@ -13,31 +13,31 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <Link href={`/events/${event.id}`} className="block group">
       <Card className="h-full gap-0 py-0 transition-all hover:shadow-md hover:border-foreground/20">
-        <CardContent className="p-4 flex flex-col h-full">
+        <CardContent className="p-5 md:p-6 flex flex-col h-full">
           {/* Header: Status + ID */}
-          <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex items-center gap-2 mb-4">
             {event.status && <StatusBadge status={event.status} />}
             {event.displayId && (
-              <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+              <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
                 {event.displayId}
               </Badge>
             )}
           </div>
 
           {/* Client name */}
-          <h3 className="font-semibold text-base leading-tight truncate group-hover:underline underline-offset-2 mb-3">
+          <h3 className="font-semibold text-lg md:text-xl leading-tight truncate group-hover:underline underline-offset-2 mb-4">
             {event.clientName}
           </h3>
 
           {/* Details — always reserve space for both rows */}
-          <div className="space-y-2 flex-1">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon icon={Location01Icon} size={14} className="shrink-0" />
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center gap-2.5 text-base text-muted-foreground">
+              <Icon icon={Location01Icon} size={16} className="shrink-0" />
               <span className="truncate">{event.venue || 'No venue'}</span>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon icon={Calendar01Icon} size={14} className="shrink-0" />
+            <div className="flex items-center gap-2.5 text-base text-muted-foreground">
+              <Icon icon={Calendar01Icon} size={16} className="shrink-0" />
               <span>
                 {event.deliveryFromDate
                   ? `${new Date(event.deliveryFromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} - ${
@@ -50,23 +50,23 @@ export function EventCard({ event }: EventCardProps) {
             </div>
           </div>
 
-          <Separator className="my-3" />
+          <Separator className="my-4" />
 
           {/* Footer */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground min-w-0">
-              <span className="flex items-center gap-1 truncate">
-                <Icon icon={UserIcon} size={12} className="shrink-0" />
+            <div className="flex items-center gap-3 text-sm text-muted-foreground min-w-0">
+              <span className="flex items-center gap-1.5 truncate">
+                <Icon icon={UserIcon} size={14} className="shrink-0" />
                 {event.managerName || 'Unassigned'}
               </span>
               {event.headKarigarName && (
-                <span className="flex items-center gap-1 truncate">
-                  <Icon icon={FlowerIcon} size={12} className="shrink-0" />
+                <span className="flex items-center gap-1.5 truncate">
+                  <Icon icon={FlowerIcon} size={14} className="shrink-0" />
                   {event.headKarigarName}
                 </span>
               )}
             </div>
-            <Icon icon={ArrowRight01Icon} size={16} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+            <Icon icon={ArrowRight01Icon} size={18} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
           </div>
         </CardContent>
       </Card>

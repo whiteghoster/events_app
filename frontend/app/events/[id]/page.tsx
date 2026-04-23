@@ -8,7 +8,7 @@ import {
   MapPin, Calendar, RefreshCw, MoreVertical, Phone, User, Crown,
   Pause, CheckCircle2, Building2, FileText, Info,
 } from 'lucide-react'
-import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly } from '@/lib/auth-context'
+import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canRevertFinishedEvent, canDeleteFinishedEvent } from '@/lib/auth-context'
 import { useEventDetail } from '@/hooks/use-event-detail'
 import { EventDetailSkeleton } from '@/components/skeletons'
 import { EventProductsTable } from '@/components/events/event-products-table'
@@ -53,10 +53,14 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   }
 
   const isEditable = event.status !== 'finished'
+  const isFinished = event.status === 'finished'
   // Allow all users to edit products (only event status changes are restricted)
   const canEdit = !!user && isEditable
   const canEditQuantity = !!user && isEditable
   const quantityOnly = false
+  // Check if user can revert or delete finished events
+  const canRevertFinished = user && isFinished && canRevertFinishedEvent(user.role, event.createdBy, user.id)
+  const canDeleteFinished = user && isFinished && canDeleteFinishedEvent(user.role, event.createdBy, user.id)
   const pricedItems = eventProductsList.filter(p => p.price && p.price > 0)
   const grandTotal = eventProductsList.reduce((sum, p) => sum + (p.price || 0), 0)
 
@@ -260,6 +264,42 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                     <div className="text-left">
                       <p className="font-medium">Delete Event</p>
                       <p className="text-xs text-muted-foreground">Permanently remove this event</p>
+                    </div>
+                  </Button>
+                )}
+              </>
+            ) : isFinished && (canRevertFinished || canDeleteFinished) ? (
+              <>
+                {canRevertFinished && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => {
+                      setActionsDialogOpen(false)
+                      setCloseStatus('hold')
+                      setCloseModalOpen(true)
+                    }}
+                  >
+                    <RefreshCw className="w-5 h-5 text-amber-500" />
+                    <div className="text-left">
+                      <p className="font-medium">Revert to Hold</p>
+                      <p className="text-xs text-muted-foreground">Restore event for editing</p>
+                    </div>
+                  </Button>
+                )}
+                {canDeleteFinished && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3 border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setActionsDialogOpen(false)
+                      handleDeleteEvent()
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <div className="text-left">
+                      <p className="font-medium">Delete Event</p>
+                      <p className="text-xs text-muted-foreground">Permanently remove this finished event</p>
                     </div>
                   </Button>
                 )}

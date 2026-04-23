@@ -85,6 +85,7 @@ export interface Event {
   deliveryFromDate?: string
   deliveryToDate?: string
   status?: EventStatus
+  createdBy?: string
   createdAt?: string
   updatedAt?: string | null
 }

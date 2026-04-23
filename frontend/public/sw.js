@@ -1,4 +1,4 @@
-const CACHE_NAME = 'floraevent-v1'
+const CACHE_NAME = 'Zevan-v1'
 const OFFLINE_URL = '/'
 
 // Assets to pre-cache on install

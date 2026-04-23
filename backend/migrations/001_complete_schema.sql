@@ -1,4 +1,4 @@
--- FloraEvent - Complete Database Schema
+-- Zevan - Complete Database Schema
 -- Date: 2025-01-09
 -- Description: Consolidated migration with all schema changes
 

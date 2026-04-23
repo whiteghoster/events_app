@@ -78,10 +78,10 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    await this.eventsService.deleteEvent(id, user.id);
+    await this.eventsService.deleteEvent(id, user.role, user.id);
   }
 
   // ── Event Products ──

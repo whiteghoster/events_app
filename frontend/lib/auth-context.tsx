@@ -248,3 +248,27 @@ export function canManageProducts(role: UserRole | undefined): boolean {
   if (!role) return false
   return role === 'admin' || role === 'karigar' || role === 'manager'
 }
+
+export function canRevertFinishedEvent(
+  role: UserRole | undefined,
+  createdBy: string | undefined,
+  currentUserId: string
+): boolean {
+  if (!role || !currentUserId) return false
+  // Creator or admin can revert finished events
+  const isCreator = createdBy === currentUserId
+  const isAdmin = role === 'admin'
+  return isCreator || isAdmin
+}
+
+export function canDeleteFinishedEvent(
+  role: UserRole | undefined,
+  createdBy: string | undefined,
+  currentUserId: string
+): boolean {
+  if (!role || !currentUserId) return false
+  // Creator or admin can delete finished events
+  const isCreator = createdBy === currentUserId
+  const isAdmin = role === 'admin'
+  return isCreator || isAdmin
+}

@@ -54,26 +54,26 @@ function StatCard({ title, value, subtext, icon, color = 'text-primary', isLoadi
   if (isLoading) {
     return (
       <Card className="overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between pb-1 md:pb-2 p-3 md:p-6">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-4 rounded-full" />
+        <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-5 w-5 rounded-full" />
         </CardHeader>
-        <CardContent className="p-3 md:p-6 pt-0 md:pt-0 space-y-2">
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-3 w-24" />
+        <CardContent className="p-4 md:p-6 pt-0 md:pt-0 space-y-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-4 w-28" />
         </CardContent>
       </Card>
     )
   }
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-1 md:pb-2 p-3 md:p-6">
-        <CardTitle className="text-xs md:text-sm font-medium">{title}</CardTitle>
-        <Icon icon={icon} className={`h-4 w-4 md:h-5 md:w-5 ${color}`} />
+      <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
+        <CardTitle className="text-sm md:text-base font-medium">{title}</CardTitle>
+        <Icon icon={icon} className={`h-5 w-5 md:h-6 md:w-6 ${color}`} />
       </CardHeader>
-      <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
-        <div className="text-xl md:text-2xl font-bold">{value}</div>
-        <p className="text-[10px] md:text-xs text-muted-foreground truncate">{subtext}</p>
+      <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+        <div className="text-2xl md:text-3xl font-bold">{value}</div>
+        <p className="text-xs md:text-sm text-muted-foreground truncate">{subtext}</p>
       </CardContent>
     </Card>
   )
@@ -137,7 +137,7 @@ export default function DashboardPage() {
   return (
     <PageTransition>
       {/* Summary Cards - Show skeleton while loading */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
         <StatCard
           title="Events"
           value={displayStats.totalEvents}
@@ -172,13 +172,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Events Breakdown */}
         <Card>
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-base md:text-lg">Events Status</CardTitle>
-            <CardDescription className="text-xs md:text-sm">Distribution by status</CardDescription>
+          <CardHeader className="p-5 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Events Status</CardTitle>
+            <CardDescription className="text-sm md:text-base">Distribution by status</CardDescription>
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
+          <CardContent className="p-5 md:p-6 pt-0 md:pt-0">
             {isLoading ? <ChartSkeleton /> : (
-              <ChartContainer config={chartConfig} className="h-[200px] md:h-[250px]">
+              <ChartContainer config={chartConfig} className="h-[220px] md:h-[280px]">
                 <PieChart>
                   <Pie
                     data={eventsChartData}

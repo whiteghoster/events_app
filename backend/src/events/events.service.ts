@@ -14,7 +14,7 @@ import { stripUndefined, paginate, paginationOffset } from '../common/utils';
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   [EventStatus.LIVE]: [EventStatus.HOLD, EventStatus.FINISHED],
   [EventStatus.HOLD]: [EventStatus.FINISHED, EventStatus.LIVE],
-  [EventStatus.FINISHED]: [],
+  [EventStatus.FINISHED]: [EventStatus.HOLD],
 };
 
 @Injectable()
@@ -50,13 +50,28 @@ export class EventsService {
     return data;
   }
 
-  enforceEventEditPermission(event: any, role: UserRole) {
+  enforceEventEditPermission(event: any, role: UserRole, actorId: string) {
     if (event.status === EventStatus.FINISHED) {
-      throw new ForbiddenException('Finished events are read-only');
+      // Only creator or admin can modify finished events
+      const isCreator = event.created_by === actorId;
+      const isAdmin = role === UserRole.ADMIN;
+      if (!isCreator && !isAdmin) {
+        throw new ForbiddenException('Finished events are read-only');
+      }
     }
     if (event.status === EventStatus.HOLD && role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only admin can edit hold events');
     }
+  }
+
+  canDeleteFinishedEvent(event: any, role: UserRole, actorId: string): boolean {
+    if (event.status !== EventStatus.FINISHED) {
+      return true; // Non-finished events can be deleted by authorized users
+    }
+    // For finished events, only creator or admin can delete
+    const isCreator = event.created_by === actorId;
+    const isAdmin = role === UserRole.ADMIN;
+    return isCreator || isAdmin;
   }
 
   private async generateDisplayId(clientName: string): Promise<string> {
@@ -110,6 +125,7 @@ export class EventsService {
       delivery_from_date: createEventDto.delivery_from_date,
       delivery_to_date: createEventDto.delivery_to_date,
       display_id: await this.generateDisplayId(createEventDto.client_name),
+      created_by: actorId,
     };
 
     const { data, error } = await this.supabase
@@ -201,7 +217,7 @@ export class EventsService {
         );
       }
     } else {
-      this.enforceEventEditPermission(event, role);
+      this.enforceEventEditPermission(event, role, actorId);
     }
 
     const fieldPayload = stripUndefined({
@@ -258,8 +274,13 @@ export class EventsService {
     return data;
   }
 
-  async deleteEvent(id: string, actorId: string) {
+  async deleteEvent(id: string, role: UserRole, actorId: string) {
     const event = await this.getEventOrThrow(id);
+
+    // Check permissions for deleting finished events
+    if (!this.canDeleteFinishedEvent(event, role, actorId)) {
+      throw new ForbiddenException('Only the creator or admin can delete finished events');
+    }
 
     const { error } = await this.supabase.from('events').delete().eq('id', event.id);
 

@@ -30,7 +30,7 @@ export class EventProductsService {
     actorId: string,
   ) {
     const event = await this.eventsService.getEventOrThrow(createEventProductDto.event_id);
-    this.eventsService.enforceEventEditPermission(event, role);
+    this.eventsService.enforceEventEditPermission(event, role, actorId);
 
     const { data: product, error: productError } = await this.supabase
       .from('products')
@@ -106,7 +106,7 @@ export class EventProductsService {
     }
 
     const event = await this.eventsService.getEventOrThrow(row.event_id);
-    this.eventsService.enforceEventEditPermission(event, role);
+    this.eventsService.enforceEventEditPermission(event, role, actorId);
 
     const cleanPayload = stripUndefined(updateEventProductDto as Record<string, any>);
 
@@ -159,7 +159,7 @@ export class EventProductsService {
     }
 
     const event = await this.eventsService.getEventOrThrow(row.event_id);
-    this.eventsService.enforceEventEditPermission(event, role);
+    this.eventsService.enforceEventEditPermission(event, role, actorId);
 
     const { error } = await this.supabase
       .from('event_products')

@@ -34,7 +34,7 @@ export function LoginForm({
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <img src="/download.png" alt="Logo" className="w-8 h-8 object-contain" />
-            <span className="text-xl font-bold tracking-tight">FloraEvent</span>
+            <span className="text-xl font-bold tracking-tight">Zevan</span>
           </div>
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>
@@ -104,7 +104,7 @@ export function LoginForm({
               </Button>
             </div>
             <p className="text-center text-xs text-muted-foreground mt-6">
-              Sign in with your FloraIndia account credentials.
+              Sign in with your Zevan account credentials.
             </p>
           </form>
         </CardContent>

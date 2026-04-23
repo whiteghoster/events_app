@@ -62,14 +62,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="pb-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:!p-2">
+            <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:!p-3">
               <Link href="/events">
-                <div className="flex items-center justify-center rounded-lg bg-primary text-primary-foreground size-8 shadow-sm">
-                  <Icon icon={FlowerIcon} size={18} />
+                <div className="flex items-center justify-center rounded-lg bg-primary text-primary-foreground size-10 shadow-sm">
+                  <Icon icon={FlowerIcon} size={20} />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="font-semibold text-base">FloraEvent</span>
-                  <span className="text-xs text-muted-foreground">Event Management</span>
+                <div className="grid flex-1 text-left text-base leading-tight">
+                  <span className="font-semibold text-lg">Zevan</span>
+                  <span className="text-sm text-muted-foreground">Event Management</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -89,10 +89,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 const isActive = pathname.startsWith(item.href)
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="py-3 md:py-2">
                       <Link href={item.href}>
-                        <Icon icon={item.icon} size={18} />
-                        <span>{item.title}</span>
+                        <Icon icon={item.icon} size={20} />
+                        <span className="text-base md:text-sm">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -113,10 +113,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 const isActive = pathname === item.href
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="py-3 md:py-2">
                       <Link href={item.href}>
-                        <Icon icon={item.icon} size={18} />
-                        <span>{item.title}</span>
+                        <Icon icon={item.icon} size={20} />
+                        <span className="text-base md:text-sm">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

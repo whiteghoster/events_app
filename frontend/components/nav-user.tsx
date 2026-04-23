@@ -94,20 +94,20 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground py-4 md:py-3"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-medium">
+              <Avatar className="h-10 w-10 md:h-8 md:w-8 rounded-lg">
+                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-sm md:text-xs font-medium">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-left text-base md:text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate text-sm md:text-xs text-muted-foreground">
                   {user.email}
                 </span>
               </div>
-              <Icon icon={MoreVerticalIcon} size={16} className="ml-auto text-muted-foreground" />
+              <Icon icon={MoreVerticalIcon} size={18} className="ml-auto text-muted-foreground md:size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
