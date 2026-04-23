@@ -7,7 +7,7 @@ import {
   Cancel01Icon, GridViewIcon,
 } from '@hugeicons/core-free-icons'
 import { Trash2 } from 'lucide-react'
-import { useAuth, canManageProducts } from '@/lib/auth-context'
+import { useAuth } from '@/lib/auth-context'
 import { useCatalog } from '@/hooks/use-catalog'
 import { ProductsTable } from '@/components/catalog/products-table'
 import { ProductSheet } from '@/components/catalog/product-sheet'
@@ -23,7 +23,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 export default function CatalogPage() {
   const { user } = useAuth()
   const catalog = useCatalog()
-  const canManage = user ? canManageProducts(user.role) : false
+  // Allow all logged-in users to manage products
+  const canManage = !!user
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false)
 
   if (catalog.isPageLoading) return <CatalogSkeleton />

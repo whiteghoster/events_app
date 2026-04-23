@@ -10,6 +10,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { EventsModule } from './events/events.module';
 import { AuditModule } from './audit/audit.module';
 import { HealthModule } from './health/health.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -25,6 +26,7 @@ import { AppController } from './app.controller';
     EventsModule,
     AuditModule,
     HealthModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

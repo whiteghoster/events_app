@@ -21,6 +21,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { EventProduct, Category, Product } from '@/lib/types'
 
@@ -57,6 +58,8 @@ export function EventProductsTable({
   onStartEdit, onSaveEdit, onCancelEdit, onDeleteProduct, onAddProduct, onResetNewProduct,
 }: EventProductsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
+  const [mobileActionProduct, setMobileActionProduct] = useState<EventProduct | null>(null)
+  const [mobileActionOpen, setMobileActionOpen] = useState(false)
 
   const pricedItems = products.filter(p => p.price && p.price > 0)
   const grandTotal = products.reduce((sum, p) => sum + (p.price || 0), 0)
@@ -200,7 +203,7 @@ export function EventProductsTable({
         return (
           <div className="flex items-center justify-end">
             <span className="text-[10px] text-muted-foreground opacity-0 group-hover/row:opacity-100">
-              {!canEditQuantity ? 'Staff view only' : 'Locked'}
+              {!canEditQuantity ? 'Login required' : 'Locked'}
             </span>
           </div>
         )
@@ -256,7 +259,7 @@ export function EventProductsTable({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              {!canEdit ? 'Admin/Manager/Karigar can add products' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
+              {!canEdit ? 'Login required' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -286,7 +289,7 @@ export function EventProductsTable({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {!canEdit ? 'Admin/Manager/Karigar can add products' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
+                  {!canEdit ? 'Login required' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -346,33 +349,17 @@ export function EventProductsTable({
                       {product.price ? ` · ₹${product.price.toLocaleString('en-IN')}` : ''}
                     </p>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      {canEditQuantity && isEditable ? (
-                        <>
-                          <DropdownMenuItem onClick={() => onStartEdit(product)}>
-                            <Pencil className="w-3.5 h-3.5 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          {canEdit && (
-                            <DropdownMenuItem onClick={() => onDeleteProduct(product.id)} className="text-destructive focus:text-destructive">
-                              <Trash2 className="w-3.5 h-3.5 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </>
-                      ) : (
-                        <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-                          {!canEditQuantity ? 'Staff cannot edit products' : 'Event is locked'}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-muted-foreground"
+                    onClick={() => {
+                      setMobileActionProduct(product)
+                      setMobileActionOpen(true)
+                    }}
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
                 </div>
               )}
             </div>
@@ -533,7 +520,7 @@ export function EventProductsTable({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {!canEdit ? 'Admin/Manager/Karigar can add products' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
+                          {!canEdit ? 'Login required' : !isEditable ? 'Event is finished - locked' : 'Add a product to this event'}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -567,6 +554,65 @@ export function EventProductsTable({
           </div>
         </div>
       )}
+
+      {/* Mobile Product Actions Dialog */}
+      <Dialog open={mobileActionOpen} onOpenChange={setMobileActionOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Product Actions</DialogTitle>
+            <DialogDescription>
+              {mobileActionProduct?.productName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-2">
+            {canEditQuantity && isEditable ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3 h-auto py-3"
+                  onClick={() => {
+                    if (mobileActionProduct) {
+                      onStartEdit(mobileActionProduct)
+                      setMobileActionOpen(false)
+                    }
+                  }}
+                >
+                  <Pencil className="w-5 h-5 text-blue-500" />
+                  <div className="text-left">
+                    <p className="font-medium">Edit Product</p>
+                    <p className="text-xs text-muted-foreground">Change quantity, unit, or price</p>
+                  </div>
+                </Button>
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3 border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (mobileActionProduct) {
+                        onDeleteProduct(mobileActionProduct.id)
+                        setMobileActionOpen(false)
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <div className="text-left">
+                      <p className="font-medium">Delete Product</p>
+                      <p className="text-xs text-muted-foreground">Remove from this event</p>
+                    </div>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                {!canEditQuantity ? 'Please log in to edit products' : 'Event is finished and locked'}
+              </div>
+            )}
+          </div>
+          <Button variant="outline" onClick={() => setMobileActionOpen(false)} className="w-full">
+            Cancel
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -498,7 +498,29 @@ export const usersApi = {
 }
 
 // -------------------------------------------------------------------
-// 7. AUDIT
+// 7. DASHBOARD
+// -------------------------------------------------------------------
+
+export const dashboardApi = {
+  async getStats(): Promise<{
+    totalEvents: number
+    totalUsers: number
+    totalProducts: number
+    totalCategories: number
+    activeEvents: number
+    holdEvents: number
+    finishedEvents: number
+    activeUsers: number
+    inactiveUsers: number
+    activeProducts: number
+    inactiveProducts: number
+  }> {
+    return await apiRequest<any>('/dashboard/stats')
+  },
+}
+
+// -------------------------------------------------------------------
+// 8. AUDIT
 // -------------------------------------------------------------------
 
 export const auditApi = {

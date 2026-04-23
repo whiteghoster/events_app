@@ -21,6 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { CatalogProductsTableProps, Product } from '@/lib/types'
 
@@ -33,6 +34,8 @@ export function ProductsTable({
   reactivateProduct,
 }: CatalogProductsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
+  const [mobileActionProduct, setMobileActionProduct] = useState<Product | null>(null)
+  const [mobileActionOpen, setMobileActionOpen] = useState(false)
 
   const columns = useMemo<ColumnDef<Product>[]>(() => {
     const cols: ColumnDef<Product>[] = [
@@ -96,30 +99,34 @@ export function ProductsTable({
       },
     ]
 
-    if (canManage) {
-      cols.push({
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 transition-opacity">
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md" onClick={() => openProductSheet(row.original)}>
-              <Icon icon={PencilEdit01Icon} size={14} />
-            </Button>
-            {row.original.isActive ? (
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-md" onClick={() => deactivateProduct(row.original)}>
-                <Icon icon={BlockedIcon} size={14} />
+    cols.push({
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 transition-opacity">
+          {canManage ? (
+            <>
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md" onClick={() => openProductSheet(row.original)}>
+                <Icon icon={PencilEdit01Icon} size={14} />
               </Button>
-            ) : (
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md" onClick={() => reactivateProduct(row.original)}>
-                <Icon icon={Refresh01Icon} size={14} />
-              </Button>
-            )}
-          </div>
-        ),
-        size: 72,
-        enableSorting: false,
-      })
-    }
+              {row.original.isActive ? (
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-md" onClick={() => deactivateProduct(row.original)}>
+                  <Icon icon={BlockedIcon} size={14} />
+                </Button>
+              ) : (
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md" onClick={() => reactivateProduct(row.original)}>
+                  <Icon icon={Refresh01Icon} size={14} />
+                </Button>
+              )}
+            </>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">Login required</span>
+          )}
+        </div>
+      ),
+      size: 80,
+      enableSorting: false,
+    })
 
     return cols
   }, [canManage, categories, openProductSheet, deactivateProduct, reactivateProduct])
@@ -161,31 +168,17 @@ export function ProductsTable({
                   </div>
                   <StatusBadge status={product.isActive ? 'active' : 'inactive'} />
                   {canManage && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-36">
-                        <DropdownMenuItem onClick={() => openProductSheet(product)}>
-                          <Icon icon={PencilEdit01Icon} size={14} className="mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {product.isActive ? (
-                          <DropdownMenuItem onClick={() => deactivateProduct(product)} className="text-destructive focus:text-destructive">
-                            <Icon icon={BlockedIcon} size={14} className="mr-2" />
-                            Deactivate
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => reactivateProduct(product)}>
-                            <Icon icon={Refresh01Icon} size={14} className="mr-2" />
-                            Reactivate
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground"
+                      onClick={() => {
+                        setMobileActionProduct(product)
+                        setMobileActionOpen(true)
+                      }}
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
                   )}
                 </div>
               </div>
@@ -268,6 +261,82 @@ export function ProductsTable({
           )}
         </div>
       )}
+
+      {/* Mobile Product Actions Dialog */}
+      <Dialog open={mobileActionOpen} onOpenChange={setMobileActionOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Product Actions</DialogTitle>
+            <DialogDescription>
+              {mobileActionProduct?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-3 space-y-2">
+            {canManage ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3 h-auto py-3"
+                  onClick={() => {
+                    if (mobileActionProduct) {
+                      openProductSheet(mobileActionProduct)
+                      setMobileActionOpen(false)
+                    }
+                  }}
+                >
+                  <Icon icon={PencilEdit01Icon} size={18} className="text-blue-500" />
+                  <div className="text-left">
+                    <p className="font-medium">Edit Product</p>
+                    <p className="text-xs text-muted-foreground">Change name, category, price, or unit</p>
+                  </div>
+                </Button>
+                {mobileActionProduct?.isActive ? (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3 border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (mobileActionProduct) {
+                        deactivateProduct(mobileActionProduct)
+                        setMobileActionOpen(false)
+                      }
+                    }}
+                  >
+                    <Icon icon={BlockedIcon} size={18} />
+                    <div className="text-left">
+                      <p className="font-medium">Deactivate</p>
+                      <p className="text-xs text-muted-foreground">Hide from new events</p>
+                    </div>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => {
+                      if (mobileActionProduct) {
+                        reactivateProduct(mobileActionProduct)
+                        setMobileActionOpen(false)
+                      }
+                    }}
+                  >
+                    <Icon icon={Refresh01Icon} size={18} className="text-green-500" />
+                    <div className="text-left">
+                      <p className="font-medium">Reactivate</p>
+                      <p className="text-xs text-muted-foreground">Make available for events</p>
+                    </div>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                Please log in to manage products
+              </div>
+            )}
+          </div>
+          <Button variant="outline" onClick={() => setMobileActionOpen(false)} className="w-full">
+            Cancel
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

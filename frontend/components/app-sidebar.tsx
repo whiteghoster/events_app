@@ -11,6 +11,7 @@ import {
   Audit01Icon,
   FlowerIcon,
   Settings01Icon,
+  DashboardSquare01Icon,
 } from '@hugeicons/core-free-icons'
 import { NavUser } from '@/components/nav-user'
 import {
@@ -44,6 +45,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (!user) return null
 
   const navMain: NavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: DashboardSquare01Icon, show: user.role === 'admin' },
     { title: 'Events', href: '/events', icon: Calendar01Icon },
     { title: 'Catalog', href: '/catalog', icon: CatalogueIcon, show: canViewCatalog(user.role) },
     { title: 'Team', href: '/users', icon: UserGroupIcon, show: canViewUsers(user.role) },
