@@ -44,7 +44,8 @@ export class EventsController {
   }
 
   @Get()
-  @Header('Cache-Control', 's-maxage=30, stale-while-revalidate=120')
+  @Header('Cache-Control', 'private, max-age=30')
+  @Header('Vercel-CDN-Cache-Control', 'max-age=30')
   async findAll(
     @Query() query: EventQueryDto,
   ) {
