@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   ParseUUIDPipe,
+  Header,
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -29,6 +30,7 @@ export class ProductsController {
   }
 
   @Get()
+  @Header('Cache-Control', 's-maxage=30, stale-while-revalidate=120')
   async findAll(
     @Query() pagination: PaginationQueryDto,
   ) {

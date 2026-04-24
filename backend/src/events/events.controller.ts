@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  Header,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { EventProductsService } from './event-products.service';
@@ -43,6 +44,7 @@ export class EventsController {
   }
 
   @Get()
+  @Header('Cache-Control', 's-maxage=30, stale-while-revalidate=120')
   async findAll(
     @Query() query: EventQueryDto,
   ) {
@@ -56,6 +58,7 @@ export class EventsController {
 
   @Get('clients')
   @Public()
+  @Header('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
   async getClients() {
     const data = await this.eventsService.getUniqueClients();
     return { data };
