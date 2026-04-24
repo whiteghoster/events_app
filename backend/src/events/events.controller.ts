@@ -11,7 +11,9 @@ import {
   HttpCode,
   HttpStatus,
   Header,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { EventsService } from './events.service';
 import { EventProductsService } from './event-products.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -44,8 +46,9 @@ export class EventsController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30) // Cache for 30 seconds
   @Header('Cache-Control', 'private, max-age=30')
-  @Header('Vercel-CDN-Cache-Control', 'max-age=30')
   async findAll(
     @Query() query: EventQueryDto,
   ) {
