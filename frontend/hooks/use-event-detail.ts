@@ -120,6 +120,8 @@ export function useEventDetail(id: string) {
     try {
       await eventsApi.deleteEvent(id)
       toast.success('Event deleted successfully')
+      // Invalidate events list cache so the deleted event is removed immediately
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'] })
       router.push('/events')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Delete failed')

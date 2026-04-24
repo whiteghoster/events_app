@@ -48,7 +48,19 @@ export function useEvents() {
     try {
       await eventsApi.deleteEvent(id)
       toast.success('Event deleted successfully')
-      queryClient.invalidateQueries({ queryKey: ['events', 'list'] })
+      // Immediately remove from cache for instant UI update
+      queryClient.setQueriesData({ queryKey: ['events', 'list'] }, (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            events: page.events.filter((e: Event) => e.id !== id),
+          })),
+        }
+      })
+      // Also invalidate to sync with server
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'] })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete event')
     }
@@ -58,9 +70,11 @@ export function useEvents() {
   // Only client-side search filtering remains
   const filteredEvents = useMemo<Event[]>(() => {
     if (!search) return apiEvents
+    const searchLower = search.toLowerCase()
     return apiEvents.filter(e =>
-      e.clientName.toLowerCase().includes(search.toLowerCase()) ||
-      e.venue.toLowerCase().includes(search.toLowerCase())
+      e.clientName.toLowerCase().includes(searchLower) ||
+      e.venue.toLowerCase().includes(searchLower) ||
+      (e.displayId && e.displayId.toLowerCase().includes(searchLower))
     )
   }, [apiEvents, search])
 

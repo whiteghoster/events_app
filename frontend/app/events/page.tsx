@@ -54,7 +54,7 @@ export default function EventsPage() {
           <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-0">
             <Icon icon={Search01Icon} size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by client or venue..."
+              placeholder="Search by client, venue, or event code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9"

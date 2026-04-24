@@ -48,6 +48,17 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Event Identity</h2>
 
             <div className="space-y-2">
+              <Label htmlFor="displayId" className="text-label">Event Code</Label>
+              <Input
+                id="displayId"
+                value={formData.displayId}
+                onChange={(e) => handleChange('displayId', e.target.value.toUpperCase())}
+                placeholder="e.g., JD-01 or ABC-001"
+              />
+              <p className="text-xs text-muted-foreground">Custom event code (auto-generated if left empty)</p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="clientName" className="text-label">
                 Client Name <span className="text-primary">*</span>
               </Label>

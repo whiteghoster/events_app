@@ -36,7 +36,7 @@ export class EventsService {
   ].join(',');
 
   async getEventOrThrow(eventId: string, fields: string = '*'): Promise<any> {
-    const isDisplayId = /^[A-Z]{2}-\d{2}$/.test(eventId) || eventId.startsWith('EVT-');
+    const isDisplayId = /^[A-Z]{2,}-\d{2,3}$/.test(eventId);
     const column = isDisplayId ? 'display_id' : 'id';
 
     const { data, error } = await this.supabase
@@ -139,9 +139,10 @@ export class EventsService {
     });
 
     const hasFieldChanges = Object.keys(fieldPayload).length > 0;
+    const hasDisplayIdChange = !!updateEventDto.display_id;
 
     // Status-only: atomic SQL (prevents race conditions on concurrent status changes)
-    if (updateEventDto.status && !hasFieldChanges) {
+    if (updateEventDto.status && !hasFieldChanges && !hasDisplayIdChange) {
       return this.updateEventStatus(id, updateEventDto.status, actorId);
     }
 
@@ -163,7 +164,10 @@ export class EventsService {
 
     const updatePayload: Record<string, any> = { ...fieldPayload };
 
-    if (updateEventDto.client_name && updateEventDto.client_name !== event.client_name) {
+    // Handle display_id: explicit update takes priority over auto-generation
+    if (updateEventDto.display_id) {
+      updatePayload.display_id = updateEventDto.display_id.toUpperCase();
+    } else if (updateEventDto.client_name && updateEventDto.client_name !== event.client_name) {
       updatePayload.display_id = await this.generateDisplayId(updateEventDto.client_name);
     }
 
@@ -241,13 +245,23 @@ export class EventsService {
   }
 
   private async generateDisplayId(clientName: string): Promise<string> {
-    const parts = clientName.trim().split(/\s+/);
-    const first = parts[0] || '';
-    const last = parts.length > 1 ? parts[parts.length - 1] : '';
-
-    const initials = last
-      ? `${first.charAt(0).toUpperCase()}${last.charAt(0).toUpperCase()}`
-      : first.substring(0, 2).toUpperCase();
+    const parts = clientName.trim().split(/\s+/).filter(p => p.length > 0);
+    
+    // Take first character from each name part (first, middle, last)
+    let initials: string;
+    if (parts.length === 1) {
+      // Single name: take first 2 characters
+      initials = parts[0].substring(0, 2).toUpperCase();
+    } else if (parts.length === 2) {
+      // Two names: first + last initial
+      initials = `${parts[0].charAt(0).toUpperCase()}${parts[1].charAt(0).toUpperCase()}`;
+    } else {
+      // Three or more names: first + middle + last initial
+      const first = parts[0].charAt(0).toUpperCase();
+      const middle = parts.slice(1, -1).map(p => p.charAt(0).toUpperCase()).join('');
+      const last = parts[parts.length - 1].charAt(0).toUpperCase();
+      initials = `${first}${middle}${last}`;
+    }
 
     const { data: existing } = await this.supabase
       .from('events')
@@ -262,6 +276,8 @@ export class EventsService {
       if (!isNaN(lastNumber) && lastNumber < 1000) nextNumber = lastNumber + 1;
     }
 
-    return `${initials}-${nextNumber.toString().padStart(2, '0')}`;
+    // Use 3 digits for 3+ initials, 2 digits for 2 initials
+    const padLength = initials.length >= 3 ? 3 : 2;
+    return `${initials}-${nextNumber.toString().padStart(padLength, '0')}`;
   }
 }

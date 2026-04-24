@@ -271,8 +271,8 @@ export const eventsApi = {
     return mapEventFromBackend(data)
   },
 
-  async updateEvent(id: string, payload: Partial<Event>): Promise<Event> {
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate } = payload
+  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string }): Promise<Event> {
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId } = payload
     const data = await apiRequest<any>(`/events/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -287,6 +287,7 @@ export const eventsApi = {
         manager_name: managerName,
         delivery_from_date: deliveryFromDate,
         delivery_to_date: deliveryToDate,
+        display_id: displayId,
       }),
     })
     return mapEventFromBackend(data)

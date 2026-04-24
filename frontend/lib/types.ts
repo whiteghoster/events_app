@@ -186,6 +186,7 @@ export interface EventFormData {
   managerName: string
   deliveryFromDate: string
   deliveryToDate: string
+  displayId?: string
 }
 
 export interface ProductFormData {
