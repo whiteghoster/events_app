@@ -14,7 +14,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Zevan - Event Organisation System',
+  title: 'Zevan - Event Organised and Managed System',
   description: 'Professional event management system for organizing events',
   manifest: '/manifest.json',
   appleWebApp: {
