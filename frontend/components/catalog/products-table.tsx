@@ -103,7 +103,7 @@ export function ProductsTable({
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end gap-1">
           {canManage ? (
             <>
               <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md" onClick={() => openProductSheet(row.original)}>

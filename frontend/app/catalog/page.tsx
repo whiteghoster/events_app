@@ -122,7 +122,7 @@ export default function CatalogPage() {
                       <p className="text-sm font-medium truncate">{category.name}</p>
                       <p className="text-xs text-muted-foreground">{count} product{count !== 1 ? 's' : ''}</p>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         size="icon"
                         variant="ghost"
