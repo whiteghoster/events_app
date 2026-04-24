@@ -55,5 +55,4 @@ export class CategoriesController {
   async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     await this.catalogService.deleteCategory(id, user.id);
   }
-
 }

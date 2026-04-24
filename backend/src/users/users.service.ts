@@ -25,29 +25,6 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto, actorId: string) {
-    // Only existing admins can create new admin users
-    if (createUserDto.role === UserRole.ADMIN) {
-      const { data: actor } = await this.supabase
-        .from('users')
-        .select('role')
-        .eq('id', actorId)
-        .single();
-      
-      if (!actor || actor.role !== UserRole.ADMIN) {
-        throw new BadRequestException('Only existing admins can create new admin accounts.');
-      }
-    }
-
-    const { data: existingUser } = await this.supabase
-      .from('users')
-      .select('id')
-      .eq('email', createUserDto.email)
-      .maybeSingle();
-
-    if (existingUser) {
-      throw new BadRequestException('User with this email already exists');
-    }
-
     const displayName = createUserDto.name || createUserDto.email.split('@')[0];
 
     const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
@@ -74,21 +51,19 @@ export class UsersService {
       .single();
 
     if (userError) {
-      const { error: cleanupError } = await this.supabase.auth.admin.deleteUser(authData.user.id);
-      if (cleanupError) {
-        this.logger.error(`Orphaned auth user ${authData.user.id}: cleanup failed: ${cleanupError.message}`);
-      }
+      this.supabase.auth.admin.deleteUser(authData.user.id).catch(err => {
+        this.logger.error(`Orphaned auth user ${authData.user.id}: cleanup failed: ${err.message}`);
+      });
       throw new BadRequestException(`Failed to create user record: ${userError.message}`);
     }
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'User',
       entity_id: user.id,
       action: AuditAction.CREATE,
       user_id: actorId,
       new_values: user,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return user;
   }
@@ -102,10 +77,7 @@ export class UsersService {
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch users: ${error.message}`);
-    }
-
+    if (error) throw new BadRequestException(`Failed to fetch users: ${error.message}`);
     return paginate(data, count, page, pageSize);
   }
 
@@ -116,27 +88,11 @@ export class UsersService {
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      throw new NotFoundException('User not found');
-    }
-
+    if (error || !data) throw new NotFoundException('User not found');
     return data;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto, actorId: string) {
-    // Only existing admins can assign admin role to other users
-    if (updateUserDto.role === UserRole.ADMIN) {
-      const { data: actor } = await this.supabase
-        .from('users')
-        .select('role')
-        .eq('id', actorId)
-        .single();
-      
-      if (!actor || actor.role !== UserRole.ADMIN) {
-        throw new BadRequestException('Only existing admins can assign admin role to other users.');
-      }
-    }
-
     const existingUser = await this.findById(id);
 
     if (existingUser.role === UserRole.ADMIN && updateUserDto.role) {
@@ -150,11 +106,8 @@ export class UsersService {
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(`Failed to update user: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to update user: ${error.message}`);
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'User',
       entity_id: id,
@@ -162,30 +115,25 @@ export class UsersService {
       user_id: actorId,
       old_values: existingUser,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     if (updateUserDto.role) {
-      const { error: metaError } = await this.supabase.auth.admin.updateUserById(id, {
+      this.supabase.auth.admin.updateUserById(id, {
         user_metadata: { role: updateUserDto.role },
+      }).catch(err => {
+        this.logger.warn(`Failed to sync auth metadata for user ${id}: ${err.message}`);
       });
-      if (metaError) {
-        this.logger.warn(`Failed to sync auth metadata for user ${id}: ${metaError.message}`);
-      }
     }
 
     return data;
   }
 
   async remove(id: string, actorId: string, permanent: boolean = false) {
-    if (permanent) {
-      return this.hardDelete(id, actorId);
-    }
+    if (permanent) return this.hardDelete(id, actorId);
     return this.softDelete(id, actorId);
   }
 
   private async softDelete(id: string, actorId: string) {
-    const existingUser = await this.findById(id);
-
     const { data, error } = await this.supabase
       .from('users')
       .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -193,19 +141,15 @@ export class UsersService {
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(`Failed to deactivate user: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to deactivate user: ${error.message}`);
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'User',
       entity_id: id,
       action: AuditAction.DELETE,
       user_id: actorId,
-      old_values: existingUser,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return data;
   }
@@ -215,26 +159,22 @@ export class UsersService {
       throw new BadRequestException('Cannot permanently delete your own account');
     }
 
-    const { error: authError } = await this.supabase.auth.admin.deleteUser(id);
-    if (authError) {
-      this.logger.warn(`Auth delete failed for user ${id}: ${authError.message}`);
-    }
+    this.supabase.auth.admin.deleteUser(id).catch(err => {
+      this.logger.warn(`Auth delete failed for user ${id}: ${err.message}`);
+    });
 
-    const { error: dbError } = await this.supabase
+    const { error } = await this.supabase
       .from('users')
       .delete()
       .eq('id', id);
 
-    if (dbError) {
-      throw new BadRequestException(`Failed to delete user from database: ${dbError.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to delete user from database: ${error.message}`);
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'User',
       entity_id: id,
       action: AuditAction.DELETE,
       user_id: actorId,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
   }
 }

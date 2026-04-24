@@ -25,38 +25,30 @@ export class EventProductsService {
   }
 
   async createEventProduct(
-    createEventProductDto: CreateEventProductDto,
+    dto: CreateEventProductDto,
     role: UserRole,
     actorId: string,
   ) {
-    const event = await this.eventsService.getEventOrThrow(createEventProductDto.event_id);
-    this.eventsService.enforceEventEditPermission(event, role, actorId);
-
-    const { data: product, error: productError } = await this.supabase
-      .from('products')
-      .select('id, is_active')
-      .eq('id', createEventProductDto.product_id)
-      .single();
-
-    if (productError || !product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    if (!product.is_active) {
-      throw new BadRequestException('Inactive products cannot be added to events');
-    }
-
-    const { data, error } = await this.supabase
-      .from('event_products')
-      .insert({ ...createEventProductDto, event_id: event.id })
-      .select()
-      .single();
+    // Atomic: validates event status + product active + inserts in single transaction
+    const { data, error } = await this.supabase.rpc('create_event_product_validated', {
+      p_event_id: dto.event_id,
+      p_product_id: dto.product_id,
+      p_quantity: dto.quantity,
+      p_unit: dto.unit,
+      p_price: dto.price ?? null,
+      p_actor_id: actorId,
+      p_actor_role: role,
+    });
 
     if (error) {
-      throw new BadRequestException(`Failed to create event product: ${error.message}`);
+      if (error.message?.includes('not found')) throw new NotFoundException(error.message);
+      if (error.message?.includes('read-only') || error.message?.includes('Only admin')) {
+        throw new ForbiddenException(error.message);
+      }
+      throw new BadRequestException(error.message);
     }
 
-    await this.auditService.createLog({
+    this.auditService.createLog({
       entity_type: 'Event Product',
       entity_id: data.id,
       action: AuditAction.CREATE,
@@ -68,8 +60,8 @@ export class EventProductsService {
   }
 
   async findEventProducts(eventId: string, page: number = 1, pageSize: number = 20) {
-    const event = await this.eventsService.getEventOrThrow(eventId);
-
+    // Resolve display_id to UUID if needed, then query directly — no separate validation query
+    const resolvedId = await this.resolveEventId(eventId);
     const offset = paginationOffset(page, pageSize);
 
     const { data, count, error } = await this.supabase
@@ -78,49 +70,44 @@ export class EventProductsService {
         `*, product:products(id, name, default_unit, is_active, category:categories(id, name))`,
         { count: 'exact' },
       )
-      .eq('event_id', event.id)
+      .eq('event_id', resolvedId)
       .order('created_at', { ascending: true })
       .range(offset, offset + pageSize - 1);
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch event products: ${error.message}`);
-    }
-
+    if (error) throw new BadRequestException(`Failed to fetch event products: ${error.message}`);
     return paginate(data, count, page, pageSize);
   }
 
   async updateEventProduct(
     eventProductId: string,
-    updateEventProductDto: UpdateEventProductDto,
+    dto: UpdateEventProductDto,
     role: UserRole,
     actorId: string,
   ) {
-    const { data: row, error: rowError } = await this.supabase
-      .from('event_products')
-      .select('*')
-      .eq('id', eventProductId)
-      .single();
+    // Single query: get event_product + event status via RPC join
+    const { data: joined, error: joinErr } = await this.supabase
+      .rpc('get_event_product_with_event', { p_event_product_id: eventProductId });
 
-    if (rowError || !row) {
-      throw new NotFoundException('Event product not found');
-    }
+    if (joinErr || !joined) throw new NotFoundException('Event product not found');
 
-    const event = await this.eventsService.getEventOrThrow(row.event_id);
-    this.eventsService.enforceEventEditPermission(event, role, actorId);
+    const { event_product: row, event_status: eventStatus, event_created_by: createdBy } = joined;
 
-    const cleanPayload = stripUndefined(updateEventProductDto as Record<string, any>);
+    this.eventsService.enforceEventEditPermission(
+      { status: eventStatus, created_by: createdBy },
+      role,
+      actorId,
+    );
 
+    const cleanPayload = stripUndefined(dto as Record<string, any>);
     if (Object.keys(cleanPayload).length === 0) {
       throw new BadRequestException('No valid fields provided for update');
     }
 
     if (role === UserRole.MANAGER) {
       const allowedKeys = ['quantity', 'unit'];
-      const invalidKeys = Object.keys(cleanPayload).filter((k) => !allowedKeys.includes(k));
+      const invalidKeys = Object.keys(cleanPayload).filter(k => !allowedKeys.includes(k));
       if (invalidKeys.length > 0) {
-        throw new ForbiddenException(
-          `Managers can only update ${allowedKeys.join(', ')}`,
-        );
+        throw new ForbiddenException(`Managers can only update ${allowedKeys.join(', ')}`);
       }
     }
 
@@ -131,11 +118,9 @@ export class EventProductsService {
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(`Failed to update event product: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to update event product: ${error.message}`);
 
-    await this.auditService.createLog({
+    this.auditService.createLog({
       entity_type: 'Event Product',
       entity_id: eventProductId,
       action: AuditAction.UPDATE,
@@ -148,67 +133,57 @@ export class EventProductsService {
   }
 
   async deleteEventProduct(eventProductId: string, role: UserRole, actorId: string) {
-    const { data: row, error: rowError } = await this.supabase
-      .from('event_products')
-      .select('*')
-      .eq('id', eventProductId)
-      .single();
+    // Single query: get event_product + event status
+    const { data: joined, error: joinErr } = await this.supabase
+      .rpc('get_event_product_with_event', { p_event_product_id: eventProductId });
 
-    if (rowError || !row) {
-      throw new NotFoundException('Event product not found');
-    }
+    if (joinErr || !joined) throw new NotFoundException('Event product not found');
 
-    const event = await this.eventsService.getEventOrThrow(row.event_id);
-    this.eventsService.enforceEventEditPermission(event, role, actorId);
+    const { event_product: row, event_status: eventStatus, event_created_by: createdBy } = joined;
+
+    this.eventsService.enforceEventEditPermission(
+      { status: eventStatus, created_by: createdBy },
+      role,
+      actorId,
+    );
 
     const { error } = await this.supabase
       .from('event_products')
       .delete()
       .eq('id', eventProductId);
 
-    if (error) {
-      throw new BadRequestException(`Failed to delete event product: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to delete event product: ${error.message}`);
 
-    await this.auditService.createLog({
+    this.auditService.createLog({
       entity_type: 'Event Product',
       entity_id: eventProductId,
       action: AuditAction.DELETE,
       user_id: actorId,
       old_values: row,
     });
-
-    return { message: 'Event product deleted successfully' };
   }
 
   async getCategorySummary(eventId: string) {
-    const event = await this.eventsService.getEventOrThrow(eventId);
+    const resolvedId = await this.resolveEventId(eventId);
 
     const { data, error } = await this.supabase
-      .from('event_products')
-      .select(`quantity, unit, product:products(id, name, category:categories(id, name))`)
-      .eq('event_id', event.id);
+      .rpc('get_event_category_summary', { p_event_id: resolvedId });
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch category summary: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to fetch category summary: ${error.message}`);
+    return data || [];
+  }
 
-    const summaryMap: Record<string, Record<string, number>> = {};
+  private async resolveEventId(eventId: string): Promise<string> {
+    const isDisplayId = /^[A-Z]{2}-\d{2}$/.test(eventId) || eventId.startsWith('EVT-');
+    if (!isDisplayId) return eventId;
 
-    for (const row of data ?? []) {
-      const product = row.product as any;
-      const categoryName = product?.category?.name || 'Uncategorized';
-      const unit = row.unit || 'unit';
-      const qty = Number(row.quantity || 0);
+    const { data, error } = await this.supabase
+      .from('events')
+      .select('id')
+      .eq('display_id', eventId)
+      .single();
 
-      if (!summaryMap[categoryName]) summaryMap[categoryName] = {};
-      if (!summaryMap[categoryName][unit]) summaryMap[categoryName][unit] = 0;
-      summaryMap[categoryName][unit] += qty;
-    }
-
-    return Object.entries(summaryMap).map(([category, units]) => ({
-      category,
-      totals: Object.entries(units).map(([unit, quantity]) => ({ unit, quantity })),
-    }));
+    if (error || !data) throw new NotFoundException('Event not found');
+    return data.id;
   }
 }

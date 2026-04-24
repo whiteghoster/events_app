@@ -13,6 +13,10 @@ import { RegisterDto } from './dto/register.dto';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
+  // In-memory token cache: token -> { user, expiresAt }
+  private readonly tokenCache = new Map<string, { user: any; expiresAt: number }>();
+  private readonly TOKEN_CACHE_TTL = 60_000; // 60 seconds
+
   constructor(private readonly databaseService: DatabaseService) { }
 
   private get supabase() {
@@ -92,12 +96,12 @@ export class AuthService {
       throw new UnauthorizedException('User account is inactive');
     }
 
-    const { error: metaError } = await this.supabase.auth.admin.updateUserById(authData.user.id, {
+    // Fire-and-forget: don't block login response for metadata sync
+    this.supabase.auth.admin.updateUserById(authData.user.id, {
       user_metadata: { role: dbUser.role },
+    }).catch(err => {
+      this.logger.warn(`Metadata sync failed for user ${authData.user.id}: ${err.message}`);
     });
-    if (metaError) {
-      this.logger.warn(`Metadata sync failed for user ${authData.user.id}: ${metaError.message}`);
-    }
 
     return {
       access_token: authData.session.access_token,
@@ -113,9 +117,44 @@ export class AuthService {
   }
 
   async validateToken(token: string) {
+    // Check cache first — avoids Supabase round-trip on every request
+    const cached = this.tokenCache.get(token);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.user;
+    }
+
     const { data, error } = await this.supabase.auth.getUser(token);
-    if (error || !data?.user) return null;
+    if (error || !data?.user) {
+      this.tokenCache.delete(token);
+      return null;
+    }
+
+    // Cache the validated user for subsequent requests
+    this.tokenCache.set(token, {
+      user: data.user,
+      expiresAt: Date.now() + this.TOKEN_CACHE_TTL,
+    });
+
+    // Prune expired entries periodically (every 100 cache writes)
+    if (this.tokenCache.size > 100) {
+      this.pruneTokenCache();
+    }
+
     return data.user;
+  }
+
+  /** Evict a specific token (call on logout) */
+  evictTokenCache(token: string) {
+    this.tokenCache.delete(token);
+  }
+
+  private pruneTokenCache() {
+    const now = Date.now();
+    for (const [key, value] of this.tokenCache) {
+      if (value.expiresAt <= now) {
+        this.tokenCache.delete(key);
+      }
+    }
   }
 
   async refreshToken(refreshToken: string) {

@@ -3,7 +3,6 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
-  Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -11,13 +10,11 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { AuditService } from '../audit/audit.service';
-import { EventStatus, AuditAction } from '../common/types';
+import { AuditAction } from '../common/types';
 import { paginate, paginationOffset } from '../common/utils';
 
 @Injectable()
 export class CatalogService {
-  private readonly logger = new Logger(CatalogService.name);
-
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly auditService: AuditService,
@@ -37,20 +34,17 @@ export class CatalogService {
       .single();
 
     if (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Category with this name already exists');
-      }
+      if (error.code === '23505') throw new ConflictException('Category with this name already exists');
       throw new BadRequestException(`Failed to create category: ${error.message}`);
     }
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Category',
       entity_id: data.id,
       action: AuditAction.CREATE,
       user_id: actorId,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return data;
   }
@@ -60,28 +54,22 @@ export class CatalogService {
 
     const { data, count, error } = await this.supabase
       .from('categories')
-      .select('*', { count: 'exact' })
+      .select('id, name', { count: 'exact' })
       .order('name', { ascending: true })
       .range(offset, offset + pageSize - 1);
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch categories: ${error.message}`);
-    }
-
+    if (error) throw new BadRequestException(`Failed to fetch categories: ${error.message}`);
     return paginate(data, count, page, pageSize);
   }
 
   async findCategoryById(id: string) {
     const { data, error } = await this.supabase
       .from('categories')
-      .select('*')
+      .select('id, name')
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      throw new NotFoundException('Category not found');
-    }
-
+    if (error || !data) throw new NotFoundException('Category not found');
     return data;
   }
 
@@ -96,13 +84,10 @@ export class CatalogService {
       .single();
 
     if (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Category with this name already exists');
-      }
+      if (error.code === '23505') throw new ConflictException('Category with this name already exists');
       throw new BadRequestException(`Failed to update category: ${error.message}`);
     }
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Category',
       entity_id: id,
@@ -110,7 +95,7 @@ export class CatalogService {
       user_id: actorId,
       old_values: oldCategory,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return data;
   }
@@ -118,36 +103,22 @@ export class CatalogService {
   async deleteCategory(id: string, actorId: string) {
     const category = await this.findCategoryById(id);
 
-    const { count, error: countError } = await this.supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-      .eq('category_id', id)
-      .eq('is_active', true);
-
-    if (countError) {
-      throw new BadRequestException(`Failed to validate category deletion: ${countError.message}`);
-    }
-
-    if ((count || 0) > 0) {
-      throw new ConflictException(
-        `Cannot delete category. ${count} active product(s) still exist in this category.`,
-      );
-    }
-
-    const { error } = await this.supabase.from('categories').delete().eq('id', id);
+    // Atomic: check product count + delete in single transaction
+    const { error } = await this.supabase.rpc('delete_category_safe', { p_category_id: id });
 
     if (error) {
+      if (error.message?.includes('not found')) throw new NotFoundException('Category not found');
+      if (error.message?.includes('Cannot delete')) throw new ConflictException(error.message);
       throw new BadRequestException(`Failed to delete category: ${error.message}`);
     }
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Category',
       entity_id: id,
       action: AuditAction.DELETE,
       user_id: actorId,
       old_values: category,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
   }
 
   // ── Products ──
@@ -169,20 +140,17 @@ export class CatalogService {
       .single();
 
     if (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Product with this name already exists in this category');
-      }
+      if (error.code === '23505') throw new ConflictException('Product with this name already exists in this category');
       throw new BadRequestException(`Failed to create product: ${error.message}`);
     }
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Product',
       entity_id: data.id,
       action: AuditAction.CREATE,
       user_id: actorId,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return data;
   }
@@ -192,34 +160,26 @@ export class CatalogService {
 
     let query = this.supabase
       .from('products')
-      .select(`*, category:categories(id, name)`, { count: 'exact' })
+      .select(`id, name, default_unit, price, is_active, category:categories(id, name)`, { count: 'exact' })
       .eq('is_active', true)
       .order('name', { ascending: true });
 
-    if (categoryId) {
-      query = query.eq('category_id', categoryId);
-    }
+    if (categoryId) query = query.eq('category_id', categoryId);
 
     const { data, count, error } = await query.range(offset, offset + pageSize - 1);
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch products: ${error.message}`);
-    }
-
+    if (error) throw new BadRequestException(`Failed to fetch products: ${error.message}`);
     return paginate(data, count, page, pageSize);
   }
 
   async findProductById(id: string) {
     const { data, error } = await this.supabase
       .from('products')
-      .select(`*, category:categories(id, name)`)
+      .select(`id, name, default_unit, price, is_active, category:categories(id, name)`)
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      throw new NotFoundException('Product not found');
-    }
-
+    if (error || !data) throw new NotFoundException('Product not found');
     return data;
   }
 
@@ -230,23 +190,26 @@ export class CatalogService {
       await this.findCategoryById(updateProductDto.category_id);
     }
 
+    // Atomic deactivation: check live events + deactivate in single transaction
     if (updateProductDto.is_active === false) {
-      const { data: linkedRows, error: linkedRowsError } = await this.supabase
-        .from('event_products')
-        .select(`id, event:events(id, status)`)
-        .eq('product_id', id);
+      const { data, error } = await this.supabase.rpc('deactivate_product_safe', { p_product_id: id });
 
-      if (linkedRowsError) {
-        throw new BadRequestException(`Failed to validate product deactivation: ${linkedRowsError.message}`);
+      if (error) {
+        if (error.message?.includes('Cannot deactivate')) throw new ConflictException(error.message);
+        if (error.message?.includes('not found')) throw new NotFoundException('Product not found');
+        throw new BadRequestException(`Failed to deactivate product: ${error.message}`);
       }
 
-      const inLiveEvent = (linkedRows || []).some(
-        (row: any) => row.event?.status === EventStatus.LIVE,
-      );
+      this.auditService.createLog({
+        entity_type: 'Product',
+        entity_id: id,
+        action: AuditAction.UPDATE,
+        user_id: actorId,
+        old_values: oldProduct,
+        new_values: data,
+      });
 
-      if (inLiveEvent) {
-        throw new ConflictException('Cannot deactivate product currently used in a live event');
-      }
+      return data;
     }
 
     const { data, error } = await this.supabase
@@ -257,13 +220,10 @@ export class CatalogService {
       .single();
 
     if (error) {
-      if (error.code === '23505') {
-        throw new ConflictException('Product with this name already exists in this category');
-      }
+      if (error.code === '23505') throw new ConflictException('Product with this name already exists in this category');
       throw new BadRequestException(`Failed to update product: ${error.message}`);
     }
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Product',
       entity_id: id,
@@ -271,7 +231,7 @@ export class CatalogService {
       user_id: actorId,
       old_values: oldProduct,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return data;
   }
@@ -295,9 +255,7 @@ export class CatalogService {
         { onConflict: 'name' },
       );
 
-    if (error) {
-      throw new BadRequestException(`Failed to seed categories: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to seed categories: ${error.message}`);
   }
 
   async seedProducts() {
@@ -354,8 +312,6 @@ export class CatalogService {
       .from('products')
       .upsert(rows, { onConflict: 'name,category_id' });
 
-    if (error) {
-      throw new BadRequestException(`Failed to seed products: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to seed products: ${error.message}`);
   }
 }

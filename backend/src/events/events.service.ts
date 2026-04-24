@@ -28,34 +28,30 @@ export class EventsService {
     return this.databaseService.getClient();
   }
 
-  async getEventOrThrow(eventId: string) {
-    let query = this.supabase
+  private readonly VALIDATION_FIELDS = 'id, status, created_by, client_name';
+
+  private readonly LIST_FIELDS = [
+    'id', 'client_name', 'venue', 'status', 'display_id',
+    'delivery_from_date', 'delivery_to_date', 'manager_name', 'head_karigar_name',
+  ].join(',');
+
+  async getEventOrThrow(eventId: string, fields: string = '*'): Promise<any> {
+    const isDisplayId = /^[A-Z]{2}-\d{2}$/.test(eventId) || eventId.startsWith('EVT-');
+    const column = isDisplayId ? 'display_id' : 'id';
+
+    const { data, error } = await this.supabase
       .from('events')
-      .select('*');
+      .select(fields as '*')
+      .eq(column, eventId)
+      .single();
 
-    // Check if it's a display ID (format: 2 letters + hyphen + 2 digits, e.g., JD-01)
-    const displayIdPattern = /^[A-Z]{2}-\d{2}$/;
-    if (displayIdPattern.test(eventId) || eventId.startsWith('EVT-')) {
-      query = query.eq('display_id', eventId);
-    } else {
-      query = query.eq('id', eventId);
-    }
-
-    const { data, error } = await query.single();
-
-    if (error || !data) {
-      throw new NotFoundException('Event not found');
-    }
-
+    if (error || !data) throw new NotFoundException('Event not found');
     return data;
   }
 
   enforceEventEditPermission(event: any, role: UserRole, actorId: string) {
     if (event.status === EventStatus.FINISHED) {
-      // Only creator or admin can modify finished events
-      const isCreator = event.created_by === actorId;
-      const isAdmin = role === UserRole.ADMIN;
-      if (!isCreator && !isAdmin) {
+      if (event.created_by !== actorId && role !== UserRole.ADMIN) {
         throw new ForbiddenException('Finished events are read-only');
       }
     }
@@ -64,104 +60,34 @@ export class EventsService {
     }
   }
 
-  canDeleteFinishedEvent(event: any, role: UserRole, actorId: string): boolean {
-    if (event.status !== EventStatus.FINISHED) {
-      return true; // Non-finished events can be deleted by authorized users
-    }
-    // For finished events, only creator or admin can delete
-    const isCreator = event.created_by === actorId;
-    const isAdmin = role === UserRole.ADMIN;
-    return isCreator || isAdmin;
-  }
-
-  private async generateDisplayId(clientName: string): Promise<string> {
-    // Parse client name to get initials
-    const nameParts = clientName.trim().split(/\s+/);
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-    
-    let initials: string;
-    if (lastName) {
-      // If last name exists, use first letter of first and last name
-      initials = `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
-    } else {
-      // If only first name, use first 2 letters
-      initials = firstName.substring(0, 2).toUpperCase();
-    }
-
-    // Query existing events for this client to get the next sequential number
-    const { data: existingEvents } = await this.supabase
-      .from('events')
-      .select('display_id')
-      .like('display_id', `${initials}-%`)
-      .order('display_id', { ascending: false })
-      .limit(1);
-
-    let nextNumber = 1;
-    if (existingEvents && existingEvents.length > 0) {
-      const lastDisplayId = existingEvents[0].display_id;
-      const lastNumber = parseInt(lastDisplayId.split('-')[1]);
-      if (!isNaN(lastNumber) && lastNumber < 1000) {
-        nextNumber = lastNumber + 1;
-      }
-    }
-
-    // Format as JD-01, JO-01, etc.
-    const displayId = `${initials}-${nextNumber.toString().padStart(2, '0')}`;
-    return displayId;
-  }
-
   async createEvent(createEventDto: CreateEventDto, actorId: string) {
-    const payload = {
-      client_name: createEventDto.client_name,
-      company_name: createEventDto.company_name,
-      contact_phone: createEventDto.contact_phone,
-      event_date: createEventDto.event_date,
-      venue: createEventDto.venue,
-      venue_address: createEventDto.venue_address,
-      city: createEventDto.city,
-      head_karigar_name: createEventDto.head_karigar_name,
-      manager_name: createEventDto.manager_name,
-      delivery_from_date: createEventDto.delivery_from_date,
-      delivery_to_date: createEventDto.delivery_to_date,
-      display_id: await this.generateDisplayId(createEventDto.client_name),
-      created_by: actorId,
-    };
+    const { data, error } = await this.supabase.rpc('create_event_with_display_id', {
+      p_client_name: createEventDto.client_name,
+      p_company_name: createEventDto.company_name || null,
+      p_contact_phone: createEventDto.contact_phone || null,
+      p_event_date: createEventDto.event_date || null,
+      p_venue: createEventDto.venue || null,
+      p_venue_address: createEventDto.venue_address || null,
+      p_city: createEventDto.city || null,
+      p_head_karigar_name: createEventDto.head_karigar_name || null,
+      p_manager_name: createEventDto.manager_name || null,
+      p_delivery_from_date: createEventDto.delivery_from_date || null,
+      p_delivery_to_date: createEventDto.delivery_to_date || null,
+      p_created_by: actorId,
+    });
 
-    const { data, error } = await this.supabase
-      .from('events')
-      .insert(payload)
-      .select()
-      .single();
+    if (error) throw new BadRequestException(`Failed to create event: ${error.message}`);
 
-    if (error) {
-      throw new BadRequestException(`Failed to create event: ${error.message}`);
-    }
-
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Event',
       entity_id: data.id,
       action: AuditAction.CREATE,
       user_id: actorId,
       new_values: data,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
 
     return data;
   }
-
-  // Fields needed for event list view (EventCard component)
-  private readonly EVENT_LIST_FIELDS = [
-    'id',
-    'client_name',
-    'venue',
-    'status',
-    'display_id',
-    'delivery_from_date',
-    'delivery_to_date',
-    'manager_name',
-    'head_karigar_name',
-  ].join(',');
 
   async findEvents(
     occasionType?: string,
@@ -173,23 +99,15 @@ export class EventsService {
 
     let query = this.supabase
       .from('events')
-      .select(this.EVENT_LIST_FIELDS, { count: 'exact' })
+      .select(this.LIST_FIELDS, { count: 'exact' })
       .order('event_date', { ascending: true });
 
-    if (occasionType) {
-      query = query.eq('occasion_type', occasionType);
-    }
-
-    if (status) {
-      query = query.eq('status', status);
-    }
+    if (occasionType) query = query.eq('occasion_type', occasionType);
+    if (status) query = query.eq('status', status);
 
     const { data, count, error } = await query.range(offset, offset + pageSize - 1);
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch events: ${error.message}`);
-    }
-
+    if (error) throw new BadRequestException(`Failed to fetch events: ${error.message}`);
     return paginate(data, count, page, pageSize);
   }
 
@@ -197,48 +115,15 @@ export class EventsService {
     return this.getEventOrThrow(id);
   }
 
-  async getUniqueClients(limit: number = 1000) {
+  async getUniqueClients(limit: number = 500) {
     const { data, error } = await this.supabase
-      .from('events')
-      .select('client_name, company_name, contact_phone')
-      .order('client_name', { ascending: true })
-      .limit(limit);
+      .rpc('get_unique_clients', { row_limit: limit });
 
-    if (error) {
-      throw new BadRequestException(`Failed to fetch clients: ${error.message}`);
-    }
-
-    const seen = new Set<string>();
-    return (data || [])
-      .filter(event => {
-        const name = event.client_name?.trim();
-        if (!name || seen.has(name)) return false;
-        seen.add(name);
-        return true;
-      })
-      .map(event => ({
-        client_name: event.client_name,
-        company_name: event.company_name,
-        contact_phone: event.contact_phone,
-      }));
+    if (error) throw new BadRequestException(`Failed to fetch clients: ${error.message}`);
+    return data || [];
   }
 
   async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole, actorId: string) {
-    const event = await this.getEventOrThrow(id);
-
-    // Handle status transition if status is in the payload
-    if (updateEventDto.status) {
-      const currentStatus = (event.status as EventStatus) || EventStatus.LIVE;
-      const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
-      if (!allowed.includes(updateEventDto.status)) {
-        throw new BadRequestException(
-          `Invalid status transition from ${currentStatus} to ${updateEventDto.status}`,
-        );
-      }
-    } else {
-      this.enforceEventEditPermission(event, role, actorId);
-    }
-
     const fieldPayload = stripUndefined({
       client_name: updateEventDto.client_name,
       company_name: updateEventDto.company_name,
@@ -253,10 +138,31 @@ export class EventsService {
       delivery_to_date: updateEventDto.delivery_to_date,
     });
 
-    // Build the final update payload
+    const hasFieldChanges = Object.keys(fieldPayload).length > 0;
+
+    // Status-only: atomic SQL (prevents race conditions on concurrent status changes)
+    if (updateEventDto.status && !hasFieldChanges) {
+      return this.updateEventStatus(id, updateEventDto.status, actorId);
+    }
+
+    // Field update: validate permissions first
+    const event = await this.getEventOrThrow(id, this.VALIDATION_FIELDS);
+
+    if (updateEventDto.status) {
+      // Mixed update: validate transition
+      const currentStatus = event.status as EventStatus;
+      const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(updateEventDto.status)) {
+        throw new BadRequestException(
+          `Invalid status transition from ${currentStatus} to ${updateEventDto.status}`,
+        );
+      }
+    } else {
+      this.enforceEventEditPermission(event, role, actorId);
+    }
+
     const updatePayload: Record<string, any> = { ...fieldPayload };
 
-    // Regenerate display_id if client_name is being updated
     if (updateEventDto.client_name && updateEventDto.client_name !== event.client_name) {
       updatePayload.display_id = await this.generateDisplayId(updateEventDto.client_name);
     }
@@ -276,44 +182,86 @@ export class EventsService {
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(`Failed to update event: ${error.message}`);
-    }
+    if (error) throw new BadRequestException(`Failed to update event: ${error.message}`);
 
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Event',
       entity_id: event.id,
       action: AuditAction.UPDATE,
       user_id: actorId,
-      old_values: updateEventDto.status ? { status: event.status } : event,
-      new_values: updateEventDto.status ? { status: updateEventDto.status } : data,
-    }).catch(err => console.error('Audit log failed:', err));
+      old_values: event,
+      new_values: data,
+    });
+
+    return data;
+  }
+
+  private async updateEventStatus(eventId: string, newStatus: EventStatus, actorId: string) {
+    const { data, error } = await this.supabase.rpc('update_event_status', {
+      p_event_id: eventId,
+      p_new_status: newStatus,
+      p_actor_id: actorId,
+      p_actor_role: 'admin',
+    });
+
+    if (error) {
+      if (error.message?.includes('not found')) throw new NotFoundException('Event not found');
+      throw new BadRequestException(error.message);
+    }
+
+    this.auditService.createLog({
+      entity_type: 'Event',
+      entity_id: eventId,
+      action: AuditAction.UPDATE,
+      user_id: actorId,
+      new_values: { status: newStatus },
+    });
 
     return data;
   }
 
   async deleteEvent(id: string, role: UserRole, actorId: string) {
-    const event = await this.getEventOrThrow(id);
+    const event = await this.getEventOrThrow(id, this.VALIDATION_FIELDS);
 
-    // Check permissions for deleting finished events
-    if (!this.canDeleteFinishedEvent(event, role, actorId)) {
-      throw new ForbiddenException('Only the creator or admin can delete finished events');
+    if (event.status === EventStatus.FINISHED) {
+      const canDelete = event.created_by === actorId || role === UserRole.ADMIN;
+      if (!canDelete) throw new ForbiddenException('Only the creator or admin can delete finished events');
     }
 
     const { error } = await this.supabase.from('events').delete().eq('id', event.id);
+    if (error) throw new BadRequestException(`Failed to delete event: ${error.message}`);
 
-    if (error) {
-      throw new BadRequestException(`Failed to delete event: ${error.message}`);
-    }
-
-    // Fire and forget audit log for better performance
     this.auditService.createLog({
       entity_type: 'Event',
       entity_id: event.id,
       action: AuditAction.DELETE,
       user_id: actorId,
       old_values: event,
-    }).catch(err => console.error('Audit log failed:', err));
+    });
+  }
+
+  private async generateDisplayId(clientName: string): Promise<string> {
+    const parts = clientName.trim().split(/\s+/);
+    const first = parts[0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1] : '';
+
+    const initials = last
+      ? `${first.charAt(0).toUpperCase()}${last.charAt(0).toUpperCase()}`
+      : first.substring(0, 2).toUpperCase();
+
+    const { data: existing } = await this.supabase
+      .from('events')
+      .select('display_id')
+      .like('display_id', `${initials}-%`)
+      .order('display_id', { ascending: false })
+      .limit(1);
+
+    let nextNumber = 1;
+    if (existing?.length) {
+      const lastNumber = parseInt(existing[0].display_id.split('-')[1]);
+      if (!isNaN(lastNumber) && lastNumber < 1000) nextNumber = lastNumber + 1;
+    }
+
+    return `${initials}-${nextNumber.toString().padStart(2, '0')}`;
   }
 }

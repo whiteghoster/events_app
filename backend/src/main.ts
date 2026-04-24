@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import compression from 'compression';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { validateSupabaseConfig } from './config/database.config';
@@ -13,6 +14,8 @@ async function bootstrap() {
     validateSupabaseConfig();
 
     const app = await NestFactory.create(AppModule);
+
+    app.use(compression());
 
     app.useGlobalPipes(
       new ValidationPipe({
