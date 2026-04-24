@@ -150,6 +150,19 @@ export class EventsService {
     return data;
   }
 
+  // Fields needed for event list view (EventCard component)
+  private readonly EVENT_LIST_FIELDS = [
+    'id',
+    'client_name',
+    'venue',
+    'status',
+    'display_id',
+    'delivery_from_date',
+    'delivery_to_date',
+    'manager_name',
+    'head_karigar_name',
+  ].join(',');
+
   async findEvents(
     occasionType?: string,
     status?: EventStatus,
@@ -160,7 +173,7 @@ export class EventsService {
 
     let query = this.supabase
       .from('events')
-      .select('*', { count: 'exact' })
+      .select(this.EVENT_LIST_FIELDS, { count: 'exact' })
       .order('event_date', { ascending: true });
 
     if (occasionType) {
@@ -184,29 +197,30 @@ export class EventsService {
     return this.getEventOrThrow(id);
   }
 
-  async getUniqueClients() {
+  async getUniqueClients(limit: number = 1000) {
     const { data, error } = await this.supabase
       .from('events')
       .select('client_name, company_name, contact_phone')
-      .order('client_name', { ascending: true });
+      .order('client_name', { ascending: true })
+      .limit(limit);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch clients: ${error.message}`);
     }
 
-    // Get unique clients by client_name (filter out null/empty values)
-    const uniqueClients = new Map();
-    data?.forEach(event => {
-      if (event.client_name && event.client_name.trim() && !uniqueClients.has(event.client_name)) {
-        uniqueClients.set(event.client_name, {
-          client_name: event.client_name,
-          company_name: event.company_name,
-          contact_phone: event.contact_phone,
-        });
-      }
-    });
-
-    return Array.from(uniqueClients.values());
+    const seen = new Set<string>();
+    return (data || [])
+      .filter(event => {
+        const name = event.client_name?.trim();
+        if (!name || seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      })
+      .map(event => ({
+        client_name: event.client_name,
+        company_name: event.company_name,
+        contact_phone: event.contact_phone,
+      }));
   }
 
   async updateEvent(id: string, updateEventDto: UpdateEventDto, role: UserRole, actorId: string) {

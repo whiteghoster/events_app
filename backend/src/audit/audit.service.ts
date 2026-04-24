@@ -17,6 +17,9 @@ export class AuditService {
   }
 
   async findAll(dto: FindAuditLogsDto = {}): Promise<AuditLogResult> {
+    const limit = Math.min(dto.limit || 25, 100);
+    const page = Math.max(dto.page || 1, 1);
+
     this.logger.debug(`Audit query params: ${JSON.stringify(dto)}`);
     
     let query = this.supabase
@@ -24,43 +27,26 @@ export class AuditService {
       .select(AUDIT_SELECT, { count: 'exact' })
       .order('created_at', { ascending: false });
 
-    if (dto.entity_type) {
-      this.logger.debug(`Filtering by entity_type: ${dto.entity_type}`);
-      query = query.eq('entity_type', dto.entity_type);
-    }
-    if (dto.action) {
-      this.logger.debug(`Filtering by action: ${dto.action}`);
-      query = query.eq('action', dto.action);
-    }
+    if (dto.entity_type) query = query.eq('entity_type', dto.entity_type);
+    if (dto.action) query = query.eq('action', dto.action);
     if (dto.user_id) query = query.eq('user_id', dto.user_id);
     if (dto.entity_id) query = query.eq('entity_id', dto.entity_id);
     if (dto.date_from) query = query.gte('created_at', dto.date_from);
     if (dto.date_to) query = query.lte('created_at', dto.date_to);
 
-    // Filter by user role - need to get user IDs with that role first
+    // Filter by user role - bounded query with limit to prevent N+1
     if (dto.user_role) {
-      this.logger.debug(`Filtering by user_role: ${dto.user_role}`);
+      const MAX_USERS_PER_ROLE = 1000;
       const { data: usersWithRole } = await this.supabase
         .from('users')
         .select('id')
-        .eq('role', dto.user_role);
-      
-      this.logger.debug(`Found ${usersWithRole?.length || 0} users with role ${dto.user_role}`);
-      
+        .eq('role', dto.user_role)
+        .limit(MAX_USERS_PER_ROLE);
+
       if (usersWithRole && usersWithRole.length > 0) {
-        const userIds = usersWithRole.map(u => u.id);
-        query = query.in('user_id', userIds);
+        query = query.in('user_id', usersWithRole.map(u => u.id));
       } else {
-        // No users with this role, return empty result
-        return {
-          data: [] as AuditLog[],
-          pagination: {
-            page: dto.page || 1,
-            limit: dto.limit || 25,
-            total: 0,
-            hasMore: false,
-          },
-        };
+        return { data: [], meta: { page, page_size: limit, total: 0, total_pages: 0 } };
       }
     }
 
@@ -73,8 +59,6 @@ export class AuditService {
       }
     }
 
-    const limit = Math.min(dto.limit || 25, 100);
-    const page = Math.max(dto.page || 1, 1);
     const offset = (page - 1) * limit;
 
     query = query.range(offset, offset + limit - 1);
@@ -88,13 +72,14 @@ export class AuditService {
 
     this.logger.debug(`Query returned ${data?.length || 0} rows, total count: ${count || 0}`);
 
+    const total = count ?? 0;
     return {
       data: (data ?? []) as AuditLog[],
-      pagination: {
+      meta: {
         page,
-        limit,
-        total: count ?? 0,
-        hasMore: page * limit < (count ?? 0),
+        page_size: limit,
+        total,
+        total_pages: Math.ceil(total / limit),
       },
     };
   }
@@ -152,46 +137,36 @@ export class AuditService {
     ].join('\n');
   }
 
+  private readonly actionMap: Record<string, string> = {
+    create: 'create', 0: 'create',
+    update: 'update', 1: 'update',
+    delete: 'delete', 2: 'delete',
+  };
+
+  private sanitize(obj: unknown): unknown {
+    if (!obj || typeof obj !== 'object') return obj;
+    const { password, ...rest } = obj as Record<string, unknown>;
+    return rest;
+  }
+
   async createLog(params: {
     entity_type: string;
     entity_id: string;
     action: AuditAction | string;
     user_id: string;
-    old_values?: any;
-    new_values?: any;
+    old_values?: unknown;
+    new_values?: unknown;
   }) {
-    const sanitize = (obj: any) => {
-      if (!obj) return null;
-      const copy = { ...obj };
-      delete copy.password;
-      return copy;
-    };
-
-    // Explicitly map action to valid database values
-    let action: string;
-    const actionInput = String(params.action).toLowerCase();
-    
-    if (actionInput === 'create' || actionInput === '0') {
-      action = 'create';
-    } else if (actionInput === 'update' || actionInput === '1') {
-      action = 'update';
-    } else if (actionInput === 'delete' || actionInput === '2') {
-      action = 'delete';
-    } else {
-      // Fallback - log and default to create
-      this.logger.warn(`Unknown action value: ${params.action}, defaulting to 'create'`);
-      action = 'create';
-    }
-    
-    this.logger.debug(`Action mapping: ${params.action} -> ${action}`);
+    const actionKey = String(params.action).toLowerCase();
+    const action = this.actionMap[actionKey] || 'create';
 
     const { error } = await this.supabase.from('audit_log').insert({
       entity_type: params.entity_type,
       entity_id: params.entity_id,
       action: action,
       user_id: params.user_id,
-      old_values: sanitize(params.old_values),
-      new_values: sanitize(params.new_values),
+      old_values: this.sanitize(params.old_values),
+      new_values: this.sanitize(params.new_values),
       created_at: new Date().toISOString(),
     });
 

@@ -66,10 +66,5 @@ export interface AuditLog {
 
 export interface AuditLogResult {
   data: AuditLog[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    hasMore: boolean;
-  };
+  meta: PaginationMeta;
 }

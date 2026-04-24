@@ -17,7 +17,7 @@ export class AuditController {
     }
 
     const result = await this.auditService.findAll(dto);
-    return { data: result.data, meta: result.pagination };
+    return { data: result.data, meta: result.meta };
   }
 
   @Get(':id')
