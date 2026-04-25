@@ -46,7 +46,7 @@ export default function CatalogPage() {
 
           <Select
             value={catalog.selectedCategoryId || '__all__'}
-            onValueChange={(v) => catalog.setSelectedCategoryId(v === '__all__' ? '' : v)}
+            onValueChange={(v) => catalog.setSelectedCategoryId(v === '__all__' ? '' : v === '__uncategorized__' ? '__uncategorized__' : v)}
           >
             <SelectTrigger className="h-9 w-full flex-1 sm:flex-none sm:w-[200px]">
               <SelectValue placeholder="All Categories" />
@@ -61,6 +61,14 @@ export default function CatalogPage() {
                   </SelectItem>
                 )
               })}
+              {(() => {
+                const uncategorizedCount = catalog.products.filter(p => !p.categoryId).length
+                return uncategorizedCount > 0 ? (
+                  <SelectItem value="__uncategorized__">
+                    Uncategorized ({uncategorizedCount})
+                  </SelectItem>
+                ) : null
+              })()}
             </SelectContent>
           </Select>
 

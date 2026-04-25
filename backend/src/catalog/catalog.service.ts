@@ -160,8 +160,7 @@ export class CatalogService {
 
     let query = this.supabase
       .from('products')
-      .select(`id, name, default_unit, price, is_active, category:categories(id, name)`, { count: 'exact' })
-      .eq('is_active', true)
+      .select(`id, name, category_id, default_unit, price, is_active, category:categories(id, name)`, { count: 'exact' })
       .order('name', { ascending: true });
 
     if (categoryId) query = query.eq('category_id', categoryId);
@@ -175,7 +174,7 @@ export class CatalogService {
   async findProductById(id: string) {
     const { data, error } = await this.supabase
       .from('products')
-      .select(`id, name, default_unit, price, is_active, category:categories(id, name)`)
+      .select(`id, name, category_id, default_unit, price, is_active, category:categories(id, name)`)
       .eq('id', id)
       .single();
 

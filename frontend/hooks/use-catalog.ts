@@ -47,7 +47,9 @@ export function useCatalog() {
 
   const filteredProducts = useMemo(() => {
     let filtered = selectedCategoryId
-      ? products.filter(p => p.categoryId === selectedCategoryId)
+      ? selectedCategoryId === '__uncategorized__'
+        ? products.filter(p => !p.categoryId)
+        : products.filter(p => p.categoryId === selectedCategoryId)
       : products
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -119,11 +121,24 @@ export function useCatalog() {
   }
 
   const deactivateProduct = async (product: Product) => {
+    // Optimistic update: update UI immediately
+    queryClient.setQueryData(['products', 'all'], (oldData: any) => {
+      if (!oldData?.data) return oldData
+      return {
+        ...oldData,
+        data: oldData.data.map((p: Product) => 
+          p.id === product.id ? { ...p, isActive: false } : p
+        )
+      }
+    })
+
     try {
       await catalogApi.deactivateProduct(product.id)
       toast.success('Product deactivated')
       invalidateAll()
     } catch (err) {
+      // Revert optimistic update on error
+      invalidateAll()
       if (err instanceof Error && err.message.includes('live event')) {
         setProductToDeactivate(product)
         setDeactivateDialogOpen(true)
@@ -140,11 +155,24 @@ export function useCatalog() {
   }
 
   const reactivateProduct = async (product: Product) => {
+    // Optimistic update: update UI immediately
+    queryClient.setQueryData(['products', 'all'], (oldData: any) => {
+      if (!oldData?.data) return oldData
+      return {
+        ...oldData,
+        data: oldData.data.map((p: Product) => 
+          p.id === product.id ? { ...p, isActive: true } : p
+        )
+      }
+    })
+
     try {
       await catalogApi.updateProduct(product.id, { isActive: true })
       toast.success('Product reactivated')
       invalidateAll()
     } catch {
+      // Revert optimistic update on error
+      invalidateAll()
       toast.error('Failed to reactivate product')
     }
   }

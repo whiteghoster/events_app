@@ -401,7 +401,7 @@ export const catalogApi = {
       data: products.map((p: any) => ({
         id: p.id,
         name: p.name,
-        categoryId: p.category_id,
+        categoryId: p.category?.id || p.category_id,
         categoryName: p.category?.name || 'Uncategorized',
         defaultUnit: p.default_unit || p.defaultUnit || 'pcs',
         price: p.price,
