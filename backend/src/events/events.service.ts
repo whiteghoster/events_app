@@ -97,43 +97,18 @@ export class EventsService {
   ) {
     const offset = paginationOffset(page, pageSize);
 
-    // Use RPC to sort events by proximity to today's date
-    const { data, error } = await this.supabase.rpc('get_events_sorted_by_proximity_simple', {
-      p_occasion_type: occasionType || null,
-      p_status: status || null,
-      p_page_size: pageSize,
-      p_offset: offset
-    });
+    let query = this.supabase
+      .from('events')
+      .select(this.LIST_FIELDS, { count: 'exact' })
+      .order('delivery_from_date', { ascending: true });
+
+    if (occasionType) query = query.eq('occasion_type', occasionType);
+    if (status) query = query.eq('status', status);
+
+    const { data, count, error } = await query.range(offset, offset + pageSize - 1);
 
     if (error) throw new BadRequestException(`Failed to fetch events: ${error.message}`);
-
-    // Extract total count from first row if available, otherwise get it separately
-    let totalCount = 0;
-    if (data && data.length > 0) {
-      totalCount = data[0].total_count || 0;
-    } else {
-      // Fallback: get count separately
-      const { count } = await this.supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq(occasionType ? 'occasion_type' : 'status', occasionType || status || 'live');
-      totalCount = count || 0;
-    }
-
-    // Transform the data to match expected format
-    const transformedData = data?.map(event => ({
-      id: event.id,
-      client_name: event.client_name,
-      venue: event.venue,
-      status: event.status,
-      display_id: event.display_id,
-      delivery_from_date: event.delivery_from_date,
-      delivery_to_date: event.delivery_to_date,
-      manager_name: event.manager_name,
-      head_karigar_name: event.head_karigar_name,
-    })) || [];
-
-    return paginate(transformedData, totalCount, page, pageSize);
+    return paginate(data, count, page, pageSize);
   }
 
   async findEventById(id: string) {

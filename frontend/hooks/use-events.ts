@@ -11,6 +11,33 @@ export function useEvents() {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<EventStatus>('live')
 
+  const sortEventsByProximity = useCallback((events: Event[]): Event[] => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Set to start of day for accurate comparison
+
+    return events.sort((a, b) => {
+      const dateA = a.deliveryFromDate ? new Date(a.deliveryFromDate) : null
+      const dateB = b.deliveryFromDate ? new Date(b.deliveryFromDate) : null
+
+      // Handle null dates - put them at the end
+      if (!dateA && !dateB) return 0
+      if (!dateA) return 1
+      if (!dateB) return -1
+
+      // Calculate absolute difference in days from today
+      const diffA = Math.abs(dateA.getTime() - today.getTime())
+      const diffB = Math.abs(dateB.getTime() - today.getTime())
+
+      // Sort by proximity to today
+      if (diffA !== diffB) {
+        return diffA - diffB
+      }
+
+      // If same distance, sort by date (earlier first)
+      return dateA.getTime() - dateB.getTime()
+    })
+  }, [])
+
   const {
     data,
     fetchNextPage,
@@ -30,8 +57,9 @@ export function useEvents() {
   })
 
   const apiEvents = useMemo(() => {
-    return data?.pages.flatMap((page) => page.events) || []
-  }, [data])
+    const events = data?.pages.flatMap((page) => page.events) || []
+    return sortEventsByProximity(events)
+  }, [data, sortEventsByProximity])
 
   const prefetchEvent = useCallback((eventId: string) => {
     queryClient.prefetchQuery({
