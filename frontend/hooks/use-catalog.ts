@@ -135,7 +135,6 @@ export function useCatalog() {
     try {
       await catalogApi.deactivateProduct(product.id)
       toast.success('Product deactivated')
-      invalidateAll()
     } catch (err) {
       // Revert optimistic update on error
       invalidateAll()
@@ -169,7 +168,6 @@ export function useCatalog() {
     try {
       await catalogApi.updateProduct(product.id, { isActive: true })
       toast.success('Product reactivated')
-      invalidateAll()
     } catch {
       // Revert optimistic update on error
       invalidateAll()

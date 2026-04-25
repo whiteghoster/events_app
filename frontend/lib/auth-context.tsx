@@ -200,7 +200,7 @@ export function useAuth() {
 
 export function canCreateEvent(role: UserRole | undefined): boolean {
   if (!role) return false
-  return role === 'admin' || role === 'karigar' || role === 'manager'
+  return role === 'admin' || role === 'manager'
 }
 
 export function canManageUsers(role: UserRole | undefined): boolean {
@@ -213,7 +213,7 @@ export function canDeactivateUser(role: UserRole | undefined): boolean {
 
 export function canCloseEvent(role: UserRole | undefined): boolean {
   if (!role) return false
-  return role === 'admin' || role === 'karigar' || role === 'manager'
+  return role === 'admin' || role === 'manager'
 }
 
 export function canViewCatalog(role: UserRole | undefined): boolean {

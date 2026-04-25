@@ -139,10 +139,9 @@ export class EventsService {
     });
 
     const hasFieldChanges = Object.keys(fieldPayload).length > 0;
-    const hasDisplayIdChange = !!updateEventDto.display_id;
 
     // Status-only: atomic SQL (prevents race conditions on concurrent status changes)
-    if (updateEventDto.status && !hasFieldChanges && !hasDisplayIdChange) {
+    if (updateEventDto.status && !hasFieldChanges) {
       return this.updateEventStatus(id, updateEventDto.status, actorId);
     }
 
@@ -164,10 +163,8 @@ export class EventsService {
 
     const updatePayload: Record<string, any> = { ...fieldPayload };
 
-    // Handle display_id: explicit update takes priority over auto-generation
-    if (updateEventDto.display_id) {
-      updatePayload.display_id = updateEventDto.display_id.toUpperCase();
-    } else if (updateEventDto.client_name && updateEventDto.client_name !== event.client_name) {
+    // Auto-generate display_id when client name changes
+    if (updateEventDto.client_name && updateEventDto.client_name !== event.client_name) {
       updatePayload.display_id = await this.generateDisplayId(updateEventDto.client_name);
     }
 

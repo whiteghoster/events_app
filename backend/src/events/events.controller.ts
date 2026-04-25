@@ -34,7 +34,7 @@ export class EventsController {
   ) { }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
   async create(
     @Body() createEventDto: CreateEventDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -82,7 +82,7 @@ export class EventsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     await this.eventsService.deleteEvent(id, user.role, user.id);

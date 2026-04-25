@@ -16,7 +16,6 @@ const DEFAULT_FORM_DATA: EventFormData = {
   managerName: 'unassigned',
   deliveryFromDate: '',
   deliveryToDate: '',
-  displayId: '',
 }
 
 export function useEventForm(eventId?: string) {
@@ -72,7 +71,6 @@ export function useEventForm(eventId?: string) {
           managerName: data.managerName || 'unassigned',
           deliveryFromDate: data.deliveryFromDate ? data.deliveryFromDate.split('T')[0] : '',
           deliveryToDate: data.deliveryToDate ? data.deliveryToDate.split('T')[0] : '',
-          displayId: data.displayId || '',
         })
       } catch {
         toast.error('Failed to load event details')
@@ -142,7 +140,6 @@ export function useEventForm(eventId?: string) {
           ...payload,
           headKarigarName: formData.headKarigarName === 'unassigned' ? '' : formData.headKarigarName,
           managerName: formData.managerName === 'unassigned' ? '' : formData.managerName,
-          displayId: formData.displayId || undefined,
         })
         toast.success('Event updated successfully')
         router.push(`/events/${eventId}`)
