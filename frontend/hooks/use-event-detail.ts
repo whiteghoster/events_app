@@ -160,11 +160,18 @@ export function useEventDetail(id: string) {
       await eventsApi.closeEvent(id, closeStatus)
       toast.success(`Event moved to ${closeStatus}`)
       setCloseModalOpen(false)
-      // Invalidate ALL events list caches so the status change appears instantly on the events page
-      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
+      // Invalidate and refetch ALL events list caches so the status change appears instantly
+      await queryClient.invalidateQueries({
+        queryKey: ['events', 'list'],
+        exact: false,
+        refetchType: 'active',
+      })
       if (closeStatus === 'hold') {
         // Also refresh the individual event data
-        queryClient.invalidateQueries({ queryKey: ['event', id] })
+        await queryClient.invalidateQueries({
+          queryKey: ['event', id],
+          refetchType: 'active',
+        })
       } else {
         router.push('/events')
       }

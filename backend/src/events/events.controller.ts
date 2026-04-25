@@ -44,7 +44,6 @@ export class EventsController {
   }
 
   @Get()
-  @Header('Cache-Control', 'private, max-age=30')
   async findAll(
     @Query() query: EventQueryDto,
   ) {

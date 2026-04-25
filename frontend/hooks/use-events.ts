@@ -126,7 +126,11 @@ export function useEvents() {
         }
       })
       // Also invalidate to sync with server
-      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
+      await queryClient.invalidateQueries({
+        queryKey: ['events', 'list'],
+        exact: false,
+        refetchType: 'active',
+      })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete event')
     }
