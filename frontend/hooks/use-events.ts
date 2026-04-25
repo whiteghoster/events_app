@@ -111,27 +111,29 @@ export function useEvents() {
     if (!window.confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) {
       return
     }
+    // Optimistic update: remove from cache immediately for instant UI feedback
+    queryClient.setQueriesData({ queryKey: ['events', 'list'], exact: false }, (oldData: any) => {
+      if (!oldData?.pages) return oldData
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page: any) => ({
+          ...page,
+          events: page.events.filter((e: Event) => e.id !== id),
+        })),
+      }
+    })
     try {
       await eventsApi.deleteEvent(id)
       toast.success('Event deleted successfully')
-      // Immediately remove from cache for instant UI update (match all tab caches)
-      queryClient.setQueriesData({ queryKey: ['events', 'list'], exact: false }, (oldData: any) => {
-        if (!oldData) return oldData
-        return {
-          ...oldData,
-          pages: oldData.pages.map((page: any) => ({
-            ...page,
-            events: page.events.filter((e: Event) => e.id !== id),
-          })),
-        }
-      })
-      // Also invalidate to sync with server
+      // Sync with server in background
       await queryClient.invalidateQueries({
         queryKey: ['events', 'list'],
         exact: false,
         refetchType: 'active',
       })
     } catch (err) {
+      // Restore on error
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
       toast.error(err instanceof Error ? err.message : 'Failed to delete event')
     }
   }

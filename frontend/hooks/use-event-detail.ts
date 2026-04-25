@@ -157,25 +157,39 @@ export function useEventDetail(id: string) {
 
   const handleCloseEvent = async () => {
     try {
+      // Optimistic update: remove event from current tab's cache immediately
+      queryClient.setQueriesData({ queryKey: ['events', 'list'], exact: false }, (oldData: any) => {
+        if (!oldData?.pages) return oldData
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            events: page.events.filter((e: any) => e.id !== id),
+          })),
+        }
+      })
+      setCloseModalOpen(false)
+      
       await eventsApi.closeEvent(id, closeStatus)
       toast.success(`Event moved to ${closeStatus}`)
-      setCloseModalOpen(false)
-      // Invalidate and refetch ALL events list caches so the status change appears instantly
+      
+      // Refresh all event lists to sync with server
       await queryClient.invalidateQueries({
         queryKey: ['events', 'list'],
         exact: false,
         refetchType: 'active',
       })
+      
       if (closeStatus === 'hold') {
-        // Also refresh the individual event data
-        await queryClient.invalidateQueries({
-          queryKey: ['event', id],
-          refetchType: 'active',
-        })
+        // Update individual event cache with new status
+        queryClient.setQueryData(['event', id], (old: any) => old ? { ...old, status: 'hold' } : old)
+        await queryClient.invalidateQueries({ queryKey: ['event', id], refetchType: 'active' })
       } else {
         router.push('/events')
       }
     } catch (err) {
+      // Restore on error
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
       toast.error(err instanceof Error ? err.message : 'Failed to close event')
     }
   }
