@@ -1,15 +1,53 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { eventsApi } from '@/lib/api'
 import type { Event, EventStatus } from '@/lib/types'
 
 const PAGE_SIZE = 20
 
+const VALID_TABS: EventStatus[] = ['live', 'hold', 'finished']
+
 export function useEvents() {
   const queryClient = useQueryClient()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<EventStatus>('live')
+  
+  // Initialize activeTab from URL query param, default to 'live'
+  const [activeTab, setActiveTabState] = useState<EventStatus>(() => {
+    const statusParam = searchParams.get('status')
+    if (statusParam && VALID_TABS.includes(statusParam as EventStatus)) {
+      return statusParam as EventStatus
+    }
+    return 'live'
+  })
+  
+  // Use ref to track current tab without causing effect re-runs
+  const activeTabRef = useRef(activeTab)
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+  
+  // Update URL when tab changes
+  const setActiveTab = useCallback((tab: EventStatus) => {
+    setActiveTabState(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('status', tab)
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [router, searchParams])
+  
+  // Sync with URL when back/forward navigation occurs
+  useEffect(() => {
+    const statusParam = searchParams.get('status')
+    if (statusParam && VALID_TABS.includes(statusParam as EventStatus)) {
+      setActiveTabState(statusParam as EventStatus)
+    } else if (!statusParam && activeTabRef.current !== 'live') {
+      // URL has no status param but we're not on live - reset to live
+      setActiveTabState('live')
+    }
+  }, [searchParams])
 
   const sortEventsByProximity = useCallback((events: Event[]): Event[] => {
     const today = new Date()
