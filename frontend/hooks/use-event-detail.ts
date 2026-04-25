@@ -120,8 +120,8 @@ export function useEventDetail(id: string) {
     try {
       await eventsApi.deleteEvent(id)
       toast.success('Event deleted successfully')
-      // Invalidate events list cache so the deleted event is removed immediately
-      await queryClient.invalidateQueries({ queryKey: ['events', 'list'] })
+      // Invalidate ALL events list caches (all tabs) so the deleted event is removed immediately
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
       router.push('/events')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Delete failed')
@@ -160,7 +160,10 @@ export function useEventDetail(id: string) {
       await eventsApi.closeEvent(id, closeStatus)
       toast.success(`Event moved to ${closeStatus}`)
       setCloseModalOpen(false)
+      // Invalidate ALL events list caches so the status change appears instantly on the events page
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
       if (closeStatus === 'hold') {
+        // Also refresh the individual event data
         queryClient.invalidateQueries({ queryKey: ['event', id] })
       } else {
         router.push('/events')

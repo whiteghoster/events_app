@@ -114,8 +114,8 @@ export function useEvents() {
     try {
       await eventsApi.deleteEvent(id)
       toast.success('Event deleted successfully')
-      // Immediately remove from cache for instant UI update
-      queryClient.setQueriesData({ queryKey: ['events', 'list'] }, (oldData: any) => {
+      // Immediately remove from cache for instant UI update (match all tab caches)
+      queryClient.setQueriesData({ queryKey: ['events', 'list'], exact: false }, (oldData: any) => {
         if (!oldData) return oldData
         return {
           ...oldData,
@@ -126,7 +126,7 @@ export function useEvents() {
         }
       })
       // Also invalidate to sync with server
-      await queryClient.invalidateQueries({ queryKey: ['events', 'list'] })
+      await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete event')
     }
