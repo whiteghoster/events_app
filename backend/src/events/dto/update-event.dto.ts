@@ -1,5 +1,8 @@
-import { IsString, IsOptional, IsEnum, IsDateString, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsDateString, IsUUID, IsIn } from 'class-validator';
 import { OccasionType, EventStatus } from '../../common/types';
+
+// Valid status values (lowercase to match frontend and database)
+const VALID_EVENT_STATUSES = ['live', 'hold', 'finished'];
 
 export class UpdateEventDto {
   @IsString()
@@ -62,7 +65,7 @@ export class UpdateEventDto {
   @IsOptional()
   assigned_to?: string;
 
-  @IsEnum(EventStatus)
+  @IsIn(VALID_EVENT_STATUSES)
   @IsOptional()
   status?: EventStatus;
 }
