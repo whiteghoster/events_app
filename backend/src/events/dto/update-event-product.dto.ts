@@ -1,6 +1,10 @@
-import { IsNumber, IsString, IsOptional, Min } from 'class-validator';
+import { IsNumber, IsString, IsOptional, Min, IsUUID } from 'class-validator';
 
 export class UpdateEventProductDto {
+  @IsUUID()
+  @IsOptional()
+  product_id?: string;
+
   @IsNumber()
   @IsOptional()
   @Min(1)

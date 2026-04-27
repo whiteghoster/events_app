@@ -39,6 +39,12 @@ export class ProductsController {
     );
   }
 
+  @Get(':id')
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.catalogService.findProductById(id);
+    return { data };
+  }
+
   @Patch(':id')
   @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
   async update(

@@ -35,19 +35,16 @@ export function useEventDetail(id: string) {
         queryKey: ['event', id],
         queryFn: () => eventsApi.getEventById(id),
         enabled: !!id,
-        staleTime: 1000 * 60 * 2,
       },
       {
         queryKey: ['eventProducts', id],
         queryFn: () => eventsApi.getEventProducts(id),
         enabled: !!id,
-        staleTime: 1000 * 60 * 2,
       },
       {
         queryKey: ['categorySummary', id],
         queryFn: () => eventsApi.getCategorySummary(id),
         enabled: !!id,
-        staleTime: 1000 * 60 * 2,
       },
     ],
   })
@@ -87,13 +84,15 @@ export function useEventDetail(id: string) {
       if (!quantityOnly) {
         updateData.unit = editingData.unit
         updateData.price = editingData.price
+        updateData.product_id = editingData.productId
       }
       await eventsApi.updateEventProduct(id, editingRow!, updateData)
       toast.success('Product updated')
       setEditingRow(null)
       setEditingData({})
-      queryClient.invalidateQueries({ queryKey: ['eventProducts', id] })
-      queryClient.invalidateQueries({ queryKey: ['categorySummary', id] })
+      // Refetch queries to force immediate data refresh
+      await queryClient.refetchQueries({ queryKey: ['eventProducts', id] })
+      await queryClient.refetchQueries({ queryKey: ['categorySummary', id] })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Update failed')
     }
@@ -148,8 +147,8 @@ export function useEventDetail(id: string) {
       setAddingNew(false)
       setNewProductData({ categoryId: '', productId: '', quantity: '', unit: '', price: '' })
       toast.success('Product added')
-      queryClient.invalidateQueries({ queryKey: ['eventProducts', id] })
-      queryClient.invalidateQueries({ queryKey: ['categorySummary', id] })
+      await queryClient.refetchQueries({ queryKey: ['eventProducts', id] })
+      await queryClient.refetchQueries({ queryKey: ['categorySummary', id] })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add product')
     }

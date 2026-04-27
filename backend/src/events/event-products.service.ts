@@ -48,12 +48,24 @@ export class EventProductsService {
       throw new BadRequestException(error.message);
     }
 
+    // Fetch product details for audit log
+    const { data: product } = await this.supabase
+      .from('products')
+      .select('*, category:categories(*)')
+      .eq('id', dto.product_id)
+      .single();
+
+    const auditData = {
+      ...data,
+      product: product || null,
+    };
+
     this.auditService.createLog({
       entity_type: 'Event Product',
       entity_id: data.id,
       action: AuditAction.CREATE,
       user_id: actorId,
-      new_values: data,
+      new_values: auditData,
     });
 
     return data;
@@ -120,13 +132,24 @@ export class EventProductsService {
 
     if (error) throw new BadRequestException(`Failed to update event product: ${error.message}`);
 
+    // Fetch product details for audit log
+    const productId = cleanPayload.product_id || row.product_id;
+    const { data: product } = await this.supabase
+      .from('products')
+      .select('*, category:categories(*)')
+      .eq('id', productId)
+      .single();
+
+    const oldAuditData = { ...row, product: product || null };
+    const newAuditData = { ...data, product: product || null };
+
     this.auditService.createLog({
       entity_type: 'Event Product',
       entity_id: eventProductId,
       action: AuditAction.UPDATE,
       user_id: actorId,
-      old_values: row,
-      new_values: data,
+      old_values: oldAuditData,
+      new_values: newAuditData,
     });
 
     return data;
@@ -147,6 +170,15 @@ export class EventProductsService {
       actorId,
     );
 
+    // Fetch product details for audit log before deletion
+    const { data: product } = await this.supabase
+      .from('products')
+      .select('*, category:categories(*)')
+      .eq('id', row.product_id)
+      .single();
+
+    const auditData = { ...row, product: product || null };
+
     const { error } = await this.supabase
       .from('event_products')
       .delete()
@@ -159,7 +191,7 @@ export class EventProductsService {
       entity_id: eventProductId,
       action: AuditAction.DELETE,
       user_id: actorId,
-      old_values: row,
+      old_values: auditData,
     });
   }
 

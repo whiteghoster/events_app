@@ -274,6 +274,11 @@ export const eventsApi = {
     return mapEventFromBackend(data)
   },
 
+  async getProductById(id: string): Promise<any> {
+    const res = await apiRequest<any>(`/products/${id}`)
+    return res.data || res
+  },
+
   async updateEvent(id: string, payload: Partial<Event> & { displayId?: string }): Promise<Event> {
     const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId } = payload
     const data = await apiRequest<any>(`/events/${id}`, {
@@ -309,9 +314,9 @@ export const eventsApi = {
 
   // Event Products
   async getEventProducts(eventId: string): Promise<EventProduct[]> {
-    const res = await apiRequest<any>(`/events/${eventId}/products`)
-    const items: any[] = Array.isArray(res) ? res : (res?.data || res || [])
-    return items.map((item: any) => ({
+    const res = await apiRequest<any>(`/events/${eventId}/products?page=1&page_size=100`)
+    const data = Array.isArray(res) ? res : (res.data || [])
+    return data.map((item: any) => ({
       id: item.id,
       eventId: item.event_id || eventId,
       productId: item.product_id,
