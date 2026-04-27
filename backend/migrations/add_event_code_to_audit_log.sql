@@ -17,22 +17,22 @@ TABLESPACE pg_default;
 UPDATE public.audit_log al
 SET event_code = (
   CASE 
-    -- For Event entities, get display_id from events table
-    WHEN LOWER(al.entity_type) LIKE 'event%' THEN (
-      SELECT e.display_id 
-      FROM public.events e 
-      WHERE e.id = al.entity_id
+    -- For Event entities, get display_id from events table, fallback to old_values/new_values
+    WHEN LOWER(al.entity_type) LIKE 'event%' THEN COALESCE(
+      (SELECT e.display_id FROM public.events e WHERE e.id = al.entity_id),
+      al.old_values->>'display_id',
+      al.new_values->>'display_id'
     )
-    -- For Event Product entities, get display_id from parent event
-    WHEN LOWER(al.entity_type) LIKE 'event product%' THEN (
-      SELECT e.display_id 
-      FROM public.events e
-      WHERE e.id = COALESCE(
+    -- For Event Product entities, get display_id from parent event, fallback to old_values/new_values
+    WHEN LOWER(al.entity_type) LIKE 'event product%' THEN COALESCE(
+      (SELECT e.display_id FROM public.events e WHERE e.id = COALESCE(
         (al.new_values->>'event_id')::uuid,
         (al.old_values->>'event_id')::uuid
-      )
+      )),
+      al.old_values->>'display_id',
+      al.new_values->>'display_id'
     )
-    -- Try to extract from old_values or new_values as fallback
+    -- Try to extract from old_values or new_values as fallback for other entity types
     ELSE COALESCE(
       al.old_values->>'display_id',
       al.new_values->>'display_id'

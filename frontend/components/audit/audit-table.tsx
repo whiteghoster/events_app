@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TableSkeleton } from '@/components/skeletons'
 import type { AuditAction, AuditEntry, AuditTableProps } from '@/lib/types'
+import { AuditDetailsDialog } from './audit-details-dialog'
 
 const actionLabel: Record<AuditAction, string> = {
   create: 'Created',
@@ -12,6 +14,7 @@ const actionLabel: Record<AuditAction, string> = {
 }
 
 export function AuditTable({ logs, isLoading }: AuditTableProps) {
+  const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null)
   return (
     <>
       {/* Mobile View */}
@@ -35,14 +38,13 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
                   <Badge variant="secondary" className="text-[10px] capitalize">{entry.userRole}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground uppercase font-semibold">{entry.entityType}</p>
-                {entry.entityDisplayId && (
-                  <p className="font-medium font-mono text-xs">{entry.entityDisplayId}</p>
-                )}
                 {entry.entityId && (
-                  <p className="text-[10px] text-muted-foreground font-mono truncate">{entry.entityId}</p>
-                )}
-                {entry.entityName && !entry.entityDisplayId && (
-                  <p className="font-medium">{entry.entityName}</p>
+                  <button
+                    onClick={() => setSelectedEntry(entry)}
+                    className="text-[10px] text-blue-600 hover:text-blue-800 font-mono truncate cursor-pointer hover:underline"
+                  >
+                    {entry.entityId.slice(0, 8)}...
+                  </button>
                 )}
                 {entry.change && <p className="text-muted-foreground text-sm">{entry.change}</p>}
               </div>
@@ -86,14 +88,13 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
                   <TableCell><Badge variant="outline" className="text-xs">{actionLabel[entry.action] || entry.action}</Badge></TableCell>
                   <TableCell className="text-xs text-muted-foreground uppercase font-semibold">{entry.entityType}</TableCell>
                   <TableCell className="truncate">
-                    {entry.entityDisplayId && (
-                      <span className="font-medium font-mono text-xs">{entry.entityDisplayId}</span>
-                    )}
                     {entry.entityId && (
-                      <span className="text-[10px] text-muted-foreground font-mono ml-1">({entry.entityId.slice(0, 8)}...)</span>
-                    )}
-                    {entry.entityName && !entry.entityDisplayId && (
-                      <span className="font-medium">{entry.entityName}</span>
+                      <button
+                        onClick={() => setSelectedEntry(entry)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-mono cursor-pointer hover:underline"
+                      >
+                        {entry.entityId.slice(0, 8)}...
+                      </button>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm truncate max-w-[300px]">{entry.change}</TableCell>
@@ -107,6 +108,12 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
           </TableBody>
         </Table>
       </div>
+
+      <AuditDetailsDialog
+        entry={selectedEntry}
+        open={!!selectedEntry}
+        onOpenChange={(open) => !open && setSelectedEntry(null)}
+      />
     </>
   )
 }

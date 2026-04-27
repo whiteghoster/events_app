@@ -155,6 +155,8 @@ function mapAuditEntryFromBackend(log: any): AuditEntry {
     entityId: log.entity_id || '',
     entityDisplayId: log.event_code || log.entity_display_id,
     change: change,
+    old_values: log.old_values,
+    new_values: log.new_values,
   }
 }
 
@@ -541,17 +543,6 @@ export const auditApi = {
 
     const res = await apiRequest<any>(`/audit?${q.toString()}`)
     const logs = Array.isArray(res) ? res : (res.data || [])
-    
-    // DEBUG: Log raw backend response
-    console.log('Raw audit logs from backend:', logs.map((l: any) => ({ 
-      id: l.id, 
-      action: l.action, 
-      entity_type: l.entity_type, 
-      entity_id: l.entity_id,
-      entity_display_id: l.entity_display_id,
-      new_values: l.new_values,
-      old_values: l.old_values
-    })))
 
     return {
       data: logs.map(mapAuditEntryFromBackend),

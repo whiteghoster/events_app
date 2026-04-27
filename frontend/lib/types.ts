@@ -171,6 +171,8 @@ export interface AuditEntry {
   entityId?: string
   entityDisplayId?: string
   change?: string
+  old_values?: any
+  new_values?: any
 }
 
 // ─── Form types ──────────────────────────────────────────────────────────────

@@ -80,8 +80,6 @@ export class AuditService {
       }
     });
 
-    console.log('[Audit] Event IDs to lookup:', Array.from(eventIds));
-
     if (eventIds.size === 0) return logs;
 
     // Fetch display_ids for these events
@@ -91,11 +89,9 @@ export class AuditService {
       .in('id', Array.from(eventIds));
 
     if (error) {
-      console.log('[Audit] Error fetching events:', error.message);
+      this.logger.error(`Error fetching events for audit enrichment: ${error.message}`);
       return logs;
     }
-
-    console.log('[Audit] Fetched events with display_ids:', events);
 
     // Create a map of event_id -> display_id (from database)
     const displayIdMap = new Map<string, string>();
