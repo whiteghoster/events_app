@@ -24,9 +24,8 @@ export function AuditDetailsDialog({ entry, open, onOpenChange }: AuditDetailsDi
   const isEventProduct = entry?.entityType?.toLowerCase().includes('product')
   const parentEventId = isEventProduct ? null : entry?.entityId
 
-  // For Event Products, fetch product details if not already in audit data
+  // For Event Products, always fetch product details to ensure consistency
   const productId = entry?.new_values?.product_id || entry?.old_values?.product_id
-  const hasProductData = entry?.new_values?.product?.name || entry?.old_values?.product?.name
 
   const { data: eventData, isLoading: isLoadingEvent } = useQuery({
     queryKey: ['event', parentEventId],
@@ -37,7 +36,7 @@ export function AuditDetailsDialog({ entry, open, onOpenChange }: AuditDetailsDi
   const { data: productData } = useQuery({
     queryKey: ['product', productId],
     queryFn: () => eventsApi.getProductById(productId || ''),
-    enabled: isEventProduct && !!productId && !hasProductData && open,
+    enabled: isEventProduct && !!productId && open,
   })
 
   if (!entry) return null
