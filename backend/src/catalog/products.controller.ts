@@ -28,6 +28,12 @@ export class ProductsController {
     return { data };
   }
 
+  @Get(':id')
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.catalogService.findProductById(id);
+    return { data };
+  }
+
   @Get()
   async findAll(
     @Query() pagination: PaginationQueryDto,
@@ -37,12 +43,6 @@ export class ProductsController {
       pagination.page_size,
       pagination.category_id,
     );
-  }
-
-  @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.catalogService.findProductById(id);
-    return { data };
   }
 
   @Patch(':id')
