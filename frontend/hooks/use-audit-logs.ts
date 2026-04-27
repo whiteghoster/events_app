@@ -28,6 +28,7 @@ export function useAuditLogs() {
     placeholderData: (previousData) => previousData,
   })
 
+  // Data is already mapped by auditApi.getAuditLogs via mapAuditEntryFromBackend
   const logs = auditData?.data || []
   const total = auditData?.pagination?.total || 0
   const totalPages = Math.ceil(total / perPage)

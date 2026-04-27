@@ -64,32 +64,69 @@ export class AuditService {
   private async enrichWithEventDisplayIds(logs: any[]): Promise<any[]> {
     if (logs.length === 0) return logs;
 
+    // Normalize entity type for comparison
+    const normalizeEntityType = (type: string) => (type || '').toLowerCase().replace(/s$/, '');
+
     // Get unique event IDs from Event and Event Product entities
     const eventIds = new Set<string>();
     logs.forEach(log => {
-      if (log.entity_type === 'Event' || log.entity_type === 'Event Product') {
+      const normalizedType = normalizeEntityType(log.entity_type);
+      if (normalizedType === 'event') {
         eventIds.add(log.entity_id);
+      } else if (normalizedType === 'event product') {
+        // For Event Products, event_id is in new_values or old_values
+        const eventId = log.new_values?.event_id || log.old_values?.event_id;
+        if (eventId) eventIds.add(eventId);
       }
     });
+
+    console.log('[Audit] Event IDs to lookup:', Array.from(eventIds));
 
     if (eventIds.size === 0) return logs;
 
     // Fetch display_ids for these events
-    const { data: events } = await this.supabase
+    const { data: events, error } = await this.supabase
       .from('events')
       .select('id, display_id')
       .in('id', Array.from(eventIds));
 
-    if (!events || events.length === 0) return logs;
+    if (error) {
+      console.log('[Audit] Error fetching events:', error.message);
+      return logs;
+    }
 
-    // Create a map of event_id -> display_id
-    const displayIdMap = new Map(events.map(e => [e.id, e.display_id]));
+    console.log('[Audit] Fetched events with display_ids:', events);
+
+    // Create a map of event_id -> display_id (from database)
+    const displayIdMap = new Map<string, string>();
+    if (events) {
+      events.forEach(e => displayIdMap.set(e.id, e.display_id));
+    }
 
     // Add entity_display_id to each log
-    return logs.map(log => ({
-      ...log,
-      entity_display_id: displayIdMap.get(log.entity_id) || undefined,
-    }));
+    return logs.map(log => {
+      let displayId: string | undefined;
+      const normalizedType = normalizeEntityType(log.entity_type);
+
+      if (normalizedType === 'event') {
+        // Try database first, then fallback to old_values/new_values
+        displayId = displayIdMap.get(log.entity_id)
+          || log.old_values?.display_id
+          || log.new_values?.display_id;
+      } else if (normalizedType === 'event product') {
+        const eventId = log.new_values?.event_id || log.old_values?.event_id;
+        if (eventId) {
+          displayId = displayIdMap.get(eventId)
+            || log.old_values?.display_id
+            || log.new_values?.display_id;
+        }
+      }
+      console.log(`[Audit] Mapping log ${log.id} (${log.entity_type}/${log.action}): entity_id=${log.entity_id} -> displayId=${displayId}`);
+      return {
+        ...log,
+        entity_display_id: displayId,
+      };
+    });
   }
 
   async findById(id: string) {
@@ -143,7 +180,7 @@ export class AuditService {
     return rest;
   }
 
-  createLog(params: {
+  async createLog(params: {
     entity_type: string;
     entity_id: string;
     action: AuditAction;
@@ -151,6 +188,31 @@ export class AuditService {
     old_values?: unknown;
     new_values?: unknown;
   }) {
+    let eventCode: string | undefined;
+
+    // Capture event_code for Event and Event Product entities
+    const normalizedType = (params.entity_type || '').toLowerCase().replace(/s$/, '');
+    if (normalizedType === 'event') {
+      // For Event entities, fetch display_id from events table
+      const { data: event } = await this.supabase
+        .from('events')
+        .select('display_id')
+        .eq('id', params.entity_id)
+        .single();
+      eventCode = event?.display_id;
+    } else if (normalizedType === 'event product') {
+      // For Event Product entities, fetch display_id from parent event
+      const eventId = (params.new_values as any)?.event_id || (params.old_values as any)?.event_id;
+      if (eventId) {
+        const { data: event } = await this.supabase
+          .from('events')
+          .select('display_id')
+          .eq('id', eventId)
+          .single();
+        eventCode = event?.display_id;
+      }
+    }
+
     this.supabase.from('audit_log').insert({
       entity_type: params.entity_type,
       entity_id: params.entity_id,
@@ -158,6 +220,7 @@ export class AuditService {
       user_id: params.user_id,
       old_values: this.sanitize(params.old_values),
       new_values: this.sanitize(params.new_values),
+      event_code: eventCode,
     }).then(({ error }) => {
       if (error) this.logger.error(`Audit log failed for ${params.entity_type}:${params.entity_id}: ${error.message}`);
     });
