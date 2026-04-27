@@ -29,13 +29,13 @@ export function useCatalog() {
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => catalogApi.getCategories(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30,
   })
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['products', 'all'],
     queryFn: () => catalogApi.getProducts({ pageSize: 100 }),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30,
   })
 
   const products = productsData?.data || []
@@ -92,28 +92,48 @@ export function useCatalog() {
       return
     }
     setIsSaving(true)
+    const tempId = editingProduct ? editingProduct.id : `temp-${Date.now()}`
+    const productData = {
+      name: productFormData.name,
+      categoryId: productFormData.categoryId,
+      defaultUnit: productFormData.defaultUnit,
+      price: productFormData.price ? parseFloat(productFormData.price) : undefined,
+      isActive: editingProduct ? productFormData.isActive : true,
+    }
+    
+    // Optimistic update for instant UI feedback
+    queryClient.setQueryData(['products', 'all'], (oldData: any) => {
+      if (!oldData?.data) return oldData
+      if (editingProduct) {
+        // Update existing product
+        return {
+          ...oldData,
+          data: oldData.data.map((p: Product) =>
+            p.id === editingProduct.id ? { ...p, ...productData } : p
+          ),
+        }
+      } else {
+        // Add new product temporarily
+        return {
+          ...oldData,
+          data: [{ ...productData, id: tempId, category: categories.find(c => c.id === productData.categoryId) }, ...oldData.data],
+        }
+      }
+    })
+    setProductSheetOpen(false)
+    
     try {
       if (editingProduct) {
-        await catalogApi.updateProduct(editingProduct.id, {
-          name: productFormData.name,
-          categoryId: productFormData.categoryId,
-          defaultUnit: productFormData.defaultUnit,
-          price: productFormData.price ? parseFloat(productFormData.price) : undefined,
-          isActive: productFormData.isActive,
-        })
+        await catalogApi.updateProduct(editingProduct.id, productData)
         toast.success('Product updated')
       } else {
-        await catalogApi.createProduct({
-          name: productFormData.name,
-          categoryId: productFormData.categoryId,
-          defaultUnit: productFormData.defaultUnit,
-          price: productFormData.price ? parseFloat(productFormData.price) : undefined,
-        })
+        await catalogApi.createProduct(productData)
         toast.success('Product created')
       }
-      setProductSheetOpen(false)
       invalidateAll()
     } catch (err) {
+      // Revert on error
+      invalidateAll()
       toast.error(err instanceof Error ? err.message : 'Failed to save product')
     } finally {
       setIsSaving(false)
@@ -192,6 +212,23 @@ export function useCatalog() {
       return
     }
     setIsSaving(true)
+    const tempId = editingCategory ? editingCategory.id : `temp-${Date.now()}`
+    
+    // Optimistic update for instant UI feedback
+    queryClient.setQueryData(['categories'], (oldData: any) => {
+      if (!oldData) return oldData
+      if (editingCategory) {
+        // Update existing category
+        return oldData.map((c: Category) =>
+          c.id === editingCategory.id ? { ...c, name: newCategoryName } : c
+        )
+      } else {
+        // Add new category temporarily
+        return [{ id: tempId, name: newCategoryName }, ...oldData]
+      }
+    })
+    setCategoryDialogOpen(false)
+    
     try {
       if (editingCategory) {
         await catalogApi.updateCategory(editingCategory.id, newCategoryName)
@@ -200,9 +237,10 @@ export function useCatalog() {
         await catalogApi.createCategory(newCategoryName)
         toast.success('Category created')
       }
-      setCategoryDialogOpen(false)
       invalidateAll()
     } catch (err) {
+      // Revert on error
+      invalidateAll()
       toast.error(err instanceof Error ? err.message : 'Failed to save category')
     } finally {
       setIsSaving(false)
@@ -210,12 +248,20 @@ export function useCatalog() {
   }
 
   const deleteCategory = async (category: Category) => {
+    // Optimistic update: remove from cache immediately
+    queryClient.setQueryData(['categories'], (oldData: any) => {
+      if (!oldData) return oldData
+      return oldData.filter((c: Category) => c.id !== category.id)
+    })
+    if (selectedCategoryId === category.id) setSelectedCategoryId('')
+    
     try {
       await catalogApi.deleteCategory(category.id)
       toast.success('Category deleted')
-      if (selectedCategoryId === category.id) setSelectedCategoryId('')
       invalidateAll()
     } catch (err) {
+      // Revert on error
+      invalidateAll()
       toast.error(err instanceof Error ? err.message : 'Failed to delete category')
     }
   }

@@ -10,7 +10,6 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
-  Header,
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -33,7 +32,6 @@ export class CategoriesController {
   }
 
   @Get()
-  @Header('Cache-Control', 's-maxage=60, stale-while-revalidate=300')
   async findAll(@Query() pagination: PaginationQueryDto) {
     return await this.catalogService.findAllCategories(pagination.page, pagination.page_size);
   }

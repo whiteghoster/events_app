@@ -9,15 +9,12 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../common/types';
 import { paginate, paginationOffset } from '../common/utils';
 
 @Injectable()
 export class CatalogService {
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly auditService: AuditService,
   ) {}
 
   private get supabase() {
@@ -37,14 +34,6 @@ export class CatalogService {
       if (error.code === '23505') throw new ConflictException('Category with this name already exists');
       throw new BadRequestException(`Failed to create category: ${error.message}`);
     }
-
-    this.auditService.createLog({
-      entity_type: 'Category',
-      entity_id: data.id,
-      action: AuditAction.CREATE,
-      user_id: actorId,
-      new_values: data,
-    });
 
     return data;
   }
@@ -88,15 +77,6 @@ export class CatalogService {
       throw new BadRequestException(`Failed to update category: ${error.message}`);
     }
 
-    this.auditService.createLog({
-      entity_type: 'Category',
-      entity_id: id,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      old_values: oldCategory,
-      new_values: data,
-    });
-
     return data;
   }
 
@@ -112,13 +92,6 @@ export class CatalogService {
       throw new BadRequestException(`Failed to delete category: ${error.message}`);
     }
 
-    this.auditService.createLog({
-      entity_type: 'Category',
-      entity_id: id,
-      action: AuditAction.DELETE,
-      user_id: actorId,
-      old_values: category,
-    });
   }
 
   // ── Products ──
@@ -143,14 +116,6 @@ export class CatalogService {
       if (error.code === '23505') throw new ConflictException('Product with this name already exists in this category');
       throw new BadRequestException(`Failed to create product: ${error.message}`);
     }
-
-    this.auditService.createLog({
-      entity_type: 'Product',
-      entity_id: data.id,
-      action: AuditAction.CREATE,
-      user_id: actorId,
-      new_values: data,
-    });
 
     return data;
   }
@@ -199,15 +164,6 @@ export class CatalogService {
         throw new BadRequestException(`Failed to deactivate product: ${error.message}`);
       }
 
-      this.auditService.createLog({
-        entity_type: 'Product',
-        entity_id: id,
-        action: AuditAction.UPDATE,
-        user_id: actorId,
-        old_values: oldProduct,
-        new_values: data,
-      });
-
       return data;
     }
 
@@ -222,15 +178,6 @@ export class CatalogService {
       if (error.code === '23505') throw new ConflictException('Product with this name already exists in this category');
       throw new BadRequestException(`Failed to update product: ${error.message}`);
     }
-
-    this.auditService.createLog({
-      entity_type: 'Product',
-      entity_id: id,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      old_values: oldProduct,
-      new_values: data,
-    });
 
     return data;
   }

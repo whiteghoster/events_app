@@ -35,7 +35,11 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
                   <Badge variant="secondary" className="text-[10px] capitalize">{entry.userRole}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground uppercase font-semibold">{entry.entityType}</p>
-                {entry.entityName && <p className="font-medium">{entry.entityName}</p>}
+                {entry.entityDisplayId ? (
+                  <p className="font-medium font-mono text-xs">{entry.entityDisplayId}</p>
+                ) : entry.entityName ? (
+                  <p className="font-medium">{entry.entityName}</p>
+                ) : null}
                 {entry.change && <p className="text-muted-foreground text-sm">{entry.change}</p>}
               </div>
             </div>
@@ -77,7 +81,7 @@ export function AuditTable({ logs, isLoading }: AuditTableProps) {
                   <TableCell><Badge variant="secondary" className="text-xs capitalize">{entry.userRole}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{actionLabel[entry.action] || entry.action}</Badge></TableCell>
                   <TableCell className="text-xs text-muted-foreground uppercase font-semibold">{entry.entityType}</TableCell>
-                  <TableCell className="font-medium truncate">{entry.entityName}</TableCell>
+                  <TableCell className="font-medium truncate">{entry.entityDisplayId || entry.entityName}</TableCell>
                   <TableCell className="text-muted-foreground text-sm truncate">{entry.change}</TableCell>
                 </TableRow>
               ))

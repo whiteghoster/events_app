@@ -47,8 +47,11 @@ export class AuditService {
 
     if (error) throw new BadRequestException(`Failed to fetch audit logs: ${error.message}`);
 
+    // Enrich audit logs with event display IDs for Event and Event Product entities
+    const enrichedData = await this.enrichWithEventDisplayIds(data ?? []);
+
     return {
-      data: (data ?? []) as AuditLog[],
+      data: enrichedData as AuditLog[],
       meta: {
         page,
         page_size: limit,
@@ -56,6 +59,37 @@ export class AuditService {
         total_pages: Math.ceil((count ?? 0) / limit),
       },
     };
+  }
+
+  private async enrichWithEventDisplayIds(logs: any[]): Promise<any[]> {
+    if (logs.length === 0) return logs;
+
+    // Get unique event IDs from Event and Event Product entities
+    const eventIds = new Set<string>();
+    logs.forEach(log => {
+      if (log.entity_type === 'Event' || log.entity_type === 'Event Product') {
+        eventIds.add(log.entity_id);
+      }
+    });
+
+    if (eventIds.size === 0) return logs;
+
+    // Fetch display_ids for these events
+    const { data: events } = await this.supabase
+      .from('events')
+      .select('id, display_id')
+      .in('id', Array.from(eventIds));
+
+    if (!events || events.length === 0) return logs;
+
+    // Create a map of event_id -> display_id
+    const displayIdMap = new Map(events.map(e => [e.id, e.display_id]));
+
+    // Add entity_display_id to each log
+    return logs.map(log => ({
+      ...log,
+      entity_display_id: displayIdMap.get(log.entity_id) || undefined,
+    }));
   }
 
   async findById(id: string) {

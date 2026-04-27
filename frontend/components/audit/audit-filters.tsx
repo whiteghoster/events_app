@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { AuditAction, AuditFiltersProps } from '@/lib/types'
 
-const entityTypes = ['All', 'Event', 'Product', 'Category', 'Event Product', 'User']
+const entityTypes = ['All', 'Event', 'Event Product']
 const actions: (AuditAction | 'All')[] = ['All', 'create', 'update', 'delete']
 
 const actionLabel: Record<AuditAction, string> = {

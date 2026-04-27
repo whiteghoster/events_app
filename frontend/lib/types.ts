@@ -169,6 +169,7 @@ export interface AuditEntry {
   entityType: string
   entityName?: string
   entityId?: string
+  entityDisplayId?: string
   change?: string
 }
 

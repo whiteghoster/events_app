@@ -5,8 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { AuditService } from '../audit/audit.service';
-import { UserRole, AuditAction } from '../common/types';
+import { UserRole } from '../common/types';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { paginate, paginationOffset } from '../common/utils';
@@ -17,7 +16,6 @@ export class UsersService {
 
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly auditService: AuditService,
   ) {}
 
   private get supabase() {
@@ -56,14 +54,6 @@ export class UsersService {
       });
       throw new BadRequestException(`Failed to create user record: ${userError.message}`);
     }
-
-    this.auditService.createLog({
-      entity_type: 'User',
-      entity_id: user.id,
-      action: AuditAction.CREATE,
-      user_id: actorId,
-      new_values: user,
-    });
 
     return user;
   }
@@ -108,15 +98,6 @@ export class UsersService {
 
     if (error) throw new BadRequestException(`Failed to update user: ${error.message}`);
 
-    this.auditService.createLog({
-      entity_type: 'User',
-      entity_id: id,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      old_values: existingUser,
-      new_values: data,
-    });
-
     if (updateUserDto.role) {
       this.supabase.auth.admin.updateUserById(id, {
         user_metadata: { role: updateUserDto.role },
@@ -143,14 +124,6 @@ export class UsersService {
 
     if (error) throw new BadRequestException(`Failed to deactivate user: ${error.message}`);
 
-    this.auditService.createLog({
-      entity_type: 'User',
-      entity_id: id,
-      action: AuditAction.DELETE,
-      user_id: actorId,
-      new_values: data,
-    });
-
     return data;
   }
 
@@ -170,11 +143,5 @@ export class UsersService {
 
     if (error) throw new BadRequestException(`Failed to delete user from database: ${error.message}`);
 
-    this.auditService.createLog({
-      entity_type: 'User',
-      entity_id: id,
-      action: AuditAction.DELETE,
-      user_id: actorId,
-    });
   }
 }

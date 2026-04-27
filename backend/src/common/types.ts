@@ -52,6 +52,7 @@ export interface AuditLog {
   id: string;
   entity_type: string;
   entity_id: string;
+  entity_display_id?: string;
   action: AuditAction;
   user_id: string;
   old_values: Record<string, unknown> | null;
