@@ -20,7 +20,7 @@ export default function EventsPage() {
     isLoading, search, setSearch,
     activeTab, setActiveTab,
     filteredEvents, prefetchEvent,
-    handleExportCSV,
+    handleExportXLSX,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -83,11 +83,11 @@ export default function EventsPage() {
             )}
             {user?.role === 'admin' && (
               <>
-                <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={activeTab !== 'finished'} className="hidden sm:flex">
+                <Button variant="outline" size="sm" onClick={handleExportXLSX} disabled={activeTab !== 'finished'} className="hidden sm:flex">
                   <Icon icon={Download01Icon} size={16} className="mr-1.5" />
-                  Export CSV
+                  Export XLSX
                 </Button>
-                <Button variant="outline" size="icon" onClick={handleExportCSV} disabled={activeTab !== 'finished'} className="sm:hidden h-8 w-8">
+                <Button variant="outline" size="icon" onClick={handleExportXLSX} disabled={activeTab !== 'finished'} className="sm:hidden h-8 w-8">
                   <Icon icon={Download01Icon} size={16} />
                 </Button>
               </>

@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { eventsApi } from '@/lib/api'
+import * as XLSX from 'xlsx'
+import { eventsApi, auditApi } from '@/lib/api'
 import type { Event, EventStatus } from '@/lib/types'
 
 const PAGE_SIZE = 20
@@ -150,7 +151,7 @@ export function useEvents() {
     )
   }, [apiEvents, search])
 
-  const handleExportCSV = async () => {
+  const handleExportXLSX = async () => {
     const finishedEvents = apiEvents.filter(e => e.status === 'finished')
     if (finishedEvents.length === 0) {
       toast.info('No finished events to export')
@@ -158,17 +159,28 @@ export function useEvents() {
     }
     try {
       toast.loading('Preparing detailed export...', { id: 'export-loading' })
-      const rows: string[][] = []
-      rows.push([
+
+      // --- Sheet 1: Event Details ---
+      const eventRows: (string | number)[][] = []
+      eventRows.push([
         'Event ID', 'Client Name', 'Venue', 'Event Date', 'Delivery Date',
         'Occasion', 'Status', 'Contact Number', 'Manager Name', 'Karigar Name',
         'Category', 'Product Name', 'Quantity', 'Unit', 'Price', 'Product Notes', 'Event Notes',
       ])
+
+      // --- Sheet 2: Audit Logs ---
+      const auditRows: (string | number)[][] = []
+      auditRows.push([
+        'ID', 'Timestamp', 'Date', 'Time', 'Action', 'Entity Type',
+        'Entity ID', 'Entity Name', 'User Name', 'User Email', 'User Role',
+        'Old Values', 'New Values', 'Changes Summary',
+      ])
+
       for (const event of finishedEvents) {
         try {
           const eventProducts = await eventsApi.getEventProducts(event.id)
           if (eventProducts.length === 0) {
-            rows.push([
+            eventRows.push([
               event.displayId || event.id, event.clientName, event.venue,
               new Date(event.eventDate).toLocaleDateString('en-IN'),
               event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A',
@@ -178,7 +190,7 @@ export function useEvents() {
             ])
           } else {
             eventProducts.forEach((product: any, index: number) => {
-              rows.push([
+              eventRows.push([
                 index === 0 ? (event.displayId || event.id) : '',
                 index === 0 ? event.clientName : '',
                 index === 0 ? event.venue : '',
@@ -196,7 +208,7 @@ export function useEvents() {
             })
           }
         } catch {
-          rows.push([
+          eventRows.push([
             event.displayId || event.id, event.clientName, event.venue,
             new Date(event.eventDate).toLocaleDateString('en-IN'),
             event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A',
@@ -205,14 +217,59 @@ export function useEvents() {
             'Error Loading', 'Error Loading Products', '', '', '', '', event.notes || '',
           ])
         }
-        rows.push(Array(17).fill(''))
+        eventRows.push(Array(17).fill(''))
+
+        // Fetch audit logs for this event
+        try {
+          const [eventAuditsRes, productAuditsRes] = await Promise.all([
+            auditApi.getAuditLogs({ entity_id: event.id, entity_type: 'Event', limit: 100 }),
+            auditApi.getAuditLogs({ event_id: event.id, entity_type: 'Event Product', limit: 100 }),
+          ])
+
+          const eventAudits = eventAuditsRes.data || []
+          const productAudits = productAuditsRes.data || []
+          const allAudits = [...eventAudits, ...productAudits].sort((a: any, b: any) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )
+
+          for (const entry of allAudits) {
+            const timestamp = new Date(entry.timestamp || entry.created_at)
+            const oldVals = entry.old_values || {}
+            const newVals = entry.new_values || {}
+            let changesSummary = ''
+            if (entry.action === 'create') changesSummary = `Created new ${entry.entityType}`
+            else if (entry.action === 'delete') changesSummary = `Deleted ${entry.entityType}`
+            else if (entry.action === 'update') {
+              const changedKeys = Object.keys(newVals).filter(k => k !== 'updated_at' && oldVals[k] !== newVals[k])
+              changesSummary = changedKeys.length > 0 ? `Updated: ${changedKeys.join(', ')}` : 'Updated'
+            }
+            auditRows.push([
+              entry.id, timestamp.toISOString(),
+              timestamp.toLocaleDateString('en-IN'), timestamp.toLocaleTimeString('en-IN'),
+              entry.action, entry.entityType, entry.entityId, entry.entityName,
+              entry.userName, entry.userId, entry.userRole,
+              JSON.stringify(oldVals),
+              JSON.stringify(newVals),
+              changesSummary,
+            ])
+          }
+        } catch {
+          auditRows.push(['Error loading audit logs for event', event.displayId || event.id, '', '', '', '', '', '', '', '', '', '', ''])
+        }
       }
-      const csv = rows.map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n')
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+
+      const wb = XLSX.utils.book_new()
+      const ws1 = XLSX.utils.aoa_to_sheet(eventRows)
+      const ws2 = XLSX.utils.aoa_to_sheet(auditRows)
+      XLSX.utils.book_append_sheet(wb, ws1, 'Event Details')
+      XLSX.utils.book_append_sheet(wb, ws2, 'Audit Logs')
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `finished_events_detailed_${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `finished_events_${new Date().toISOString().split('T')[0]}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Detailed export completed', { id: 'export-loading' })
@@ -230,7 +287,7 @@ export function useEvents() {
     filteredEvents,
     prefetchEvent,
     handleDeleteEvent,
-    handleExportCSV,
+    handleExportXLSX,
     // Infinite scroll
     fetchNextPage,
     hasNextPage,

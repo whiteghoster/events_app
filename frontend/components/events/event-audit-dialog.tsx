@@ -19,11 +19,10 @@ interface EventAuditDialogProps {
 export function EventAuditDialog({ eventId, open, onOpenChange }: EventAuditDialogProps) {
   const [activeTab, setActiveTab] = useState('products')
 
-  // Fetch event audits (event-level CRUD operations) - filtered by entity_id on backend
-  const { data: eventAuditData, isLoading: eventLoading, error: eventError } = useQuery({
+  // Fetch all audit logs for this event (both event and event product audits)
+  const { data: auditData, isLoading, error } = useQuery({
     queryKey: ['audit', 'event', eventId],
     queryFn: () => auditApi.getAuditLogs({
-      entity_id: eventId,
       limit: 100,
     }),
     enabled: open && !!eventId,
@@ -32,23 +31,33 @@ export function EventAuditDialog({ eventId, open, onOpenChange }: EventAuditDial
     refetchOnWindowFocus: true,
   })
 
-  // Fetch event product audits - filtered by event_id in old_values/new_values on backend
-  const { data: productAuditData, isLoading: productLoading, error: productError } = useQuery({
-    queryKey: ['audit', 'event-products', eventId],
-    queryFn: () => auditApi.getAuditLogs({
-      event_id: eventId,
-      limit: 100,
-    }),
-    enabled: open && !!eventId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-  })
+  // DEBUG: log audit data structure
+  console.log('Audit Data:', auditData?.data?.slice(0, 3).map((e: any) => ({
+    id: e.id,
+    entity_id: e.entity_id,
+    entity_type: e.entity_type,
+    action: e.action,
+    new_values_keys: e.new_values ? Object.keys(e.new_values) : [],
+    old_values_keys: e.old_values ? Object.keys(e.old_values) : [],
+    new_values_id: e.new_values?.id,
+    new_values_event_id: e.new_values?.event_id,
+    new_values_product: !!e.new_values?.product,
+  })))
 
-  const eventLogs = eventAuditData?.data || []
-  const eventProductLogs = productAuditData?.data || []
-  const isLoading = eventLoading || productLoading
-  const error = eventError || productError
+  // Event product audits: event_id stored in new_values/old_values + has product data
+  const eventProductLogs = auditData?.data?.filter((entry: any) => {
+    const entryEventId = entry.new_values?.event_id || entry.old_values?.event_id
+    const hasProductData = entry.new_values?.product || entry.old_values?.product
+    return entryEventId === eventId && hasProductData
+  }) || []
+
+  // Event audits: event ID is in new_values.id or old_values.id (event data itself)
+  const eventLogs = auditData?.data?.filter((entry: any) => {
+    const entryEventId = entry.new_values?.id || entry.old_values?.id
+    const isProductAudit = (entry.new_values?.event_id || entry.old_values?.event_id) && 
+                           (entry.new_values?.product || entry.old_values?.product)
+    return entryEventId === eventId && !isProductAudit
+  }) || []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
