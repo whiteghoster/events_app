@@ -25,7 +25,7 @@ export default function Error({
             <div className="relative">
               <div className="p-3 bg-destructive/10 rounded-full">
                 <img
-                  src="/download.png"
+                  src="/android-chrome-512x512.png"
                   alt="Zevan"
                   className="w-10 h-10 rounded-lg opacity-80"
                 />
