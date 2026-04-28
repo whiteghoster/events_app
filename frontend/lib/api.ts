@@ -538,6 +538,7 @@ export const auditApi = {
     const q = new URLSearchParams()
     if (params?.entity_type) q.set('entity_type', params.entity_type)
     if (params?.entity_id) q.set('entity_id', params.entity_id)
+    if (params?.event_id) q.set('event_id', params.event_id)
     if (params?.action) q.set('action', params.action)
     if (params?.user_id) q.set('user_id', params.user_id)
     if (params?.user_role) q.set('user_role', params.user_role)

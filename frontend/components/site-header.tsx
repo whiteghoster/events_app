@@ -8,7 +8,6 @@ const pageTitles: Record<string, string> = {
   '/events/new': 'Create Event',
   '/catalog': 'Product Catalog',
   '/users': 'Team Members',
-  '/audit': 'Audit Trail',
   '/account': 'My Account',
 }
 

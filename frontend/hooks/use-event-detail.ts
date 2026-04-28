@@ -93,6 +93,7 @@ export function useEventDetail(id: string) {
       // Refetch queries to force immediate data refresh
       await queryClient.refetchQueries({ queryKey: ['eventProducts', id] })
       await queryClient.refetchQueries({ queryKey: ['categorySummary', id] })
+      await queryClient.invalidateQueries({ queryKey: ['audit', 'event-products', id] })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Update failed')
     }
@@ -109,6 +110,7 @@ export function useEventDetail(id: string) {
       toast.success('Product removed from event')
       queryClient.invalidateQueries({ queryKey: ['eventProducts', id] })
       queryClient.invalidateQueries({ queryKey: ['categorySummary', id] })
+      queryClient.invalidateQueries({ queryKey: ['audit', 'event-products', id] })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Delete failed')
     }
@@ -121,6 +123,7 @@ export function useEventDetail(id: string) {
       toast.success('Event deleted successfully')
       // Invalidate ALL events list caches (all tabs) so the deleted event is removed immediately
       await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
+      await queryClient.invalidateQueries({ queryKey: ['audit', 'event', id] })
       router.push('/events')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Delete failed')
@@ -149,6 +152,7 @@ export function useEventDetail(id: string) {
       toast.success('Product added')
       await queryClient.refetchQueries({ queryKey: ['eventProducts', id] })
       await queryClient.refetchQueries({ queryKey: ['categorySummary', id] })
+      await queryClient.invalidateQueries({ queryKey: ['audit', 'event-products', id] })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add product')
     }
@@ -178,6 +182,7 @@ export function useEventDetail(id: string) {
         exact: false,
         refetchType: 'active',
       })
+      await queryClient.invalidateQueries({ queryKey: ['audit', 'event', id] })
       
       if (closeStatus === 'hold') {
         // Update individual event cache with new status
@@ -197,6 +202,8 @@ export function useEventDetail(id: string) {
     queryClient.invalidateQueries({ queryKey: ['event', id] })
     queryClient.invalidateQueries({ queryKey: ['eventProducts', id] })
     queryClient.invalidateQueries({ queryKey: ['categorySummary', id] })
+    queryClient.invalidateQueries({ queryKey: ['audit', 'event', id] })
+    queryClient.invalidateQueries({ queryKey: ['audit', 'event-products', id] })
   }
 
   const resetNewProduct = () => {

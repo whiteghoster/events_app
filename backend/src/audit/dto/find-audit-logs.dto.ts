@@ -48,4 +48,8 @@ export class FindAuditLogsDto {
   @IsOptional()
   @IsString()
   user_role?: string;
+
+  @IsOptional()
+  @IsString()
+  event_id?: string;
 }

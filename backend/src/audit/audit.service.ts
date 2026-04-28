@@ -33,6 +33,9 @@ export class AuditService {
     if (dto.date_from) query = query.gte('created_at', dto.date_from);
     if (dto.date_to) query = query.lte('created_at', dto.date_to);
     if (dto.user_role) query = query.eq('users.role', dto.user_role);
+    if (dto.event_id) {
+      query = query.or(`new_values->>event_id.eq.${dto.event_id},old_values->>event_id.eq.${dto.event_id}`);
+    }
 
     if (dto.search) {
       const sanitized = sanitizeSearchTerm(dto.search);

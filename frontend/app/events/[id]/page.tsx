@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Pencil, Trash2,
   MapPin, Calendar, RefreshCw, MoreVertical, Phone, User, Crown,
-  Pause, CheckCircle2, Building2, FileText, Info,
+  Pause, CheckCircle2, Building2, FileText, Info, History,
 } from 'lucide-react'
 import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canRevertFinishedEvent, canDeleteFinishedEvent } from '@/lib/auth-context'
 import { useEventDetail } from '@/hooks/use-event-detail'
 import { EventDetailSkeleton } from '@/components/skeletons'
 import { EventProductsTable } from '@/components/events/event-products-table'
+import { EventAuditDialog } from '@/components/events/event-audit-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +31,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   const { user } = useAuth()
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false)
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false)
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false)
   const {
     event, isLoading, eventProductsList, categorySummary,
     allCategories, allProducts, filteredProducts, units,
@@ -95,6 +97,11 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             {user && canEditEvent(user.role) && isEditable && (
               <Button variant="ghost" size="icon" onClick={() => router.push(`/events/${id}/edit`)} className="h-8 w-8 rounded-md">
                 <Pencil className="w-4 h-4" />
+              </Button>
+            )}
+            {user?.role === 'admin' && (
+              <Button variant="ghost" size="icon" onClick={() => setAuditDialogOpen(true)} className="h-8 w-8 rounded-md">
+                <History className="w-4 h-4" />
               </Button>
             )}
             <Button
@@ -317,6 +324,13 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Audit Dialog ─────────────────────────────────────────── */}
+      <EventAuditDialog
+        eventId={id}
+        open={auditDialogOpen}
+        onOpenChange={setAuditDialogOpen}
+      />
     </div>
   )
 }

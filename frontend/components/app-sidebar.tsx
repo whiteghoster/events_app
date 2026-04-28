@@ -2,13 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuth, canViewCatalog, canViewUsers, canViewAudit } from '@/lib/auth-context'
+import { useAuth, canViewCatalog, canViewUsers } from '@/lib/auth-context'
 import { Icon } from '@/components/icon'
 import {
   Calendar01Icon,
   CatalogueIcon,
   UserGroupIcon,
-  Audit01Icon,
   FlowerIcon,
   Settings01Icon,
   DashboardSquare01Icon,
@@ -49,7 +48,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     { title: 'Events', href: '/events', icon: Calendar01Icon },
     { title: 'Catalog', href: '/catalog', icon: CatalogueIcon, show: canViewCatalog(user.role) },
     { title: 'Team', href: '/users', icon: UserGroupIcon, show: canViewUsers(user.role) },
-    { title: 'Audit Trail', href: '/audit', icon: Audit01Icon, show: canViewAudit(user.role) },
   ].filter(item => item.show !== false)
 
   const navSecondary: NavItem[] = [
