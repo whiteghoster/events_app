@@ -147,6 +147,7 @@ function mapAuditEntryFromBackend(log: any): AuditEntry {
     id: log.id,
     timestamp: log.created_at || new Date().toISOString(),
     userId: log.user_id || '',
+    userEmail: log.users?.email || '',
     userName: log.users?.name || log.users?.email || 'System',
     userRole: (log.users?.role || 'admin').toLowerCase(),
     action: log.action as any,

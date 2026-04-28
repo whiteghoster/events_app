@@ -172,7 +172,7 @@ export function useEvents() {
       const auditRows: (string | number)[][] = []
       auditRows.push([
         'ID', 'Timestamp', 'Date', 'Time', 'Action', 'Entity Type',
-        'Entity ID', 'Entity Name', 'User Name', 'User Email', 'User Role',
+        'Event Code', 'Event Name', 'User Name', 'User Email', 'User Role',
         'Old Values', 'New Values', 'Changes Summary',
       ])
 
@@ -243,18 +243,32 @@ export function useEvents() {
               const changedKeys = Object.keys(newVals).filter(k => k !== 'updated_at' && oldVals[k] !== newVals[k])
               changesSummary = changedKeys.length > 0 ? `Updated: ${changedKeys.join(', ')}` : 'Updated'
             }
+            // Get event name from new_values or old_values for Event Product entries
+            const eventName = entry.entityType === 'Event Product'
+              ? (newVals.product?.name || oldVals.product?.name || entry.entityName || '')
+              : (newVals.client_name || oldVals.client_name || entry.entityName || '')
+
+            // Format old/new values as readable key-value pairs instead of JSON
+            const formatValues = (vals: any) => {
+              if (!vals || typeof vals !== 'object' || Object.keys(vals).length === 0) return ''
+              return Object.entries(vals)
+                .filter(([k]) => k !== 'updated_at' && k !== 'id' && k !== 'created_at')
+                .map(([k, v]) => `${k}: ${v}`)
+                .join('\n')
+            }
+
             auditRows.push([
               entry.id, timestamp.toISOString(),
               timestamp.toLocaleDateString('en-IN'), timestamp.toLocaleTimeString('en-IN'),
-              entry.action, entry.entityType, entry.entityId, entry.entityName,
-              entry.userName, entry.userId, entry.userRole,
-              JSON.stringify(oldVals),
-              JSON.stringify(newVals),
+              entry.action, entry.entityType, entry.entityDisplayId || '', eventName,
+              entry.userName, entry.userEmail || '', entry.userRole,
+              formatValues(oldVals),
+              formatValues(newVals),
               changesSummary,
             ])
           }
         } catch {
-          auditRows.push(['Error loading audit logs for event', event.displayId || event.id, '', '', '', '', '', '', '', '', '', '', ''])
+          auditRows.push(['Error loading audit logs for event', event.displayId || event.id, '', '', '', '', '', '', '', '', '', '', '', ''])
         }
       }
 

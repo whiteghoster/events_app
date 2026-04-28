@@ -163,6 +163,7 @@ export interface AuditEntry {
   id: string
   timestamp: string
   userId?: string
+  userEmail?: string
   userName: string
   userRole: string
   action: AuditAction
