@@ -23,6 +23,7 @@ export function EventAuditDialog({ eventId, open, onOpenChange }: EventAuditDial
   const { data: auditData, isLoading, error } = useQuery({
     queryKey: ['audit', 'event', eventId],
     queryFn: () => auditApi.getAuditLogs({
+      event_id: eventId,
       limit: 100,
     }),
     enabled: open && !!eventId,

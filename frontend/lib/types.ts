@@ -260,10 +260,6 @@ export interface UserCardProps {
   onPermanentlyDelete: (user: User) => void
 }
 
-export interface SidebarRegisterFormProps {
-  collapsed?: boolean
-}
-
 export interface AuthenticatedLayoutProps {
   children: React.ReactNode
 }

@@ -34,7 +34,18 @@ export class AuditService {
     if (dto.date_to) query = query.lte('created_at', dto.date_to);
     if (dto.user_role) query = query.eq('users.role', dto.user_role);
     if (dto.event_id) {
-      query = query.or(`new_values->>event_id.eq.${dto.event_id},old_values->>event_id.eq.${dto.event_id}`);
+      // Build filter for event_id in JSONB columns
+      // Must combine with entity_type if it was already set
+      const newValuesFilter = `new_values->>event_id.eq.${dto.event_id}`;
+      const oldValuesFilter = `old_values->>event_id.eq.${dto.event_id}`;
+      if (dto.entity_type) {
+        // Combine entity_type.eq.X with (new_values->>event_id.eq.X OR old_values->>event_id.eq.X)
+        query = query.or(
+          `and(entity_type.eq.${dto.entity_type},${newValuesFilter}),and(entity_type.eq.${dto.entity_type},${oldValuesFilter})`
+        );
+      } else {
+        query = query.or(`${newValuesFilter},${oldValuesFilter}`);
+      }
     }
 
     if (dto.search) {
