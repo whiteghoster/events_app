@@ -255,10 +255,11 @@ export function canRevertFinishedEvent(
   currentUserId: string
 ): boolean {
   if (!role || !currentUserId) return false
-  // Creator or admin can revert finished events
+  // Creator, admin, or manager can revert finished events
   const isCreator = createdBy === currentUserId
   const isAdmin = role === 'admin'
-  return isCreator || isAdmin
+  const isManager = role === 'manager'
+  return isCreator || isAdmin || isManager
 }
 
 export function canDeleteFinishedEvent(

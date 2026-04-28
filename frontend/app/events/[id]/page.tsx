@@ -188,24 +188,29 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
           <DialogHeader>
             <DialogTitle>Change Event Status</DialogTitle>
             <DialogDescription>
-              Choose the new status for &quot;{event.clientName}&quot;.
+              {closeStatus === 'hold' 
+                ? `Put "${event.clientName}" on hold? Admin can still edit while on hold.` 
+                : `Mark "${event.clientName}" as finished? This will make the event permanently read-only.`}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-3 space-y-2">
-            <label className={cn('flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors', closeStatus === 'hold' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30')}>
-              <input type="radio" name="closeStatus" value="hold" checked={closeStatus === 'hold'} onChange={() => setCloseStatus('hold')} className="accent-primary" />
-              <div>
-                <p className="text-sm font-medium">Hold</p>
-                <p className="text-xs text-muted-foreground">Admin can still edit</p>
+          <div className="py-3">
+            {closeStatus === 'hold' ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5">
+                <Pause className="w-5 h-5 text-amber-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Hold</p>
+                  <p className="text-xs text-muted-foreground">Admin can still edit</p>
+                </div>
               </div>
-            </label>
-            <label className={cn('flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors', closeStatus === 'finished' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30')}>
-              <input type="radio" name="closeStatus" value="finished" checked={closeStatus === 'finished'} onChange={() => setCloseStatus('finished')} className="accent-primary" />
-              <div>
-                <p className="text-sm font-medium">Finished</p>
-                <p className="text-xs text-muted-foreground">Permanently read-only</p>
+            ) : (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5">
+                <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Finished</p>
+                  <p className="text-xs text-muted-foreground">Permanently read-only</p>
+                </div>
               </div>
-            </label>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setCloseModalOpen(false)} className="flex-1 sm:flex-none">Cancel</Button>
