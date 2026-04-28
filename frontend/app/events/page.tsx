@@ -6,6 +6,7 @@ import { Icon } from '@/components/icon'
 import { Add01Icon, Search01Icon, Download01Icon } from '@hugeicons/core-free-icons'
 import { EventCard } from '@/components/event-card'
 import { EmptyState } from '@/components/empty-state'
+import { StaggeredGrid } from '@/components/staggered-grid'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
 import { useEvents } from '@/hooks/use-events'
 import { Button } from '@/components/ui/button'
@@ -102,7 +103,7 @@ export default function EventsPage() {
         </div>
       ) : filteredEvents.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <StaggeredGrid className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" staggerDelay={60}>
             {filteredEvents.map(event => (
               <div
                 key={event.id}
@@ -112,7 +113,7 @@ export default function EventsPage() {
                 <EventCard event={event} />
               </div>
             ))}
-          </div>
+          </StaggeredGrid>
           {/* Infinite scroll trigger */}
           <div ref={loadMoreRef} className="h-10 flex items-center justify-center py-4">
             {isFetchingNextPage && (

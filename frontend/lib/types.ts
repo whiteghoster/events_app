@@ -218,6 +218,7 @@ export interface PageHeaderProps {
 export interface EventCardProps {
   event: Event
   products?: EventProduct[]
+  productCount?: number
 }
 
 export interface EmptyStateProps {

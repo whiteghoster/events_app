@@ -66,13 +66,13 @@ function StatCard({ title, value, subtext, icon, color = 'text-primary', isLoadi
     )
   }
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5">
       <CardHeader className="flex flex-row items-center justify-between pb-2 p-4 md:p-6">
         <CardTitle className="text-sm md:text-base font-medium">{title}</CardTitle>
-        <Icon icon={icon} className={`h-5 w-5 md:h-6 md:w-6 ${color}`} />
+        <Icon icon={icon} className={`h-5 w-5 md:h-6 md:w-6 ${color} transition-transform hover:scale-110`} />
       </CardHeader>
       <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
-        <div className="text-2xl md:text-3xl font-bold">{value}</div>
+        <div className="text-2xl md:text-3xl font-bold animate-in slide-in-from-bottom-2 duration-500">{value}</div>
         <p className="text-xs md:text-sm text-muted-foreground truncate">{subtext}</p>
       </CardContent>
     </Card>
@@ -189,7 +189,9 @@ export default function DashboardPage() {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    isAnimationActive={false}
+                    isAnimationActive={true}
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   >
                     {eventsChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -221,7 +223,9 @@ export default function DashboardPage() {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    isAnimationActive={false}
+                    isAnimationActive={true}
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   >
                     {usersChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -253,7 +257,9 @@ export default function DashboardPage() {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    isAnimationActive={false}
+                    isAnimationActive={true}
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   >
                     {productsChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -280,7 +286,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" fontSize={10} tickLine={true} axisLine={true} />
                   <YAxis fontSize={10} width={25} tickLine={true} axisLine={true} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" fill={COLORS.primary} radius={[2, 2, 0, 0]} barSize={40} isAnimationActive={false}>
+                  <Bar dataKey="value" fill={COLORS.primary} radius={[2, 2, 0, 0]} barSize={40} isAnimationActive={true} animationDuration={800} animationEasing="ease-out">
                     {summaryChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
