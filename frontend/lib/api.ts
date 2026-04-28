@@ -39,14 +39,23 @@ async function apiRequest<T>(
 ): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  })
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    })
+  } catch (networkErr) {
+    console.error('[API] Network error - API may be unreachable:', { 
+      url: `${API_BASE_URL}${endpoint}`,
+      error: networkErr 
+    })
+    throw new Error(`API unreachable. Check NEXT_PUBLIC_API_URL (${API_BASE_URL})`)
+  }
 
   if (response.status === 401 && _retry) {
     const newToken = await refreshAccessToken()
@@ -61,7 +70,12 @@ async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    let errorMessage = `Request failed: ${response.status}`
+    let errorMessage = `Request failed: ${response.status} ${response.statusText}`
+    console.error('[API] Request failed:', { 
+      url: `${API_BASE_URL}${endpoint}`, 
+      status: response.status, 
+      statusText: response.statusText 
+    })
     try {
       const errorData = await response.json()
       errorMessage = errorData?.message || errorData?.error || errorMessage
@@ -548,7 +562,10 @@ export const auditApi = {
     if (params?.page) q.set('page', params.page.toString())
     if (params?.limit) q.set('limit', params.limit.toString())
 
-    const res = await apiRequest<any>(`/audit?${q.toString()}`)
+    const url = `/audit?${q.toString()}`
+    console.log('[API] auditApi.getAuditLogs:', { apiUrl: API_BASE_URL, endpoint: url, params })
+    const res = await apiRequest<any>(url)
+    console.log('[API] auditApi.getAuditLogs response:', { count: Array.isArray(res) ? res.length : res.data?.length })
     const logs = Array.isArray(res) ? res : (res.data || [])
 
     return {

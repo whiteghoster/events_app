@@ -22,10 +22,36 @@ export function EventAuditDialog({ eventId, open, onOpenChange }: EventAuditDial
   // Fetch all audit logs for this event (both event and event product audits)
   const { data: auditData, isLoading, error } = useQuery({
     queryKey: ['audit', 'event', eventId],
-    queryFn: () => auditApi.getAuditLogs({
-      event_id: eventId,
-      limit: 100,
-    }),
+    queryFn: async () => {
+      console.log('[Audit] Fetching audits for event:', eventId)
+      try {
+        // First try with event_id filter
+        let result = await auditApi.getAuditLogs({
+          event_id: eventId,
+          limit: 100,
+        })
+        
+        // If no results, try without filter and filter client-side as fallback
+        if (result.data?.length === 0) {
+          console.log('[Audit] No results with event_id filter, trying fallback...')
+          const allResult = await auditApi.getAuditLogs({ limit: 200 })
+          // Filter client-side for this event
+          const filtered = allResult.data?.filter((entry: any) => {
+            const entryEventId = entry.new_values?.event_id || entry.old_values?.event_id || 
+                                entry.new_values?.id || entry.old_values?.id
+            return entryEventId === eventId
+          }) || []
+          console.log('[Audit] Fallback found', filtered.length, 'entries')
+          result = { ...allResult, data: filtered }
+        }
+        
+        console.log('[Audit] API response:', { count: result.data?.length, firstItem: result.data?.[0] })
+        return result
+      } catch (err) {
+        console.error('[Audit] API fetch failed:', err)
+        throw err
+      }
+    },
     enabled: open && !!eventId,
     staleTime: 0,
     refetchOnMount: 'always',
@@ -72,7 +98,8 @@ export function EventAuditDialog({ eventId, open, onOpenChange }: EventAuditDial
 
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive mb-4">
-            Failed to load audit logs.
+            <p className="font-semibold">Failed to load audit logs</p>
+            <p className="text-xs mt-1 opacity-80">{(error as Error)?.message || 'Unknown error'}</p>
           </div>
         )}
 

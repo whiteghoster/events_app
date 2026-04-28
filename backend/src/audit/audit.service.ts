@@ -34,17 +34,20 @@ export class AuditService {
     if (dto.date_to) query = query.lte('created_at', dto.date_to);
     if (dto.user_role) query = query.eq('users.role', dto.user_role);
     if (dto.event_id) {
-      // Build filter for event_id in JSONB columns
-      // Must combine with entity_type if it was already set
-      const newValuesFilter = `new_values->>event_id.eq.${dto.event_id}`;
-      const oldValuesFilter = `old_values->>event_id.eq.${dto.event_id}`;
+      // Filter for event_id in JSONB columns using @> (contains) operator
+      // This is more reliable across different Supabase/PostgREST versions
+      const eventIdMatch = { event_id: dto.event_id };
+      const eventIdJson = JSON.stringify(eventIdMatch);
+      
       if (dto.entity_type) {
-        // Combine entity_type.eq.X with (new_values->>event_id.eq.X OR old_values->>event_id.eq.X)
+        // Combine entity_type with JSONB contains check
+        // Use or() to check both new_values and old_values
         query = query.or(
-          `and(entity_type.eq.${dto.entity_type},${newValuesFilter}),and(entity_type.eq.${dto.entity_type},${oldValuesFilter})`
+          `and(entity_type.eq.${dto.entity_type},new_values.cs.${eventIdJson}),and(entity_type.eq.${dto.entity_type},old_values.cs.${eventIdJson})`
         );
       } else {
-        query = query.or(`${newValuesFilter},${oldValuesFilter}`);
+        // Check both new_values and old_values for event_id using @> operator
+        query = query.or(`new_values.cs.${eventIdJson},old_values.cs.${eventIdJson}`);
       }
     }
 
@@ -59,7 +62,12 @@ export class AuditService {
 
     const { data, count, error } = await query.range(offset, offset + limit - 1);
 
-    if (error) throw new BadRequestException(`Failed to fetch audit logs: ${error.message}`);
+    if (error) {
+      this.logger.error(`[Audit] Query failed: ${error.message}`, { event_id: dto.event_id, entity_type: dto.entity_type });
+      throw new BadRequestException(`Failed to fetch audit logs: ${error.message}`);
+    }
+    
+    this.logger.log(`[Audit] Fetched ${data?.length || 0} logs for event_id=${dto.event_id}`);
 
     // Enrich audit logs with event display IDs for Event and Event Product entities
     const enrichedData = await this.enrichWithEventDisplayIds(data ?? []);
