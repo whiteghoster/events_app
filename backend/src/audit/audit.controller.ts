@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Delete, Body, Param, Query } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { FindAuditLogsDto } from './dto/find-audit-logs.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,5 +25,12 @@ export class AuditController {
   async findOne(@Param('id') id: string) {
     const data = await this.auditService.findById(id);
     return { data };
+  }
+
+  @Delete('logs')
+  @Roles(UserRole.ADMIN)
+  async deleteLogs(@Body() body: { ids: string[] }) {
+    await this.auditService.deleteAuditLogs(body.ids);
+    return { message: 'Audit logs deleted successfully' };
   }
 }

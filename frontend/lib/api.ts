@@ -590,4 +590,11 @@ export const auditApi = {
       filename: res.filename || 'audit_export.csv'
     }
   },
+
+  async deleteAuditLogs(ids: string[]): Promise<void> {
+    await apiRequest('/audit/logs', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids }),
+    })
+  },
 }

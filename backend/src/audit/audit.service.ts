@@ -226,4 +226,46 @@ export class AuditService {
       if (error) this.logger.error(`Audit log failed for ${params.entity_type}:${params.entity_id}: ${error.message}`);
     });
   }
+
+  async deleteAuditLogs(ids: string[]) {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('No audit log IDs provided');
+    }
+
+    // Validate that all logs are for Event Product entities only
+    const { data: logs, error: fetchError } = await this.supabase
+      .from('audit_log')
+      .select('id, entity_type')
+      .in('id', ids);
+
+    if (fetchError) {
+      throw new BadRequestException(`Failed to fetch audit logs: ${fetchError.message}`);
+    }
+
+    if (!logs || logs.length === 0) {
+      throw new NotFoundException('No audit logs found with provided IDs');
+    }
+
+    // Check if any log is not an Event Product
+    const nonEventProductLogs = logs.filter(log => {
+      const normalizedType = (log.entity_type || '').toLowerCase().replace(/s$/, '');
+      return normalizedType !== 'event product';
+    });
+
+    if (nonEventProductLogs.length > 0) {
+      throw new BadRequestException('Can only delete Event Product audit logs');
+    }
+
+    // Delete the logs
+    const { error: deleteError } = await this.supabase
+      .from('audit_log')
+      .delete()
+      .in('id', ids);
+
+    if (deleteError) {
+      throw new BadRequestException(`Failed to delete audit logs: ${deleteError.message}`);
+    }
+
+    this.logger.log(`[Audit] Deleted ${ids.length} audit logs`);
+  }
 }
