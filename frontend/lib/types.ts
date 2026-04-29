@@ -151,31 +151,6 @@ export interface EventProduct {
   price?: number
 }
 
-/**
- * Audit Log Action - MUST match backend enum (lowercase)
- */
-export type AuditAction = 'create' | 'update' | 'delete'
-
-/**
- * Audit Log Entry
- */
-export interface AuditEntry {
-  id: string
-  timestamp: string
-  userId?: string
-  userEmail?: string
-  userName: string
-  userRole: string
-  action: AuditAction
-  entityType: string
-  entityName?: string
-  entityId?: string
-  entityDisplayId?: string
-  change?: string
-  old_values?: any
-  new_values?: any
-}
-
 // ─── Form types ──────────────────────────────────────────────────────────────
 
 export interface EventFormData {
@@ -300,28 +275,4 @@ export interface ProductSheetProps {
   setProductFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
   isSaving: boolean
   saveProduct: () => void
-}
-
-export interface AuditTableProps {
-  logs: AuditEntry[]
-  isLoading: boolean
-}
-
-export interface AuditPaginationProps {
-  page: number
-  totalPages: number
-  total: number
-  setPage: (page: number | ((prev: number) => number)) => void
-}
-
-export interface AuditFiltersProps {
-  entityFilter: string
-  setEntityFilter: (value: string) => void
-  actionFilter: AuditAction | 'All'
-  setActionFilter: (value: AuditAction | 'All') => void
-  dateFrom: string
-  setDateFrom: (value: string) => void
-  dateTo: string
-  setDateTo: (value: string) => void
-  setPage: (page: number) => void
 }

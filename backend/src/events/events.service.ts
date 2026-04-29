@@ -78,14 +78,6 @@ export class EventsService {
 
     if (error) throw new BadRequestException(`Failed to create event: ${error.message}`);
 
-    this.auditService.createLog({
-      entity_type: 'Event',
-      entity_id: data.id,
-      action: AuditAction.CREATE,
-      user_id: actorId,
-      new_values: data,
-    });
-
     return data;
   }
 
@@ -185,15 +177,6 @@ export class EventsService {
 
     if (error) throw new BadRequestException(`Failed to update event: ${error.message}`);
 
-    this.auditService.createLog({
-      entity_type: 'Event',
-      entity_id: event.id,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      old_values: event,
-      new_values: data,
-    });
-
     return data;
   }
 
@@ -210,14 +193,6 @@ export class EventsService {
       throw new BadRequestException(error.message);
     }
 
-    this.auditService.createLog({
-      entity_type: 'Event',
-      entity_id: eventId,
-      action: AuditAction.UPDATE,
-      user_id: actorId,
-      new_values: { status: newStatus },
-    });
-
     return data;
   }
 
@@ -231,14 +206,6 @@ export class EventsService {
 
     const { error } = await this.supabase.from('events').delete().eq('id', event.id);
     if (error) throw new BadRequestException(`Failed to delete event: ${error.message}`);
-
-    this.auditService.createLog({
-      entity_type: 'Event',
-      entity_id: event.id,
-      action: AuditAction.DELETE,
-      user_id: actorId,
-      old_values: event,
-    });
   }
 
   private async generateDisplayId(clientName: string): Promise<string> {

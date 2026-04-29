@@ -34,19 +34,17 @@ export class AuditService {
     if (dto.date_to) query = query.lte('created_at', dto.date_to);
     if (dto.user_role) query = query.eq('users.role', dto.user_role);
     if (dto.event_id) {
-      // Filter for event_id in JSONB columns using @> (contains) operator
-      // This is more reliable across different Supabase/PostgREST versions
+      // Filter for event_id in JSONB columns for Event Product entities only
       const eventIdMatch = { event_id: dto.event_id };
       const eventIdJson = JSON.stringify(eventIdMatch);
       
       if (dto.entity_type) {
         // Combine entity_type with JSONB contains check
-        // Use or() to check both new_values and old_values
         query = query.or(
           `and(entity_type.eq.${dto.entity_type},new_values.cs.${eventIdJson}),and(entity_type.eq.${dto.entity_type},old_values.cs.${eventIdJson})`
         );
       } else {
-        // Check both new_values and old_values for event_id using @> operator
+        // Check both new_values and old_values for event_id
         query = query.or(`new_values.cs.${eventIdJson},old_values.cs.${eventIdJson}`);
       }
     }
@@ -69,7 +67,7 @@ export class AuditService {
     
     this.logger.log(`[Audit] Fetched ${data?.length || 0} logs for event_id=${dto.event_id}`);
 
-    // Enrich audit logs with event display IDs for Event and Event Product entities
+    // Enrich audit logs with event display IDs for Event Product entities only
     const enrichedData = await this.enrichWithEventDisplayIds(data ?? []);
 
     return {
@@ -89,13 +87,11 @@ export class AuditService {
     // Normalize entity type for comparison
     const normalizeEntityType = (type: string) => (type || '').toLowerCase().replace(/s$/, '');
 
-    // Get unique event IDs from Event and Event Product entities
+    // Get unique event IDs from Event Product entities only
     const eventIds = new Set<string>();
     logs.forEach(log => {
       const normalizedType = normalizeEntityType(log.entity_type);
-      if (normalizedType === 'event') {
-        eventIds.add(log.entity_id);
-      } else if (normalizedType === 'event product') {
+      if (normalizedType === 'event product') {
         // For Event Products, event_id is in new_values or old_values
         const eventId = log.new_values?.event_id || log.old_values?.event_id;
         if (eventId) eventIds.add(eventId);
@@ -121,17 +117,12 @@ export class AuditService {
       events.forEach(e => displayIdMap.set(e.id, e.display_id));
     }
 
-    // Add entity_display_id to each log
+    // Add entity_display_id to each log (Event Product only)
     return logs.map(log => {
       let displayId: string | undefined;
       const normalizedType = normalizeEntityType(log.entity_type);
 
-      if (normalizedType === 'event') {
-        // Try database first, then fallback to old_values/new_values
-        displayId = displayIdMap.get(log.entity_id)
-          || log.old_values?.display_id
-          || log.new_values?.display_id;
-      } else if (normalizedType === 'event product') {
+      if (normalizedType === 'event product') {
         const eventId = log.new_values?.event_id || log.old_values?.event_id;
         if (eventId) {
           displayId = displayIdMap.get(eventId)
@@ -208,17 +199,9 @@ export class AuditService {
   }) {
     let eventCode: string | undefined;
 
-    // Capture event_code for Event and Event Product entities
+    // Capture event_code for Event Product entities only
     const normalizedType = (params.entity_type || '').toLowerCase().replace(/s$/, '');
-    if (normalizedType === 'event') {
-      // For Event entities, fetch display_id from events table
-      const { data: event } = await this.supabase
-        .from('events')
-        .select('display_id')
-        .eq('id', params.entity_id)
-        .single();
-      eventCode = event?.display_id;
-    } else if (normalizedType === 'event product') {
+    if (normalizedType === 'event product') {
       // For Event Product entities, fetch display_id from parent event
       const eventId = (params.new_values as any)?.event_id || (params.old_values as any)?.event_id;
       if (eventId) {
