@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, Trash2, Check, X } from 'lucide-react'
+import { History, Trash2, X } from 'lucide-react'
 import { auditApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'

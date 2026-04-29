@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { eventsApi, usersApi } from '@/lib/api'
 import type { User, Client, EventFormData } from '@/lib/types'
@@ -20,6 +21,7 @@ const DEFAULT_FORM_DATA: EventFormData = {
 
 export function useEventForm(eventId?: string) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [isLoading, setIsLoading] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(!!eventId)
   const [staffList, setStaffList] = useState<User[]>([])
@@ -146,6 +148,11 @@ export function useEventForm(eventId?: string) {
       } else {
         await eventsApi.createEvent(payload)
         toast.success('Event created successfully')
+        // Invalidate events cache to refresh the list instantly
+        await queryClient.invalidateQueries({
+          queryKey: ['events', 'list'],
+          exact: false,
+        })
         router.push('/events')
       }
     } catch (err: any) {
