@@ -101,6 +101,7 @@ export default function CatalogPage() {
         openProductSheet={catalog.openProductSheet}
         deactivateProduct={catalog.deactivateProduct}
         reactivateProduct={catalog.reactivateProduct}
+        deleteProduct={catalog.deleteProduct}
       />
 
       {/* Manage Categories drawer */}

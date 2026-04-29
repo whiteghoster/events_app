@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -54,5 +55,15 @@ export class ProductsController {
   ) {
     const data = await this.catalogService.updateProduct(id, dto, user.id);
     return { data };
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
+  async delete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.catalogService.deleteProduct(id, user.id);
+    return { message: 'Product deleted successfully' };
   }
 }

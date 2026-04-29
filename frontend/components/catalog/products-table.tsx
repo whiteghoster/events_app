@@ -9,7 +9,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
-import { ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Trash2 } from 'lucide-react'
 import { PencilEdit01Icon, Refresh01Icon, BlockedIcon } from '@hugeicons/core-free-icons'
 import { Icon } from '@/components/icon'
 import { StatusBadge } from '@/components/status-badge'
@@ -32,6 +32,7 @@ export function ProductsTable({
   openProductSheet,
   deactivateProduct,
   reactivateProduct,
+  deleteProduct,
 }: CatalogProductsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [mobileActionProduct, setMobileActionProduct] = useState<Product | null>(null)
@@ -118,18 +119,25 @@ export function ProductsTable({
                   <Icon icon={Refresh01Icon} size={14} />
                 </Button>
               )}
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive rounded-md" onClick={() => {
+                if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+                  deleteProduct(row.original)
+                }
+              }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
             </>
           ) : (
             <span className="text-[10px] text-muted-foreground">Login required</span>
           )}
         </div>
       ),
-      size: 80,
+      size: 100,
       enableSorting: false,
     })
 
     return cols
-  }, [canManage, categories, openProductSheet, deactivateProduct, reactivateProduct])
+  }, [canManage, categories, openProductSheet, deactivateProduct, reactivateProduct, deleteProduct])
 
   const table = useReactTable({
     data: products,
@@ -325,6 +333,22 @@ export function ProductsTable({
                     </div>
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3 h-auto py-3 border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    if (mobileActionProduct && confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+                      deleteProduct(mobileActionProduct)
+                      setMobileActionOpen(false)
+                    }
+                  }}
+                >
+                  <Trash2 size={18} />
+                  <div className="text-left">
+                    <p className="font-medium">Delete Product</p>
+                    <p className="text-xs text-muted-foreground">Permanently remove from catalog</p>
+                  </div>
+                </Button>
               </>
             ) : (
               <div className="text-center py-4 text-muted-foreground">

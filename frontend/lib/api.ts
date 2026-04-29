@@ -468,6 +468,10 @@ export const catalogApi = {
     })
   },
 
+  async deleteProduct(id: string): Promise<void> {
+    await apiRequest(`/products/${id}`, { method: 'DELETE' })
+  },
+
 }
 
 // -------------------------------------------------------------------

@@ -282,6 +282,7 @@ export interface CatalogProductsTableProps {
   openProductSheet: (product?: Product) => void
   deactivateProduct: (product: Product) => void
   reactivateProduct: (product: Product) => void
+  deleteProduct: (product: Product) => void
 }
 
 export interface DeactivateDialogProps {

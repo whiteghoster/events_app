@@ -182,6 +182,36 @@ export class CatalogService {
     return data;
   }
 
+  async deleteProduct(id: string, actorId: string) {
+    const product = await this.findProductById(id);
+
+    // Check if product is used in any live events
+    const { data: eventProducts, error: checkError } = await this.supabase
+      .from('event_products')
+      .select('event_id, events(status)')
+      .eq('product_id', id)
+      .in('events.status', ['live', 'hold'])
+      .limit(1);
+
+    if (checkError) {
+      throw new BadRequestException(`Failed to check product usage: ${checkError.message}`);
+    }
+
+    if (eventProducts && eventProducts.length > 0) {
+      throw new ConflictException('Cannot delete product that is used in live or hold events. Deactivate it instead.');
+    }
+
+    // Delete the product
+    const { error } = await this.supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new BadRequestException(`Failed to delete product: ${error.message}`);
+    }
+  }
+
   // ── Seed Data ──
 
   private assertNonProduction() {

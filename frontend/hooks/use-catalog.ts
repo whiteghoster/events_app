@@ -266,6 +266,27 @@ export function useCatalog() {
     }
   }
 
+  const deleteProduct = async (product: Product) => {
+    // Optimistic update: remove from cache immediately
+    queryClient.setQueryData(['products', 'all'], (oldData: any) => {
+      if (!oldData?.data) return oldData
+      return {
+        ...oldData,
+        data: oldData.data.filter((p: Product) => p.id !== product.id)
+      }
+    })
+    
+    try {
+      await catalogApi.deleteProduct(product.id)
+      toast.success('Product deleted')
+      invalidateAll()
+    } catch (err) {
+      // Revert on error
+      invalidateAll()
+      toast.error(err instanceof Error ? err.message : 'Failed to delete product')
+    }
+  }
+
   return {
     categories,
     products,
@@ -297,5 +318,6 @@ export function useCatalog() {
     openCategoryDialog,
     saveCategory,
     deleteCategory,
+    deleteProduct,
   }
 }
