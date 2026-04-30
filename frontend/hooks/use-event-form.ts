@@ -144,6 +144,16 @@ export function useEventForm(eventId?: string) {
           managerName: formData.managerName === 'unassigned' ? '' : formData.managerName,
         })
         toast.success('Event updated successfully')
+        // Invalidate event cache to refresh the detail page instantly
+        await queryClient.invalidateQueries({
+          queryKey: ['event', eventId],
+          exact: true,
+        })
+        // Also invalidate the events list to show updated data in list view
+        await queryClient.invalidateQueries({
+          queryKey: ['events', 'list'],
+          exact: false,
+        })
         router.push(`/events/${eventId}`)
       } else {
         await eventsApi.createEvent(payload)
