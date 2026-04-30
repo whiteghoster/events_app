@@ -165,9 +165,8 @@ export function useEvents() {
       // --- Sheet 1: Event Details ---
       const eventSheet = workbook.addWorksheet('Event Details')
       const eventHeaders = [
-        'Event ID', 'Client Name', 'Venue', 'Event Date', 'Delivery Date',
-        'Occasion', 'Status', 'Contact Number', 'Manager Name', 'Karigar Name',
-        'Category', 'Product Name', 'Quantity', 'Unit', 'Price',
+        'Event Code', 'Start Date', 'End Date', 'Client Name', 'Venue', 'City',
+        'Manager', 'Head Karigar', 'Category', 'Product Name', 'Quantity', 'Unit', 'Price',
       ]
       eventSheet.addRow(eventHeaders)
 
@@ -179,14 +178,12 @@ export function useEvents() {
 
       // Set column widths
       eventSheet.columns = [
-        { key: 'eventId', width: 15 },
+        { key: 'eventCode', width: 15 },
+        { key: 'startDate', width: 15 },
+        { key: 'endDate', width: 15 },
         { key: 'clientName', width: 25 },
         { key: 'venue', width: 25 },
-        { key: 'eventDate', width: 15 },
-        { key: 'deliveryDate', width: 15 },
-        { key: 'occasion', width: 15 },
-        { key: 'status', width: 12 },
-        { key: 'contact', width: 18 },
+        { key: 'city', width: 15 },
         { key: 'manager', width: 20 },
         { key: 'karigar', width: 20 },
         { key: 'category', width: 18 },
@@ -216,11 +213,14 @@ export function useEvents() {
           const eventProducts = await eventsApi.getEventProducts(event.id)
           if (eventProducts.length === 0) {
             const row = eventSheet.addRow([
-              event.displayId || event.id, event.clientName, event.venue,
+              event.displayId || event.id,
               new Date(event.eventDate).toLocaleDateString('en-IN'),
-              event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A',
-              '', event.status || 'finished', event.contactPhone || '',
-              event.managerName || 'N/A', event.headKarigarName || 'N/A',
+              event.deliveryToDate ? new Date(event.deliveryToDate).toLocaleDateString('en-IN') : 'N/A',
+              event.clientName,
+              event.venue,
+              event.city || 'N/A',
+              event.managerName || 'N/A',
+              event.headKarigarName || 'N/A',
               'N/A', 'No Products', '', '', '',
             ])
             if (rowIndex % 2 === 0) {
@@ -228,34 +228,48 @@ export function useEvents() {
             }
             rowIndex++
           } else {
+            let eventTotal = 0
             eventProducts.forEach((product: any, index: number) => {
+              const price = product.price || 0
+              eventTotal += price
               const row = eventSheet.addRow([
                 index === 0 ? (event.displayId || event.id) : '',
+                index === 0 ? new Date(event.eventDate).toLocaleDateString('en-IN') : '',
+                index === 0 ? (event.deliveryToDate ? new Date(event.deliveryToDate).toLocaleDateString('en-IN') : 'N/A') : '',
                 index === 0 ? event.clientName : '',
                 index === 0 ? event.venue : '',
-                index === 0 ? new Date(event.eventDate).toLocaleDateString('en-IN') : '',
-                index === 0 ? (event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A') : '',
-                '', index === 0 ? (event.status || 'finished') : '',
-                index === 0 ? (event.contactPhone || '') : '',
+                index === 0 ? (event.city || 'N/A') : '',
                 index === 0 ? (event.managerName || 'N/A') : '',
                 index === 0 ? (event.headKarigarName || 'N/A') : '',
-                product.categoryName || 'N/A', product.productName || 'N/A',
-                product.quantity?.toString() || '0', product.unit || 'pcs',
-                product.price?.toString() || '0',
+                product.categoryName || 'N/A',
+                product.productName || 'N/A',
+                product.quantity?.toString() || '0',
+                product.unit || 'pcs',
+                price.toString(),
               ])
               if (rowIndex % 2 === 0) {
                 row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5EB' } }
               }
               rowIndex++
             })
+            // Add total row for this event
+            const totalRow = eventSheet.addRow([
+              '', '', '', '', '', '', '', '', '', 'TOTAL', '', '', eventTotal.toString(),
+            ])
+            totalRow.font = { bold: true }
+            totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FED7AA' } }
+            rowIndex++
           }
         } catch {
           const row = eventSheet.addRow([
-            event.displayId || event.id, event.clientName, event.venue,
+            event.displayId || event.id,
             new Date(event.eventDate).toLocaleDateString('en-IN'),
-            event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A',
-            '', event.status || 'finished', event.contactPhone || '',
-            event.managerName || 'N/A', event.headKarigarName || 'N/A',
+            event.deliveryToDate ? new Date(event.deliveryToDate).toLocaleDateString('en-IN') : 'N/A',
+            event.clientName,
+            event.venue,
+            event.city || 'N/A',
+            event.managerName || 'N/A',
+            event.headKarigarName || 'N/A',
             'Error Loading', 'Error Loading Products', '', '', '',
           ])
           row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } }
@@ -263,7 +277,7 @@ export function useEvents() {
         }
 
         // Add blank row separator
-        eventSheet.addRow(Array(15).fill(''))
+        eventSheet.addRow(Array(13).fill(''))
         rowIndex++
 
         // Fetch audit logs for this event
