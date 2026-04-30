@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { eventsApi, auditApi } from '@/lib/api'
 import type { Event, EventStatus } from '@/lib/types'
 
@@ -160,37 +160,76 @@ export function useEvents() {
     try {
       toast.loading('Preparing detailed export...', { id: 'export-loading' })
 
+      const workbook = new ExcelJS.Workbook()
+
       // --- Sheet 1: Event Details ---
-      const eventRows: (string | number)[][] = []
-      eventRows.push([
+      const eventSheet = workbook.addWorksheet('Event Details')
+      const eventHeaders = [
         'Event ID', 'Client Name', 'Venue', 'Event Date', 'Delivery Date',
         'Occasion', 'Status', 'Contact Number', 'Manager Name', 'Karigar Name',
-        'Category', 'Product Name', 'Quantity', 'Unit', 'Price', 'Product Notes', 'Event Notes',
-      ])
+        'Category', 'Product Name', 'Quantity', 'Unit', 'Price',
+      ]
+      eventSheet.addRow(eventHeaders)
 
-      // --- Sheet 2: Audit Logs ---
-      const auditRows: (string | number)[][] = []
-      auditRows.push([
-        'ID', 'Timestamp', 'Date', 'Time', 'Action', 'Entity Type',
-        'Event Code', 'Event Name', 'User Name', 'User Email', 'User Role',
-        'Old Values', 'New Values', 'Changes Summary',
-      ])
+      // Style header row
+      const headerRow = eventSheet.getRow(1)
+      headerRow.font = { bold: true, color: { argb: 'FFFFFF' } }
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EA580C' } } // Primary orange color
+      headerRow.alignment = { horizontal: 'center', vertical: 'middle' }
+
+      // Set column widths
+      eventSheet.columns = [
+        { key: 'eventId', width: 15 },
+        { key: 'clientName', width: 25 },
+        { key: 'venue', width: 25 },
+        { key: 'eventDate', width: 15 },
+        { key: 'deliveryDate', width: 15 },
+        { key: 'occasion', width: 15 },
+        { key: 'status', width: 12 },
+        { key: 'contact', width: 18 },
+        { key: 'manager', width: 20 },
+        { key: 'karigar', width: 20 },
+        { key: 'category', width: 18 },
+        { key: 'product', width: 25 },
+        { key: 'quantity', width: 10 },
+        { key: 'unit', width: 10 },
+        { key: 'price', width: 12 },
+      ]
+
+      // Freeze header row
+      eventSheet.views = [{ state: 'frozen', ySplit: 1 }]
+
+      // Add alternating row colors
+      let rowIndex = 2
+
+      // Collect all audit data first
+      const allAuditData: Array<{
+        event: Event
+        entry: any
+        timestamp: Date
+        changedFields: Array<{ field: string; oldValue: string; newValue: string }>
+      }> = []
 
       for (const event of finishedEvents) {
+        // Add event data to Event Details sheet
         try {
           const eventProducts = await eventsApi.getEventProducts(event.id)
           if (eventProducts.length === 0) {
-            eventRows.push([
+            const row = eventSheet.addRow([
               event.displayId || event.id, event.clientName, event.venue,
               new Date(event.eventDate).toLocaleDateString('en-IN'),
               event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A',
               '', event.status || 'finished', event.contactPhone || '',
               event.managerName || 'N/A', event.headKarigarName || 'N/A',
-              'N/A', 'No Products', '', '', '', '', event.notes || '',
+              'N/A', 'No Products', '', '', '',
             ])
+            if (rowIndex % 2 === 0) {
+              row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5EB' } }
+            }
+            rowIndex++
           } else {
             eventProducts.forEach((product: any, index: number) => {
-              eventRows.push([
+              const row = eventSheet.addRow([
                 index === 0 ? (event.displayId || event.id) : '',
                 index === 0 ? event.clientName : '',
                 index === 0 ? event.venue : '',
@@ -202,22 +241,30 @@ export function useEvents() {
                 index === 0 ? (event.headKarigarName || 'N/A') : '',
                 product.categoryName || 'N/A', product.productName || 'N/A',
                 product.quantity?.toString() || '0', product.unit || 'pcs',
-                product.price?.toString() || '0', product.notes || '',
-                index === 0 ? (event.notes || '') : '',
+                product.price?.toString() || '0',
               ])
+              if (rowIndex % 2 === 0) {
+                row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5EB' } }
+              }
+              rowIndex++
             })
           }
         } catch {
-          eventRows.push([
+          const row = eventSheet.addRow([
             event.displayId || event.id, event.clientName, event.venue,
             new Date(event.eventDate).toLocaleDateString('en-IN'),
             event.deliveryFromDate ? new Date(event.deliveryFromDate).toLocaleDateString('en-IN') : 'N/A',
             '', event.status || 'finished', event.contactPhone || '',
             event.managerName || 'N/A', event.headKarigarName || 'N/A',
-            'Error Loading', 'Error Loading Products', '', '', '', '', event.notes || '',
+            'Error Loading', 'Error Loading Products', '', '', '',
           ])
+          row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } }
+          rowIndex++
         }
-        eventRows.push(Array(17).fill(''))
+
+        // Add blank row separator
+        eventSheet.addRow(Array(15).fill(''))
+        rowIndex++
 
         // Fetch audit logs for this event
         try {
@@ -228,58 +275,166 @@ export function useEvents() {
 
           const eventAudits = eventAuditsRes.data || []
           const productAudits = productAuditsRes.data || []
-          const allAudits = [...eventAudits, ...productAudits].sort((a: any, b: any) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          )
+          const allAudits = [...eventAudits, ...productAudits]
+
+          // Get value helper
+          const getValue = (vals: any, key: string) => {
+            if (!vals || typeof vals !== 'object') return ''
+            const val = vals[key]
+            if (val === null || val === undefined) return ''
+            if (typeof val === 'object') return JSON.stringify(val)
+            return String(val)
+          }
+
+          const getProductName = (vals: any) => {
+            if (vals.product?.name) return vals.product.name
+            if (vals.product_name) return vals.product_name
+            if (typeof vals.product === 'string') return vals.product
+            return ''
+          }
+
+          const fieldMappings: [string, string[]][] = [
+            ['Event Name', ['client_name']],
+            ['Venue', ['venue']],
+            ['Event Date', ['event_date', 'delivery_from_date']],
+            ['Delivery To', ['delivery_to_date']],
+            ['Contact Phone', ['contact_phone']],
+            ['Manager', ['manager_name']],
+            ['Karigar', ['head_karigar_name']],
+            ['Notes', ['notes']],
+            ['Status', ['status']],
+            ['Product', ['product', 'product_name']],
+            ['Quantity', ['quantity']],
+            ['Unit', ['unit']],
+            ['Price', ['price']],
+          ]
 
           for (const entry of allAudits) {
             const timestamp = new Date(entry.timestamp || entry.created_at)
             const oldVals = entry.old_values || {}
             const newVals = entry.new_values || {}
-            let changesSummary = ''
-            if (entry.action === 'create') changesSummary = `Created new ${entry.entityType}`
-            else if (entry.action === 'delete') changesSummary = `Deleted ${entry.entityType}`
-            else if (entry.action === 'update') {
-              const changedKeys = Object.keys(newVals).filter(k => k !== 'updated_at' && oldVals[k] !== newVals[k])
-              changesSummary = changedKeys.length > 0 ? `Updated: ${changedKeys.join(', ')}` : 'Updated'
-            }
-            // Get event name from new_values or old_values for Event Product entries
-            const eventName = entry.entityType === 'Event Product'
-              ? (newVals.product?.name || oldVals.product?.name || entry.entityName || '')
-              : (newVals.client_name || oldVals.client_name || entry.entityName || '')
 
-            // Format old/new values as readable key-value pairs instead of JSON
-            const formatValues = (vals: any) => {
-              if (!vals || typeof vals !== 'object' || Object.keys(vals).length === 0) return ''
-              return Object.entries(vals)
-                .filter(([k]) => k !== 'updated_at' && k !== 'id' && k !== 'created_at')
-                .map(([k, v]) => `${k}: ${v}`)
-                .join('\n')
+            const changedFields: Array<{ field: string; oldValue: string; newValue: string }> = []
+            
+            for (const [displayName, keys] of fieldMappings) {
+              for (const key of keys) {
+                let oldVal = ''
+                let newVal = ''
+                
+                if (key === 'product' || key === 'product_name') {
+                  oldVal = getProductName(oldVals)
+                  newVal = getProductName(newVals)
+                } else {
+                  for (const k of keys) {
+                    oldVal = getValue(oldVals, k)
+                    newVal = getValue(newVals, k)
+                    if (oldVal || newVal) break
+                  }
+                }
+                
+                if (oldVal !== newVal || (key === 'product' && (oldVal || newVal))) {
+                  changedFields.push({ field: displayName, oldValue: oldVal, newValue: newVal })
+                  break
+                }
+              }
             }
 
-            auditRows.push([
-              entry.id, timestamp.toISOString(),
-              timestamp.toLocaleDateString('en-IN'), timestamp.toLocaleTimeString('en-IN'),
-              entry.action, entry.entityType, entry.entityDisplayId || '', eventName,
-              entry.userName, entry.userEmail || '', entry.userRole,
-              formatValues(oldVals),
-              formatValues(newVals),
-              changesSummary,
-            ])
+            const standardKeys = [
+              'client_name', 'venue', 'event_date', 'delivery_from_date', 'delivery_to_date',
+              'contact_phone', 'manager_name', 'head_karigar_name', 'notes', 'status',
+              'product', 'product_name', 'quantity', 'unit', 'price', 'category',
+              'updated_at', 'id', 'created_at', 'event_id', 'created_by'
+            ]
+            const allKeys = new Set([...Object.keys(oldVals), ...Object.keys(newVals)])
+            for (const key of allKeys) {
+              if (!standardKeys.includes(key)) {
+                const oldVal = getValue(oldVals, key)
+                const newVal = getValue(newVals, key)
+                if (oldVal !== newVal) {
+                  changedFields.push({ field: key, oldValue: oldVal || '(empty)', newValue: newVal || '(empty)' })
+                }
+              }
+            }
+
+            if (changedFields.length === 0 && entry.action === 'create') {
+              changedFields.push({ field: 'Action', oldValue: '', newValue: 'New entry created' })
+            } else if (changedFields.length === 0 && entry.action === 'delete') {
+              changedFields.push({ field: 'Action', oldValue: 'Entry existed', newValue: 'Entry deleted' })
+            }
+
+            allAuditData.push({
+              event,
+              entry,
+              timestamp,
+              changedFields
+            })
           }
         } catch {
-          auditRows.push(['Error loading audit logs for event', event.displayId || event.id, '', '', '', '', '', '', '', '', '', '', '', ''])
+          // Silent error handling
         }
       }
 
-      const wb = XLSX.utils.book_new()
-      const ws1 = XLSX.utils.aoa_to_sheet(eventRows)
-      const ws2 = XLSX.utils.aoa_to_sheet(auditRows)
-      XLSX.utils.book_append_sheet(wb, ws1, 'Event Details')
-      XLSX.utils.book_append_sheet(wb, ws2, 'Audit Logs')
+      // --- Sheet 2: Audit Logs Grouped by Action ---
+      const auditSheet = workbook.addWorksheet('Audit Logs')
+      auditSheet.columns = [
+        { key: 'field', width: 30 },
+        { key: 'oldValue', width: 35 },
+        { key: 'newValue', width: 35 },
+      ]
 
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      // Group audits by action type
+      const createAudits = allAuditData.filter(a => a.entry.action === 'create')
+      const updateAudits = allAuditData.filter(a => a.entry.action === 'update')
+      const deleteAudits = allAuditData.filter(a => a.entry.action === 'delete')
+
+      // Helper function to add audit section
+      const addAuditSection = (title: string, audits: typeof allAuditData, color: string) => {
+        if (audits.length === 0) return
+
+        // Section title row
+        const titleRow = auditSheet.addRow([title, '', ''])
+        titleRow.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } }
+        titleRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } }
+        titleRow.alignment = { horizontal: 'center', vertical: 'middle' }
+
+        // Add each audit entry in this section
+        for (const { event, entry, timestamp, changedFields } of audits) {
+          // Entry header
+          const headerRow = auditSheet.addRow([
+            `Event: ${entry.entityDisplayId || event.id} | By: ${entry.userName} (${entry.userRole})`,
+            `Date: ${timestamp.toLocaleDateString('en-IN')} ${timestamp.toLocaleTimeString('en-IN')}`,
+            `Entity: ${entry.entityType}`
+          ])
+          headerRow.font = { bold: true, size: 10 }
+          headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F3F4F6' } }
+
+          // Column headers
+          const colHeaderRow = auditSheet.addRow(['Field', 'Old Value', 'New Value'])
+          colHeaderRow.font = { bold: true, color: { argb: 'FFFFFF' } }
+          colHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '6B7280' } }
+
+          // Data rows
+          for (const { field, oldValue, newValue } of changedFields) {
+            auditSheet.addRow([field, oldValue, newValue])
+          }
+
+          // Blank row separator
+          auditSheet.addRow(['', '', ''])
+        }
+
+        // Blank row between sections
+        auditSheet.addRow(['', '', ''])
+        auditSheet.addRow(['', '', ''])
+      }
+
+      // Add sections in order: Create (green), Update (blue), Delete (red)
+      addAuditSection('CREATE ENTRIES', createAudits, '10B981') // Green
+      addAuditSection('UPDATE ENTRIES', updateAudits, '3B82F6') // Blue  
+      addAuditSection('DELETE ENTRIES', deleteAudits, 'EF4444') // Red
+
+      // Generate and download
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
