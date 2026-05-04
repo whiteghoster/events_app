@@ -12,10 +12,6 @@ import {
   Moon02Icon,
   Sun01Icon,
 } from '@hugeicons/core-free-icons'
-import {
-  Avatar,
-  AvatarFallback,
-} from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -96,11 +92,9 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground py-4 md:py-3"
             >
-              <Avatar className="h-10 w-10 md:h-8 md:w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-sm md:text-xs font-medium">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <div className="h-10 w-10 md:h-8 md:w-8 rounded-lg bg-primary text-primary-foreground text-sm md:text-xs font-medium flex items-center justify-center">
+                {initials}
+              </div>
               <div className="grid flex-1 text-left text-base md:text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-sm md:text-xs text-muted-foreground">
@@ -118,11 +112,9 @@ export function NavUser({
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-medium">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
+                  {initials}
+                </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate font-medium">{user.name}</span>

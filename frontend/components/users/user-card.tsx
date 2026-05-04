@@ -6,7 +6,6 @@ import { Icon } from '@/components/icon'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import type { UserCardProps } from '@/lib/types'
 
@@ -21,9 +20,7 @@ export function UserCard({ user, currentUser, onEdit, onDeactivate, onActivate, 
     return (
       <Card className={`group py-0 gap-0 transition-colors hover:border-foreground/20 ${isInactive ? 'opacity-60' : ''}`}>
         <CardContent className="px-3 py-2.5 flex items-center gap-3">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="text-xs font-medium bg-muted">{initials}</AvatarFallback>
-          </Avatar>
+          <div className="h-9 w-9 shrink-0 rounded-full bg-muted text-xs font-medium flex items-center justify-center">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium text-sm truncate">{user.name}</p>
@@ -41,9 +38,7 @@ export function UserCard({ user, currentUser, onEdit, onDeactivate, onActivate, 
     <>
       <Card className={`group py-0 gap-0 transition-colors hover:border-foreground/20 ${isInactive ? 'opacity-60' : ''}`}>
         <CardContent className="px-3 py-2.5 flex items-center gap-3">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="text-xs font-medium bg-muted">{initials}</AvatarFallback>
-          </Avatar>
+          <div className="h-9 w-9 shrink-0 rounded-full bg-muted text-xs font-medium flex items-center justify-center">{initials}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium text-sm truncate">{user.name}</p>
