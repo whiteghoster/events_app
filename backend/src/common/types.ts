@@ -12,17 +12,6 @@ export enum EventStatus {
   FINISHED = 'finished',
 }
 
-export enum OccasionType {
-  HALDI = 'haldi',
-  BHAAT = 'bhaat',
-  MEHENDI = 'mehendi',
-  WEDDING = 'wedding',
-  RECEPTION = 'reception',
-  COCKTAIL = 'cocktail',
-  AFTER_PARTY = 'after_party',
-  OTHER = 'others',
-}
-
 export enum AuditAction {
   CREATE = 'create',
   UPDATE = 'update',

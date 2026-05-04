@@ -86,7 +86,7 @@ export function useEvents() {
     refetch,
   } = useInfiniteQuery({
     queryKey: ['events', 'list', activeTab],
-    queryFn: ({ pageParam }) => eventsApi.getEvents(undefined, activeTab, pageParam, PAGE_SIZE),
+    queryFn: ({ pageParam }) => eventsApi.getEvents(activeTab, pageParam, PAGE_SIZE),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const { page, totalPages } = lastPage.pagination
@@ -324,7 +324,7 @@ export function useEvents() {
           ]
 
           for (const entry of allAudits) {
-            const timestamp = new Date(entry.timestamp || entry.created_at)
+            const timestamp = new Date(entry.timestamp)
             const oldVals = entry.old_values || {}
             const newVals = entry.new_values || {}
 

@@ -48,7 +48,6 @@ export class EventsController {
     @Query() query: EventQueryDto,
   ) {
     return await this.eventsService.findEvents(
-      query.occasion_type,
       query.status,
       query.page,
       query.page_size,

@@ -21,31 +21,6 @@ export const EVENT_STATUSES = {
 } as const
 
 /**
- * Occasion Types - MUST match database constraint (lowercase)
- */
-export type OccasionType = 
-  | 'haldi' 
-  | 'bhaat' 
-  | 'mehendi' 
-  | 'wedding' 
-  | 'reception' 
-  | 'cocktail' 
-  | 'after_party' 
-  | 'others'
-
-export const OCCASION_TYPES = {
-  HALDI: 'haldi' as const,
-  BHAAT: 'bhaat' as const,
-  MEHENDI: 'mehendi' as const,
-  WEDDING: 'wedding' as const,
-  RECEPTION: 'reception' as const,
-  COCKTAIL: 'cocktail' as const,
-  AFTER_PARTY: 'after_party' as const,
-  OTHERS: 'others' as const,
-} as const
-
-
-/**
  * User Model
  */
 export interface User {
@@ -275,4 +250,23 @@ export interface ProductSheetProps {
   setProductFormData: React.Dispatch<React.SetStateAction<ProductFormData>>
   isSaving: boolean
   saveProduct: () => void
+}
+
+// ─── Audit Types ─────────────────────────────────────────────────────────────
+
+export interface AuditEntry {
+  id: string
+  timestamp: string
+  userId: string
+  userEmail: string
+  userName: string
+  userRole: string
+  action: 'create' | 'update' | 'delete' | 'Created' | 'Updated' | 'Deleted'
+  entityType: string
+  entityName: string
+  entityId: string
+  entityDisplayId?: string
+  change: string
+  old_values?: Record<string, unknown> | null
+  new_values?: Record<string, unknown> | null
 }

@@ -1,5 +1,5 @@
-import { IsString, IsOptional, IsEnum, IsDateString, IsUUID, IsIn } from 'class-validator';
-import { OccasionType, EventStatus } from '../../common/types';
+import { IsString, IsOptional, IsDateString, IsUUID, IsIn } from 'class-validator';
+import { EventStatus } from '../../common/types';
 
 // Valid status values (lowercase to match frontend and database)
 const VALID_EVENT_STATUSES = ['live', 'hold', 'finished'];
@@ -8,10 +8,6 @@ export class UpdateEventDto {
   @IsString()
   @IsOptional()
   name?: string;
-
-  @IsEnum(OccasionType)
-  @IsOptional()
-  occasion_type?: OccasionType;
 
   @IsDateString()
   @IsOptional()

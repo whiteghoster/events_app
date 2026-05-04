@@ -82,7 +82,6 @@ export class EventsService {
   }
 
   async findEvents(
-    occasionType?: string,
     status?: EventStatus,
     page: number = 1,
     pageSize: number = 20,
@@ -94,7 +93,6 @@ export class EventsService {
       .select(this.LIST_FIELDS, { count: 'exact' })
       .order('delivery_from_date', { ascending: true });
 
-    if (occasionType) query = query.eq('occasion_type', occasionType);
     if (status) query = query.eq('status', status);
 
     const { data, count, error } = await query.range(offset, offset + pageSize - 1);

@@ -1,14 +1,9 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsDateString, IsUUID } from 'class-validator';
-import { OccasionType } from '../../common/types';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsUUID } from 'class-validator';
 
 export class CreateEventDto {
   @IsString()
   @IsOptional()
   name?: string;
-
-  @IsEnum(OccasionType)
-  @IsOptional()
-  occasion_type?: OccasionType;
 
   @IsDateString()
   @IsNotEmpty()
