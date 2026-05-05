@@ -174,10 +174,13 @@ export class AuthService {
   }
 
   async signOut(userId: string) {
-    const { error } = await this.supabase.auth.admin.signOut(userId, 'global');
-    if (error) {
-      this.logger.error(`Sign out failed for user ${userId}: ${error.message}`);
-      throw new InternalServerErrorException('Failed to sign out');
+    try {
+      // Attempt to sign out from Supabase (may fail with JWT issues)
+      await this.supabase.auth.admin.signOut(userId, 'global');
+    } catch (error: any) {
+      // Log but don't fail - client will clear local storage anyway
+      this.logger.warn(`Supabase sign out failed for user ${userId}: ${error?.message || 'Unknown error'}`);
+      // Don't throw - allow client to complete logout by clearing local storage
     }
   }
 }

@@ -43,7 +43,7 @@ export class EventContractorsService {
     const existingIds = new Set(existing?.map(e => e.contractor_id) || []);
     const newIds = new Set(contractors.map(c => c.contractor_id));
 
-    // Remove contractors that are no longer in the list
+    // Batch 1: Remove contractors that are no longer in the list
     const toRemove = [...existingIds].filter(id => !newIds.has(id));
     if (toRemove.length > 0) {
       await this.supabase
@@ -53,29 +53,22 @@ export class EventContractorsService {
         .in('contractor_id', toRemove);
     }
 
-    // Update or insert contractors
-    for (const contractor of contractors) {
-      if (existingIds.has(contractor.contractor_id)) {
-        // Update existing
-        await this.supabase
-          .from('event_contractors')
-          .update({
-            shift: contractor.shift || null,
-            member_quantity: contractor.member_quantity || 0,
-          })
-          .eq('event_id', eventId)
-          .eq('contractor_id', contractor.contractor_id);
-      } else {
-        // Insert new
-        await this.supabase
-          .from('event_contractors')
-          .insert({
-            event_id: eventId,
-            contractor_id: contractor.contractor_id,
-            shift: contractor.shift || null,
-            member_quantity: contractor.member_quantity || 0,
-          });
-      }
+    // Batch 2: Update existing contractors in a single query using upsert
+    const toUpsert = contractors.map(c => ({
+      event_id: eventId,
+      contractor_id: c.contractor_id,
+      shift: c.shift || null,
+      member_quantity: c.member_quantity || 0,
+    }));
+
+    if (toUpsert.length > 0) {
+      // Use upsert with onConflict to handle both insert and update in one query
+      await this.supabase
+        .from('event_contractors')
+        .upsert(toUpsert, { 
+          onConflict: 'event_id,contractor_id',
+          ignoreDuplicates: false // Update on conflict
+        });
     }
 
     // Return updated list

@@ -92,7 +92,9 @@ export function useEvents() {
       const { page, totalPages } = lastPage.pagination
       return page < totalPages ? page + 1 : undefined
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    placeholderData: (previousData) => previousData, // Keep previous data while loading new
   })
 
   const apiEvents = useMemo(() => {
