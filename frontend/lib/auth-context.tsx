@@ -56,6 +56,16 @@ function clearSession() {
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('expires_at')
   localStorage.removeItem('user')
+  // Clear cookies for middleware
+  document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+  document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+}
+
+function setCookies(token: string, role: string) {
+  // Set cookies for middleware (7 days expiry)
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString()
+  document.cookie = `access_token=${token}; path=/; expires=${expires}; SameSite=Lax`
+  document.cookie = `user_role=${role}; path=/; expires=${expires}; SameSite=Lax`
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -136,6 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(userData)
         localStorage.setItem('user', JSON.stringify(userData))
+        // Set cookies for middleware
+        setCookies(data.access_token, userData.role)
 
         return true
       } catch (err) {

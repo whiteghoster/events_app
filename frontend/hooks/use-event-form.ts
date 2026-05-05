@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { eventsApi, usersApi, ContractorsApi } from '@/lib/api'
 import type { User, Client, EventFormData, Contractor } from '@/lib/types'
@@ -27,45 +27,32 @@ export function useEventForm(eventId?: string) {
   const queryClient = useQueryClient()
   const [isLoading, setIsLoading] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(!!eventId)
-  const [staffList, setStaffList] = useState<User[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [contractors, setContractors] = useState<Contractor[]>([])
   const [selectedDropdownClient, setSelectedDropdownClient] = useState('')
   const [formData, setFormData] = useState<EventFormData>(DEFAULT_FORM_DATA)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const { data } = await usersApi.getUsers(1, 100)
-        setStaffList(data.filter(u => u.role === 'karigar' || u.role === 'manager'))
-      } catch {
-        // silent fail
-      }
-    }
-    const fetchClients = async () => {
-      try {
-        const data = await eventsApi.getClients()
-        setClients(data)
-      } catch {
-        setClients([])
-      }
-    }
-    const fetchContractors = async () => {
-      try {
-        console.log('[useEventForm] Fetching contractors...')
-        const data = await ContractorsApi.getAll()
-        console.log('[useEventForm] Contractors fetched:', data?.length || 0, data)
-        setContractors(data?.filter(c => c.isActive !== false) || [])
-      } catch (err: any) {
-        console.error('[useEventForm] Failed to fetch contractors:', err?.message || err)
-        setContractors([])
-      }
-    }
-    fetchStaff()
-    fetchClients()
-    fetchContractors()
-  }, [])
+  // Use React Query for reactive data fetching with caching
+  const { data: staffData } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => usersApi.getUsers(1, 100),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
+  const staffList = staffData?.data || []
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => eventsApi.getClients(),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: contractors = [], isLoading: isLoadingContractors } = useQuery({
+    queryKey: ['contractors'],
+    queryFn: async () => {
+      const data = await ContractorsApi.getAll()
+      return data?.filter(c => c.isActive !== false) || []
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  })
 
   useEffect(() => {
     if (!eventId) return
@@ -218,6 +205,7 @@ export function useEventForm(eventId?: string) {
           }
         })
         // Non-blocking cache invalidation (don't wait for it)
+        // Invalidate all event list queries regardless of activeTab
         queryClient.invalidateQueries({
           queryKey: ['events', 'list'],
           exact: false,
@@ -268,6 +256,7 @@ export function useEventForm(eventId?: string) {
     isPageLoading,
     clients,
     contractors,
+    isLoadingContractors,
     selectedDropdownClient,
     karigars,
     managers,

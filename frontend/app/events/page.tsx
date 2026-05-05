@@ -25,6 +25,7 @@ export default function EventsPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch,
   } = useEvents()
 
   // Infinite scroll with IntersectionObserver
@@ -46,6 +47,18 @@ export default function EventsPage() {
 
     return () => observerRef.current?.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  // Refetch when page becomes visible (e.g., after creating new event)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Small delay to ensure navigation is complete
+        setTimeout(() => refetch(), 100)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [refetch])
 
   return (
     <PageTransition>

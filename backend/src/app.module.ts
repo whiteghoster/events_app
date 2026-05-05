@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { JwtGuard } from './auth/guards/jwt.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -11,7 +12,6 @@ import { CatalogModule } from './catalog/catalog.module';
 import { EventsModule } from './events/events.module';
 import { AuditModule } from './audit/audit.module';
 import { HealthModule } from './health/health.module';
-import { DashboardModule } from './dashboard/dashboard.module';
 import { ContractorsModule } from './Contractors/contractors.module';
 import { AppController } from './app.controller';
 
@@ -22,6 +22,11 @@ import { AppController } from './app.controller';
       envFilePath: '.env',
     }),
     ScheduleModule.forRoot(),
+    // Rate limiting: 100 requests per 60 seconds per IP
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
     AuthModule,
     DatabaseModule,
     UsersModule,
@@ -29,7 +34,6 @@ import { AppController } from './app.controller';
     EventsModule,
     AuditModule,
     HealthModule,
-    DashboardModule,
     ContractorsModule,
   ],
   controllers: [AppController],
@@ -41,6 +45,10 @@ import { AppController } from './app.controller';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

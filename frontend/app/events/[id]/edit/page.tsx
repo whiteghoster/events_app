@@ -18,7 +18,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { user } = useAuth()
   const {
-    formData, errors, isLoading, isPageLoading, clients, contractors, selectedDropdownClient,
+    formData, errors, isLoading, isPageLoading, clients, contractors, isLoadingContractors, selectedDropdownClient,
     karigars, managers, handleChange, handleClientSelect, handleSubmit,
     addContractorEntry, removeContractorEntry, updateContractorEntry,
   } = useEventForm(id)
@@ -189,6 +189,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
             <EventContractorForm
               entries={formData.contractorEntries}
               contractors={contractors}
+              isLoadingContractors={isLoadingContractors}
               fromDate={formData.eventFromDate}
               toDate={formData.eventEndDate}
               onFromDateChange={(value) => handleChange('eventFromDate', value)}

@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Successful authentication, redirect to dashboard
-      return NextResponse.redirect(`${origin}/dashboard`);
+      // Successful authentication, redirect to events
+      return NextResponse.redirect(`${origin}/events`);
     }
 
     // No code provided

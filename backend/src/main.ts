@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 const compression = require('compression');
+const helmet = require('helmet');
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { validateSupabaseConfig } from './config/database.config';
@@ -14,6 +15,19 @@ async function bootstrap() {
     validateSupabaseConfig();
 
     const app = await NestFactory.create(AppModule);
+
+    // Security headers with Helmet
+    app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Allow embedding if needed
+    }));
 
     app.use(compression());
 

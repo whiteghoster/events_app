@@ -18,6 +18,7 @@ import type { Contractor, ContractorEntry } from '@/lib/types'
 interface EventContractorFormProps {
   entries: ContractorEntry[]
   contractors: Contractor[]
+  isLoadingContractors?: boolean
   fromDate?: string
   toDate?: string
   onFromDateChange?: (value: string) => void
@@ -30,6 +31,7 @@ interface EventContractorFormProps {
 export function EventContractorForm({
   entries,
   contractors,
+  isLoadingContractors,
   fromDate,
   toDate,
   onFromDateChange,
@@ -107,12 +109,16 @@ export function EventContractorForm({
               onValueChange={(value) => onUpdate(index, 'contractorId', value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder={contractors.length === 0 ? "Loading contractors..." : "Select contractor"}>
+                <SelectValue placeholder={isLoadingContractors ? "Loading contractors..." : contractors.length === 0 ? "No contractors available" : "Select contractor"}>
                   {entry.contractorId && contractors.find(c => c.id === entry.contractorId)?.name}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {contractors.length === 0 ? (
+                {isLoadingContractors ? (
+                  <div className="px-2 py-2 text-sm text-muted-foreground">
+                    Loading contractors...
+                  </div>
+                ) : contractors.length === 0 ? (
                   <div className="px-2 py-2 text-sm text-muted-foreground">
                     No contractors available
                   </div>
