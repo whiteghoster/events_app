@@ -207,6 +207,10 @@ export function canManageUsers(role: UserRole | undefined): boolean {
   return role === 'admin'
 }
 
+export function canManageContractors(role: UserRole | undefined): boolean {
+  return role === 'admin' || role === 'manager'
+}
+
 export function canDeactivateUser(role: UserRole | undefined): boolean {
   return role === 'admin'
 }

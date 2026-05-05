@@ -33,6 +33,22 @@ export interface User {
 }
 
 /**
+ * Contractor Model (Contractor/Worker)
+ */
+export interface Contractor {
+  id: string
+  name: string
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string | null
+}
+
+export interface ContractorFormData {
+  name: string
+  isActive: boolean
+}
+
+/**
  * Client Model (for dropdown)
  */
 export interface Client {
@@ -44,6 +60,20 @@ export interface Client {
 /**
  * Event Model
  */
+/**
+ * Shift type for events
+ */
+export type ShiftType = 'day' | 'night'
+
+export interface EventContractor {
+  id: string
+  eventId: string
+  contractorId: string
+  contractorName?: string
+  shift?: ShiftType
+  memberQuantity: number
+}
+
 export interface Event {
   id: string
   displayId?: string
@@ -63,6 +93,9 @@ export interface Event {
   createdBy?: string
   createdAt?: string
   updatedAt?: string | null
+  eventFromDate?: string
+  eventEndDate?: string
+  contractors?: EventContractor[]
 }
 
 /**
@@ -128,6 +161,13 @@ export interface EventProduct {
 
 // ─── Form types ──────────────────────────────────────────────────────────────
 
+export interface ContractorEntry {
+  id?: string
+  contractorId: string
+  shift: ShiftType | 'none'
+  memberQuantity: number
+}
+
 export interface EventFormData {
   clientName: string
   companyName: string
@@ -141,6 +181,9 @@ export interface EventFormData {
   deliveryFromDate: string
   deliveryToDate: string
   displayId?: string
+  eventFromDate?: string
+  eventEndDate?: string
+  contractorEntries: ContractorEntry[]
 }
 
 export interface ProductFormData {

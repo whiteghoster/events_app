@@ -56,6 +56,22 @@ export function EventInfoCard({ event, infoExpanded, setInfoExpanded }: EventInf
             {event.managerName && <InfoField label="Manager" value={event.managerName} />}
             {event.deliveryFromDate && <InfoField label="Delivery From" value={new Date(event.deliveryFromDate).toLocaleDateString()} />}
             {event.deliveryToDate && <InfoField label="Delivery To" value={new Date(event.deliveryToDate).toLocaleDateString()} />}
+            {event.eventFromDate && <InfoField label="Event From" value={new Date(event.eventFromDate).toLocaleDateString()} />}
+            {event.eventEndDate && <InfoField label="Event End" value={new Date(event.eventEndDate).toLocaleDateString()} />}
+            {event.contractors && event.contractors.length > 0 && (
+              <div className="sm:col-span-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Contractors</p>
+                <div className="space-y-1">
+                  {event.contractors.map((c, i) => (
+                    <p key={i} className="text-sm">
+                      <span className="font-medium">{c.contractorName || 'Unknown'}</span>
+                      {c.shift && <span className="text-muted-foreground"> ({c.shift} shift)</span>}
+                      <span className="text-muted-foreground"> - {c.memberQuantity} members</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
             {event.notes && <div className="sm:col-span-2"><InfoField label="Notes" value={event.notes} /></div>}
           </div>
         </CollapsibleContent>

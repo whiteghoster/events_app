@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { eventsApi, usersApi } from '@/lib/api'
-import type { User, Client, EventFormData } from '@/lib/types'
+import { eventsApi, usersApi, ContractorsApi } from '@/lib/api'
+import type { User, Client, EventFormData, Contractor } from '@/lib/types'
 
 const DEFAULT_FORM_DATA: EventFormData = {
   clientName: '',
@@ -17,6 +17,9 @@ const DEFAULT_FORM_DATA: EventFormData = {
   managerName: 'unassigned',
   deliveryFromDate: '',
   deliveryToDate: '',
+  eventFromDate: '',
+  eventEndDate: '',
+  contractorEntries: [],
 }
 
 export function useEventForm(eventId?: string) {
@@ -26,6 +29,7 @@ export function useEventForm(eventId?: string) {
   const [isPageLoading, setIsPageLoading] = useState(!!eventId)
   const [staffList, setStaffList] = useState<User[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [contractors, setContractors] = useState<Contractor[]>([])
   const [selectedDropdownClient, setSelectedDropdownClient] = useState('')
   const [formData, setFormData] = useState<EventFormData>(DEFAULT_FORM_DATA)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -47,8 +51,17 @@ export function useEventForm(eventId?: string) {
         setClients([])
       }
     }
+    const fetchContractors = async () => {
+      try {
+        const data = await ContractorsApi.getAll()
+        setContractors(data?.filter(c => c.isActive !== false) || [])
+      } catch {
+        setContractors([])
+      }
+    }
     fetchStaff()
     fetchClients()
+    fetchContractors()
   }, [])
 
   useEffect(() => {
@@ -61,6 +74,9 @@ export function useEventForm(eventId?: string) {
           router.push(`/events/${eventId}`)
           return
         }
+        // Fetch event contractors
+        const eventContractors = await eventsApi.getEventContractors(eventId)
+        
         setFormData({
           clientName: data.clientName,
           companyName: data.companyName || '',
@@ -73,9 +89,18 @@ export function useEventForm(eventId?: string) {
           managerName: data.managerName || 'unassigned',
           deliveryFromDate: data.deliveryFromDate ? data.deliveryFromDate.split('T')[0] : '',
           deliveryToDate: data.deliveryToDate ? data.deliveryToDate.split('T')[0] : '',
+          eventFromDate: data.eventFromDate ? data.eventFromDate.split('T')[0] : '',
+          eventEndDate: data.eventEndDate ? data.eventEndDate.split('T')[0] : '',
+          contractorEntries: eventContractors.map(c => ({
+            id: c.id,
+            contractorId: c.contractorId,
+            shift: c.shift || 'none',
+            memberQuantity: c.memberQuantity || 0,
+          })),
         })
-      } catch {
-        toast.error('Failed to load event details')
+      } catch (err: any) {
+        console.error('Failed to load event:', err)
+        toast.error(err?.message || 'Failed to load event details')
         router.push('/events')
       } finally {
         setIsPageLoading(false)
@@ -123,6 +148,14 @@ export function useEventForm(eventId?: string) {
 
     setIsLoading(true)
     try {
+      const contractorsPayload = formData.contractorEntries
+        .filter(entry => entry.contractorId)
+        .map(entry => ({
+          contractorId: entry.contractorId,
+          shift: entry.shift === 'none' ? undefined : entry.shift,
+          memberQuantity: entry.memberQuantity || 0,
+        }))
+
       const payload = {
         clientName: formData.clientName,
         companyName: formData.companyName || undefined,
@@ -135,6 +168,9 @@ export function useEventForm(eventId?: string) {
         managerName: formData.managerName === 'unassigned' ? undefined : formData.managerName,
         deliveryFromDate: formData.deliveryFromDate,
         deliveryToDate: formData.deliveryToDate,
+        eventFromDate: formData.eventFromDate || undefined,
+        eventEndDate: formData.eventEndDate || undefined,
+        contractors: contractorsPayload,
       }
 
       if (eventId) {
@@ -175,17 +211,48 @@ export function useEventForm(eventId?: string) {
   const karigars = staffList.filter(s => s.role === 'karigar')
   const managers = staffList.filter(s => s.role === 'manager')
 
+  // Contractor entry management
+  const addContractorEntry = () => {
+    setFormData(prev => ({
+      ...prev,
+      contractorEntries: [
+        ...prev.contractorEntries,
+        { contractorId: '', shift: 'none', memberQuantity: 0 }
+      ]
+    }))
+  }
+
+  const removeContractorEntry = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      contractorEntries: prev.contractorEntries.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateContractorEntry = (index: number, field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      contractorEntries: prev.contractorEntries.map((entry, i) =>
+        i === index ? { ...entry, [field]: value } : entry
+      )
+    }))
+  }
+
   return {
     formData,
     errors,
     isLoading,
     isPageLoading,
     clients,
+    contractors,
     selectedDropdownClient,
     karigars,
     managers,
     handleChange,
     handleClientSelect,
     handleSubmit,
+    addContractorEntry,
+    removeContractorEntry,
+    updateContractorEntry,
   }
 }

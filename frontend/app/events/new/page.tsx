@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { useAuth, canCreateEvent } from '@/lib/auth-context'
 import { useEventForm } from '@/hooks/use-event-form'
+import { EventContractorForm } from '@/components/events/event-contractor-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,8 +16,9 @@ export default function NewEventPage() {
   const router = useRouter()
   const { user } = useAuth()
   const {
-    formData, errors, isLoading, clients, selectedDropdownClient,
+    formData, errors, isLoading, clients, contractors, selectedDropdownClient,
     karigars, managers, handleChange, handleClientSelect, handleSubmit,
+    addContractorEntry, removeContractorEntry, updateContractorEntry,
   } = useEventForm()
 
   if (!user || !canCreateEvent(user.role)) {
@@ -183,7 +185,24 @@ export default function NewEventPage() {
 
           <div className="border-t border-border" />
 
-          {/* Section 4: Staff Details */}
+          {/* Section: Contractors */}
+          <section className="space-y-4">
+            <EventContractorForm
+              entries={formData.contractorEntries}
+              contractors={contractors}
+              fromDate={formData.eventFromDate}
+              toDate={formData.eventEndDate}
+              onFromDateChange={(value) => handleChange('eventFromDate', value)}
+              onToDateChange={(value) => handleChange('eventEndDate', value)}
+              onAdd={addContractorEntry}
+              onRemove={removeContractorEntry}
+              onUpdate={updateContractorEntry}
+            />
+          </section>
+
+          <div className="border-t border-border" />
+
+          {/* Section: Staff Details */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Staff Details (Optional)</h2>
 

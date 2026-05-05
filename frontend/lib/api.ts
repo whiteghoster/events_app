@@ -1,4 +1,4 @@
-import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry } from './types'
+import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
@@ -131,6 +131,16 @@ function mapEventFromBackend(event: any): Event {
     status: normalizeStatus(event.status),
     createdAt: event.created_at || event.createdAt || undefined,
     updatedAt: event.updated_at || event.updatedAt || null,
+    eventFromDate: event.event_from_date || undefined,
+    eventEndDate: event.event_end_date || undefined,
+    contractors: event.contractors?.map((c: any) => ({
+      id: c.id,
+      eventId: c.event_id,
+      contractorId: c.contractor_id,
+      contractorName: c.contractor?.name || '',
+      shift: c.shift,
+      memberQuantity: c.member_quantity || 0,
+    })),
   }
 }
 
@@ -250,8 +260,15 @@ export const eventsApi = {
     managerName?: string
     deliveryFromDate?: string
     deliveryToDate?: string
+    eventFromDate?: string
+    eventEndDate?: string
+    contractors?: Array<{
+      contractorId: string
+      shift?: string
+      memberQuantity: number
+    }>
   }): Promise<Event> {
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate } = payload
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, eventFromDate, eventEndDate, contractors } = payload
     const data = await apiRequest<any>('/events', {
       method: 'POST',
       body: JSON.stringify({
@@ -266,6 +283,13 @@ export const eventsApi = {
         manager_name: managerName,
         delivery_from_date: deliveryFromDate,
         delivery_to_date: deliveryToDate,
+        event_from_date: eventFromDate,
+        event_end_date: eventEndDate,
+        contractors: contractors?.map(c => ({
+          contractor_id: c.contractorId,
+          shift: c.shift,
+          member_quantity: c.memberQuantity,
+        })),
       }),
     })
     return mapEventFromBackend(data)
@@ -293,8 +317,8 @@ export const eventsApi = {
     return res.data || res
   },
 
-  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string }): Promise<Event> {
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId } = payload
+  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string; contractors?: Array<{ contractorId: string; shift?: string; memberQuantity: number }> }): Promise<Event> {
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId, eventFromDate, eventEndDate, contractors } = payload
     const data = await apiRequest<any>(`/events/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -310,6 +334,13 @@ export const eventsApi = {
         delivery_from_date: deliveryFromDate,
         delivery_to_date: deliveryToDate,
         display_id: displayId,
+        event_from_date: eventFromDate,
+        event_end_date: eventEndDate,
+        contractors: contractors?.map(c => ({
+          contractor_id: c.contractorId,
+          shift: c.shift,
+          member_quantity: c.memberQuantity,
+        })),
       }),
     })
     return mapEventFromBackend(data)
@@ -370,6 +401,21 @@ export const eventsApi = {
 
   async getCategorySummary(eventId: string): Promise<any[]> {
     return await apiRequest<any[]>(`/events/${eventId}/products/summary`)
+  },
+
+  // ── Event Contractors ──
+
+  async getEventContractors(eventId: string): Promise<EventContractor[]> {
+    const res = await apiRequest<any>(`/events/${eventId}/contractors`)
+    const contractors = Array.isArray(res) ? res : (res.data || [])
+    return contractors.map((c: any) => ({
+      id: c.id,
+      eventId: c.event_id,
+      contractorId: c.contractor_id,
+      contractorName: c.contractor?.name || '',
+      shift: c.shift,
+      memberQuantity: c.member_quantity || 0,
+    }))
   },
 }
 
@@ -594,6 +640,36 @@ export const auditApi = {
     await apiRequest('/audit/logs', {
       method: 'DELETE',
       body: JSON.stringify({ ids }),
+    })
+  },
+}
+
+// -------------------------------------------------------------------
+// 6. ContractorS API
+// -------------------------------------------------------------------
+
+export const ContractorsApi = {
+  async getAll(): Promise<Contractor[]> {
+    return await apiRequest<Contractor[]>('/Contractors')
+  },
+
+  async create(data: { name: string; isActive?: boolean }): Promise<Contractor> {
+    return await apiRequest<Contractor>('/Contractors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  async update(id: string, data: { name?: string; isActive?: boolean }): Promise<Contractor> {
+    return await apiRequest<Contractor>(`/Contractors/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  },
+
+  async delete(id: string): Promise<{ success: boolean }> {
+    return await apiRequest<{ success: boolean }>(`/Contractors/${id}`, {
+      method: 'DELETE',
     })
   },
 }

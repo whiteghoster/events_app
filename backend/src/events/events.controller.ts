@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { EventProductsService } from './event-products.service';
+import { EventContractorsService } from './event-contractors.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
@@ -31,6 +32,7 @@ export class EventsController {
   constructor(
     private readonly eventsService: EventsService,
     private readonly eventProductsService: EventProductsService,
+    private readonly eventContractorsService: EventContractorsService,
   ) { }
 
   @Post()
@@ -139,6 +141,15 @@ export class EventsController {
   @Get(':id/products/summary')
   async productsSummary(@Param('id') eventId: string) {
     const data = await this.eventProductsService.getCategorySummary(eventId);
+    return { data };
+  }
+
+  // ── Event Contractors ──
+
+  @Get(':id/contractors')
+  @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
+  async findContractors(@Param('id') eventId: string) {
+    const data = await this.eventContractorsService.findAllByEvent(eventId);
     return { data };
   }
 }

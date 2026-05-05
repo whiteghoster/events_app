@@ -9,6 +9,7 @@ import { EventStatus, UserRole, AuditAction } from '../common/types';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { AuditService } from '../audit/audit.service';
+import { EventContractorsService } from './event-contractors.service';
 import { stripUndefined, paginate, paginationOffset } from '../common/utils';
 
 const ALLOWED_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
@@ -22,6 +23,7 @@ export class EventsService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly auditService: AuditService,
+    private readonly eventContractorsService: EventContractorsService,
   ) {}
 
   private get supabase() {
@@ -33,6 +35,7 @@ export class EventsService {
   private readonly LIST_FIELDS = [
     'id', 'client_name', 'venue', 'status', 'display_id',
     'delivery_from_date', 'delivery_to_date', 'manager_name', 'head_karigar_name',
+    'contractor_id', 'event_from_date', 'event_end_date', 'shift', 'member_quantity',
   ].join(',');
 
   async getEventOrThrow(eventId: string, fields: string = '*'): Promise<any> {
@@ -71,12 +74,27 @@ export class EventsService {
       p_city: createEventDto.city || null,
       p_head_karigar_name: createEventDto.head_karigar_name || null,
       p_manager_name: createEventDto.manager_name || null,
+      p_notes: createEventDto.notes || null,
       p_delivery_from_date: createEventDto.delivery_from_date || null,
       p_delivery_to_date: createEventDto.delivery_to_date || null,
+      p_assigned_to: createEventDto.assigned_to || null,
       p_created_by: actorId,
+      p_contractor_id: createEventDto.contractor_id || null,
+      p_event_from_date: createEventDto.event_from_date || null,
+      p_event_end_date: createEventDto.event_end_date || null,
+      p_shift: createEventDto.shift || null,
+      p_member_quantity: createEventDto.member_quantity || 0,
     });
 
     if (error) throw new BadRequestException(`Failed to create event: ${error.message}`);
+
+    // Sync contractors if provided
+    if (createEventDto.contractors && createEventDto.contractors.length > 0 && data?.id) {
+      await this.eventContractorsService.syncEventContractors(
+        data.id,
+        createEventDto.contractors,
+      );
+    }
 
     return data;
   }
@@ -126,6 +144,11 @@ export class EventsService {
       manager_name: updateEventDto.manager_name,
       delivery_from_date: updateEventDto.delivery_from_date,
       delivery_to_date: updateEventDto.delivery_to_date,
+      contractor_id: updateEventDto.contractor_id,
+      event_from_date: updateEventDto.event_from_date,
+      event_end_date: updateEventDto.event_end_date,
+      shift: updateEventDto.shift,
+      member_quantity: updateEventDto.member_quantity,
     });
 
     const hasFieldChanges = Object.keys(fieldPayload).length > 0;
@@ -174,6 +197,14 @@ export class EventsService {
       .single();
 
     if (error) throw new BadRequestException(`Failed to update event: ${error.message}`);
+
+    // Sync contractors if provided
+    if (updateEventDto.contractors) {
+      await this.eventContractorsService.syncEventContractors(
+        event.id,
+        updateEventDto.contractors,
+      );
+    }
 
     return data;
   }

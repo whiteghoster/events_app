@@ -29,6 +29,7 @@ export function useEventDetail(id: string) {
     { data: event, isLoading: eventLoading },
     { data: eventProductsList = [], isLoading: productsLoading },
     { data: categorySummary = [] },
+    { data: eventContractors = [], isLoading: contractorsLoading },
   ] = useQueries({
     queries: [
       {
@@ -44,6 +45,11 @@ export function useEventDetail(id: string) {
       {
         queryKey: ['categorySummary', id],
         queryFn: () => eventsApi.getCategorySummary(id),
+        enabled: !!id,
+      },
+      {
+        queryKey: ['eventContractors', id],
+        queryFn: () => eventsApi.getEventContractors(id),
         enabled: !!id,
       },
     ],
@@ -202,6 +208,7 @@ export function useEventDetail(id: string) {
     queryClient.invalidateQueries({ queryKey: ['event', id] })
     queryClient.invalidateQueries({ queryKey: ['eventProducts', id] })
     queryClient.invalidateQueries({ queryKey: ['categorySummary', id] })
+    queryClient.invalidateQueries({ queryKey: ['eventContractors', id] })
     queryClient.invalidateQueries({ queryKey: ['audit', 'event', id] })
     queryClient.invalidateQueries({ queryKey: ['audit', 'event-products', id] })
   }
@@ -215,6 +222,7 @@ export function useEventDetail(id: string) {
     event,
     isLoading,
     eventProductsList,
+    eventContractors,
     categorySummary,
     allCategories,
     allProducts,

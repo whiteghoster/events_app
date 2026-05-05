@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Pencil, Trash2,
   MapPin, Calendar, RefreshCw, MoreVertical, Phone, User, Crown,
-  Pause, CheckCircle2, Building2, FileText, Info, History,
+  Pause, CheckCircle2, Building2, FileText, Info, History, Briefcase,
 } from 'lucide-react'
 import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canRevertFinishedEvent, canDeleteFinishedEvent } from '@/lib/auth-context'
 import { useEventDetail } from '@/hooks/use-event-detail'
@@ -33,7 +33,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false)
   const [auditDialogOpen, setAuditDialogOpen] = useState(false)
   const {
-    event, isLoading, eventProductsList, categorySummary,
+    event, isLoading, eventProductsList, eventContractors, categorySummary,
     allCategories, allProducts, filteredProducts, units,
     closeModalOpen, setCloseModalOpen, closeStatus, setCloseStatus,
     editingRow, editingData, setEditingData,
@@ -138,7 +138,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
 
         {/* Left Sidebar — desktop only */}
         <div className="hidden lg:block w-72 xl:w-80 shrink-0 space-y-4">
-          <EventInfoPanel event={event} categorySummary={categorySummary} eventProductsList={eventProductsList} grandTotal={grandTotal} pricedItems={pricedItems} />
+          <EventInfoPanel event={event} eventContractors={eventContractors} categorySummary={categorySummary} eventProductsList={eventProductsList} grandTotal={grandTotal} pricedItems={pricedItems} />
         </div>
 
         {/* Mobile Info Drawer */}
@@ -148,7 +148,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
               <DrawerTitle>Event Details</DrawerTitle>
             </DrawerHeader>
             <div className="px-4 pb-6 overflow-y-auto max-h-[70vh] space-y-4">
-              <EventInfoPanel event={event} categorySummary={categorySummary} eventProductsList={eventProductsList} grandTotal={grandTotal} pricedItems={pricedItems} />
+              <EventInfoPanel event={event} eventContractors={eventContractors} categorySummary={categorySummary} eventProductsList={eventProductsList} grandTotal={grandTotal} pricedItems={pricedItems} />
             </div>
           </DrawerContent>
         </Drawer>
@@ -341,8 +341,8 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
 }
 
 /* ─── Shared info panel (sidebar + drawer) ────────────────────── */
-function EventInfoPanel({ event, categorySummary, eventProductsList, grandTotal, pricedItems }: {
-  event: EventType; categorySummary: any[]; eventProductsList: EventProduct[]; grandTotal: number; pricedItems: EventProduct[]
+function EventInfoPanel({ event, eventContractors, categorySummary, eventProductsList, grandTotal, pricedItems }: {
+  event: EventType; eventContractors: any[]; categorySummary: any[]; eventProductsList: EventProduct[]; grandTotal: number; pricedItems: EventProduct[]
 }) {
   return (
     <>
@@ -360,6 +360,19 @@ function EventInfoPanel({ event, categorySummary, eventProductsList, grandTotal,
           {event.contactPhone && <InfoRow icon={<Phone className="w-4 h-4" />} label="Phone"><span>{event.contactPhone}</span></InfoRow>}
           {event.managerName && <InfoRow icon={<User className="w-4 h-4" />} label="Manager"><span>{event.managerName}</span></InfoRow>}
           {event.headKarigarName && <InfoRow icon={<Crown className="w-4 h-4" />} label="Head Karigar"><span>{event.headKarigarName}</span></InfoRow>}
+          {eventContractors?.length > 0 && (
+            <InfoRow icon={<Briefcase className="w-4 h-4" />} label="Contractors">
+              <div className="space-y-1">
+                {eventContractors.map((c) => (
+                  <div key={c.id} className="text-sm">
+                    <span className="font-medium">{c.contractorName || 'Unknown'}</span>
+                    {c.shift && <span className="text-muted-foreground text-xs"> ({c.shift})</span>}
+                    {c.memberQuantity > 0 && <span className="text-muted-foreground text-xs"> - {c.memberQuantity} members</span>}
+                  </div>
+                ))}
+              </div>
+            </InfoRow>
+          )}
           {event.notes && <InfoRow icon={<FileText className="w-4 h-4" />} label="Notes"><span className="text-xs leading-relaxed">{event.notes}</span></InfoRow>}
         </div>
       </div>

@@ -16,6 +16,11 @@ interface StaffMember {
   name: string
 }
 
+interface Contractor {
+  id: string
+  name: string
+}
+
 interface FormData {
   clientName: string
   companyName: string
@@ -28,6 +33,11 @@ interface FormData {
   city: string
   headKarigarName: string
   managerName: string
+  contractorId: string
+  eventFromDate: string
+  eventEndDate: string
+  shift: string
+  memberQuantity: number
 }
 
 interface FormErrors {
@@ -41,6 +51,7 @@ interface EventFormFieldsProps {
   formData: FormData
   errors: FormErrors
   clients: Client[]
+  contractors: Contractor[]
   selectedDropdownClient: string
   karigars: StaffMember[]
   managers: StaffMember[]
@@ -53,6 +64,7 @@ export function EventFormFields({
   formData,
   errors,
   clients,
+  contractors,
   selectedDropdownClient,
   karigars,
   managers,
@@ -171,6 +183,72 @@ export function EventFormFields({
             onChange={(e) => handleChange('city', e.target.value)}
             placeholder={isNew ? 'e.g., Mumbai' : undefined}
           />
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide">Event Schedule</h2>
+        
+        <div className="space-y-2">
+          <Label>Contractor</Label>
+          <Select value={formData.contractorId} onValueChange={(v) => handleChange('contractorId', v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select contractor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {contractors.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Event From</Label>
+            <Input
+              type="date"
+              value={formData.eventFromDate}
+              onChange={(e) => handleChange('eventFromDate', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Event End</Label>
+            <Input
+              type="date"
+              value={formData.eventEndDate}
+              onChange={(e) => handleChange('eventEndDate', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Shift</Label>
+            <Select value={formData.shift} onValueChange={(v) => handleChange('shift', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select shift" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="day">Day</SelectItem>
+                <SelectItem value="night">Night</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Member Quantity</Label>
+            <Input
+              type="number"
+              min="0"
+              value={formData.memberQuantity}
+              onChange={(e) => handleChange('memberQuantity', e.target.value)}
+              placeholder="0"
+            />
+          </div>
         </div>
       </section>
 

@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsDateString, IsUUID, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsUUID, IsIn, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { EventStatus } from '../../common/types';
 
 // Valid status values (lowercase to match frontend and database)
@@ -64,4 +65,44 @@ export class UpdateEventDto {
   @IsIn(VALID_EVENT_STATUSES)
   @IsOptional()
   status?: EventStatus;
+
+  @IsUUID()
+  @IsOptional()
+  contractor_id?: string;
+
+  @IsDateString()
+  @IsOptional()
+  event_from_date?: string;
+
+  @IsDateString()
+  @IsOptional()
+  event_end_date?: string;
+
+  @IsString()
+  @IsOptional()
+  shift?: string;
+
+  @IsOptional()
+  member_quantity?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventContractorUpdateEntry)
+  contractors?: EventContractorUpdateEntry[];
+}
+
+export class EventContractorUpdateEntry {
+  @IsUUID()
+  contractor_id: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['day', 'night'])
+  shift?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  member_quantity?: number;
 }
