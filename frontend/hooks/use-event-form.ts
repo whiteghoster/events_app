@@ -53,9 +53,12 @@ export function useEventForm(eventId?: string) {
     }
     const fetchContractors = async () => {
       try {
+        console.log('[useEventForm] Fetching contractors...')
         const data = await ContractorsApi.getAll()
+        console.log('[useEventForm] Contractors fetched:', data?.length || 0, data)
         setContractors(data?.filter(c => c.isActive !== false) || [])
-      } catch {
+      } catch (err: any) {
+        console.error('[useEventForm] Failed to fetch contractors:', err?.message || err)
         setContractors([])
       }
     }
@@ -151,7 +154,7 @@ export function useEventForm(eventId?: string) {
       const contractorsPayload = formData.contractorEntries
         .filter(entry => entry.contractorId)
         .map(entry => ({
-          contractorId: entry.contractorId,
+          contractorId: entry.contractorId!,
           shift: entry.shift === 'none' ? undefined : entry.shift,
           memberQuantity: entry.memberQuantity || 0,
         }))
@@ -197,10 +200,25 @@ export function useEventForm(eventId?: string) {
         })
         router.push(`/events/${eventId}`)
       } else {
-        await eventsApi.createEvent(payload)
+        const newEvent = await eventsApi.createEvent(payload)
         toast.success('Event created successfully')
-        // Invalidate events cache to refresh the list instantly
-        await queryClient.invalidateQueries({
+        // Optimistically add new event to cache for instant UI update
+        queryClient.setQueriesData({ queryKey: ['events', 'list'], exact: false }, (oldData: any) => {
+          if (!oldData?.pages?.[0]) return oldData
+          const newEventWithStatus = { ...newEvent, status: 'live' }
+          return {
+            ...oldData,
+            pages: [
+              {
+                ...oldData.pages[0],
+                events: [newEventWithStatus, ...oldData.pages[0].events],
+              },
+              ...oldData.pages.slice(1),
+            ],
+          }
+        })
+        // Non-blocking cache invalidation (don't wait for it)
+        queryClient.invalidateQueries({
           queryKey: ['events', 'list'],
           exact: false,
         })
@@ -222,7 +240,7 @@ export function useEventForm(eventId?: string) {
       ...prev,
       contractorEntries: [
         ...prev.contractorEntries,
-        { contractorId: '', shift: 'none', memberQuantity: 0 }
+        { contractorId: undefined, shift: 'none', memberQuantity: 0 }
       ]
     }))
   }

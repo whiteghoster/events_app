@@ -31,6 +31,7 @@ export class ContractorsService {
   }
 
   async create(dto: CreateContractorDto) {
+    console.log('[ContractorsService] Creating contractor:', dto);
     const supabase = this.databaseService.getClient();
     const { data, error } = await supabase
       .from('contractors')
@@ -41,7 +42,11 @@ export class ContractorsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[ContractorsService] Create error:', error);
+      throw error;
+    }
+    console.log('[ContractorsService] Created:', data);
     return transformContractor(data);
   }
 

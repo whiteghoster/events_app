@@ -163,7 +163,7 @@ export interface EventProduct {
 
 export interface ContractorEntry {
   id?: string
-  contractorId: string
+  contractorId?: string
   shift: ShiftType | 'none'
   memberQuantity: number
 }

@@ -73,7 +73,14 @@ export function useEvents() {
       }
 
       // If same distance, sort by date (earlier first)
-      return dateA.getTime() - dateB.getTime()
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime()
+      }
+
+      // If same date, sort by event code (displayId) alphabetically
+      const codeA = a.displayId || ''
+      const codeB = b.displayId || ''
+      return codeA.localeCompare(codeB)
     })
   }, [])
 

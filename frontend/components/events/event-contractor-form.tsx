@@ -107,7 +107,7 @@ export function EventContractorForm({
               onValueChange={(value) => onUpdate(index, 'contractorId', value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select contractor">
+                <SelectValue placeholder={contractors.length === 0 ? "Loading contractors..." : "Select contractor"}>
                   {entry.contractorId && contractors.find(c => c.id === entry.contractorId)?.name}
                 </SelectValue>
               </SelectTrigger>
