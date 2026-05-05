@@ -185,6 +185,11 @@ export function useEventForm(eventId?: string) {
           queryKey: ['event', eventId],
           exact: true,
         })
+        // Invalidate event contractors to refresh contractor list instantly
+        await queryClient.invalidateQueries({
+          queryKey: ['eventContractors', eventId],
+          exact: true,
+        })
         // Also invalidate the events list to show updated data in list view
         await queryClient.invalidateQueries({
           queryKey: ['events', 'list'],
