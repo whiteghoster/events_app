@@ -57,7 +57,7 @@ export class EventContractorsService {
       contractor_id: c.contractor_id,
       shift: c.shift || null,
       member_quantity: c.member_quantity || 0,
-      work_date: c.work_date || null,
+      // work_date: c.work_date || null, // TODO: Uncomment after migration is applied
     }));
 
     if (toUpsert.length > 0) {

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageTransition } from '@/components/page-transition'
 import { Loader2 } from 'lucide-react'
+import { setTimeout } from 'timers'
 
 export default function EventsPage() {
   const { user } = useAuth()

@@ -10,11 +10,13 @@ import {
 import { ContractorsService } from './contractors.service';
 import { CreateContractorDto } from './dto/create-contractor.dto';
 import { UpdateContractorDto } from './dto/update-contractor.dto';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('Contractors')
 export class ContractorsController {
   constructor(private readonly ContractorsService: ContractorsService) {}
 
+  @Public()
   @Get()
   async findAll() {
     return await this.ContractorsService.findAll();
