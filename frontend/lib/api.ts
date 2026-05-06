@@ -102,11 +102,11 @@ async function apiRequest<T>(
 
   } catch (networkErr) {
 
-    console.error('[API] Network error - API may be unreachable:', { 
+    console.error('[API] Network error - API may be unreachable:', {
 
       url: `${API_BASE_URL}${endpoint}`,
 
-      error: networkErr 
+      error: networkErr
 
     })
 
@@ -144,13 +144,13 @@ async function apiRequest<T>(
 
     let errorMessage = `Request failed: ${response.status} ${response.statusText}`
 
-    console.error('[API] Request failed:', { 
+    console.error('[API] Request failed:', {
 
-      url: `${API_BASE_URL}${endpoint}`, 
+      url: `${API_BASE_URL}${endpoint}`,
 
-      status: response.status, 
+      status: response.status,
 
-      statusText: response.statusText 
+      statusText: response.statusText
 
     })
 
@@ -880,7 +880,7 @@ export const eventsApi = {
 
       contractorName: data.contractor?.name || '',
 
-      date: data.date,
+      workDate: data.date,
 
       shift: data.shift,
 
