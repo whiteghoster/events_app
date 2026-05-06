@@ -19,6 +19,7 @@ const DEFAULT_FORM_DATA: EventFormData = {
   deliveryToDate: '',
   eventFromDate: '',
   eventEndDate: '',
+  notes: '',
 }
 
 export function useEventForm(eventId?: string) {
@@ -68,6 +69,7 @@ export function useEventForm(eventId?: string) {
           deliveryToDate: data.deliveryToDate ? data.deliveryToDate.split('T')[0] : '',
           eventFromDate: data.eventFromDate ? data.eventFromDate.split('T')[0] : '',
           eventEndDate: data.eventEndDate ? data.eventEndDate.split('T')[0] : '',
+          notes: data.notes || '',
         })
       } catch (err: any) {
         console.error('Failed to load event:', err)
@@ -133,6 +135,7 @@ export function useEventForm(eventId?: string) {
         deliveryToDate: formData.deliveryToDate,
         eventFromDate: formData.eventFromDate || undefined,
         eventEndDate: formData.eventEndDate || undefined,
+        notes: formData.notes || undefined,
       }
 
       if (eventId) {

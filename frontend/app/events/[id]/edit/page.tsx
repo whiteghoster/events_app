@@ -143,6 +143,34 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
 
           <div className="border-t border-border" />
 
+          {/* Section: Event Period */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Event Period</h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="eventFromDate" className="text-label">Event From</Label>
+                <Input
+                  id="eventFromDate"
+                  type="date"
+                  value={formData.eventFromDate || ''}
+                  onChange={(e) => handleChange('eventFromDate', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eventEndDate" className="text-label">Event End</Label>
+                <Input
+                  id="eventEndDate"
+                  type="date"
+                  value={formData.eventEndDate || ''}
+                  onChange={(e) => handleChange('eventEndDate', e.target.value)}
+                />
+              </div>
+            </div>
+          </section>
+
+          <div className="border-t border-border" />
+
           {/* Section 3: Venue */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Venue</h2>
@@ -221,6 +249,24 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </section>
+
+          <div className="border-t border-border" />
+
+          {/* Section: Notes */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Notes</h2>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-label">Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes || ''}
+                onChange={(e) => handleChange('notes', e.target.value)}
+                rows={3}
+                placeholder="Any additional notes about the event"
+              />
             </div>
           </section>
 

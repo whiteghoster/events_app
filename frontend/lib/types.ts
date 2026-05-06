@@ -200,6 +200,7 @@ export interface EventFormData {
   displayId?: string
   eventFromDate?: string
   eventEndDate?: string
+  notes?: string
 }
 
 export interface ProductFormData {

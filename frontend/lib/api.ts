@@ -268,6 +268,10 @@ function mapEventFromBackend(event: any): Event {
 
     eventEndDate: event.event_end_date || undefined,
 
+    contractorsWorkFrom: event.contractors_work_from || undefined,
+
+    contractorsWorkTo: event.contractors_work_to || undefined,
+
     contractors: event.contractors?.map((c: any) => ({
 
       id: c.id,
@@ -526,6 +530,8 @@ export const eventsApi = {
 
     eventEndDate?: string
 
+    notes?: string
+
     contractors?: Array<{
 
       contractorId: string
@@ -538,7 +544,7 @@ export const eventsApi = {
 
   }): Promise<Event> {
 
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, eventFromDate, eventEndDate, contractors } = payload
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, eventFromDate, eventEndDate, notes, contractors } = payload
 
     const data = await apiRequest<any>('/events', {
 
@@ -571,6 +577,8 @@ export const eventsApi = {
         event_from_date: eventFromDate,
 
         event_end_date: eventEndDate,
+
+        notes: notes,
 
         contractors: contractors?.map(c => ({
 
@@ -636,9 +644,9 @@ export const eventsApi = {
 
 
 
-  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string; contractors?: Array<{ contractorId: string; shift?: string; memberQuantity: number }> }): Promise<Event> {
+  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string; notes?: string; contractors?: Array<{ contractorId: string; shift?: string; memberQuantity: number }> }): Promise<Event> {
 
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId, eventFromDate, eventEndDate, contractors } = payload
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId, eventFromDate, eventEndDate, notes, contractors } = payload
 
     const data = await apiRequest<any>(`/events/${id}`, {
 
@@ -673,6 +681,8 @@ export const eventsApi = {
         event_from_date: eventFromDate,
 
         event_end_date: eventEndDate,
+
+        notes: notes,
 
         contractors: contractors?.map(c => ({
 
