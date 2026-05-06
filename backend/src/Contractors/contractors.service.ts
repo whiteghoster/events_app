@@ -109,4 +109,30 @@ export class ContractorsService {
     if (error) throw error;
     return { success: true };
   }
+
+  async findEventsByContractor(contractorId: string) {
+    const supabase = this.databaseService.getClient();
+    const { data, error } = await supabase
+      .from('event_contractors')
+      .select(`
+        shift,
+        member_quantity,
+        work_date,
+        event:events(id, display_id, client_name, status)
+      `)
+      .eq('contractor_id', contractorId)
+      .order('work_date', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      eventId: row.event?.id,
+      eventCode: row.event?.display_id || undefined,
+      eventName: row.event?.client_name,
+      eventStatus: row.event?.status || undefined,
+      shift: row.shift || undefined,
+      memberQuantity: row.member_quantity ?? 0,
+      workDate: row.work_date || undefined,
+    }));
+  }
 }

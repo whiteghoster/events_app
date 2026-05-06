@@ -10,12 +10,14 @@ import { UserCard } from '@/components/users/user-card'
 import { UserDialog } from '@/components/users/user-dialog'
 import { ContractorCard } from '@/components/Contractors/contractor-card'
 import { ContractorDialog } from '@/components/Contractors/contractor-dialog'
+import { ContractorEventsDialog } from '@/components/Contractors/contractor-events-dialog'
 import { EmptyState } from '@/components/empty-state'
 import { PageTransition } from '@/components/page-transition'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Loader2 } from 'lucide-react'
+import type { Contractor } from '@/lib/types'
 
 // Authorized emails for Manpower section
 const MANPOWER_AUTHORIZED_EMAILS = [
@@ -53,6 +55,10 @@ export default function UsersPage() {
   const canManageManpower = user ? canManageContractors(user.role) : false
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('team')
+
+  // Contractor events dialog state
+  const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null)
+  const [contractorEventsOpen, setContractorEventsOpen] = useState(false)
 
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users
@@ -183,6 +189,7 @@ export default function UsersPage() {
                   onEdit={openContractorDialog}
                   onDelete={deleteContractor}
                   onToggleActive={toggleActive}
+                  onClick={(c) => { setSelectedContractor(c); setContractorEventsOpen(true) }}
                 />
               ))}
             </div>
@@ -225,6 +232,14 @@ export default function UsersPage() {
         saveContractor={saveContractor}
         isLoading={isContractorSaving}
       />
+
+      {/* Contractor events detail dialog */}
+      <ContractorEventsDialog
+        contractor={selectedContractor}
+        open={contractorEventsOpen}
+        onOpenChange={setContractorEventsOpen}
+      />
     </PageTransition>
   )
 }
+

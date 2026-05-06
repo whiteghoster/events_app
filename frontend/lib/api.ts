@@ -1,4 +1,4 @@
-import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor } from './types'
+import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor, ContractorEventAssignment } from './types'
 
 
 

@@ -36,4 +36,11 @@ export class ContractorsController {
   async delete(@Param('id') id: string) {
     return await this.ContractorsService.delete(id);
   }
+
+  @Public()
+  @Get(':id/events')
+  async findContractorEvents(@Param('id') id: string) {
+    const data = await this.ContractorsService.findEventsByContractor(id);
+    return { data };
+  }
 }
