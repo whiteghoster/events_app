@@ -23,6 +23,10 @@ export function useContractors() {
     queryFn: () => ContractorsApi.getAll(),
   })
 
+  // Debug logging
+  console.log('[useContractors] Contractors data:', Contractors)
+  console.log('[useContractors] isLoading:', isLoading)
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: ContractorsApi.create,

@@ -72,6 +72,11 @@ export default function UsersPage() {
     )
   }, [Contractors, search])
 
+  // Debug logging
+  console.log('[UsersPage] Contractors:', Contractors)
+  console.log('[UsersPage] filteredContractors:', filteredContractors)
+  console.log('[UsersPage] search:', search)
+
   return (
     <PageTransition>
       {/* Controls */}
@@ -172,7 +177,7 @@ export default function UsersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredContractors.map((t) => (
                 <ContractorCard
-                  key={t.id}
+                  key={`${t.id}-${t.name}-${t.isActive}`}  // Stable key with multiple properties
                   Contractor={t}
                   canManage={canManageManpower}
                   onEdit={openContractorDialog}
