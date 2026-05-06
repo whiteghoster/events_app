@@ -25,4 +25,12 @@ export class SyncEventContractorsDto {
   @ValidateNested({ each: true })
   @Type(() => EventContractorEntryDto)
   contractors: EventContractorEntryDto[];
+
+  @IsOptional()
+  @IsDateString()
+  workFrom?: string;
+
+  @IsOptional()
+  @IsDateString()
+  workTo?: string;
 }

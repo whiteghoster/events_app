@@ -164,6 +164,10 @@ export class EventsController {
     const data = await this.eventContractorsService.syncEventContractors(
       eventId,
       dto.contractors,
+      {
+        workFrom: dto.workFrom,
+        workTo: dto.workTo,
+      },
     );
     return { data };
   }

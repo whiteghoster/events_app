@@ -26,14 +26,23 @@ function toEntry(c: EventContractor): ContractorEntry {
 }
 
 function deriveRange(existing: EventContractor[], fallbackFrom?: string, fallbackTo?: string) {
+  // Use fallback dates (from event delivery dates or saved universal work dates)
+  if (fallbackFrom || fallbackTo) {
+    return {
+      from: fallbackFrom || '',
+      to: fallbackTo || '',
+    }
+  }
+  
+  // Only use existing contractor dates if no fallback dates are provided
   const dates = existing
     .map(c => c.workDate)
     .filter((d): d is string => Boolean(d))
     .sort()
 
   return {
-    from: dates[0] || fallbackFrom || '',
-    to: dates[dates.length - 1] || fallbackTo || '',
+    from: dates[0] || '',
+    to: dates[dates.length - 1] || '',
   }
 }
 
@@ -69,13 +78,15 @@ export function useEventContractorsDialog({
   }, [open])
 
   const addEntry = () => {
+    // Prefer worksFrom, but if it's empty, use worksTo
+    const defaultDate = worksFrom || worksTo || '';
     setEntries(prev => [
       ...prev,
       {
         contractorId: '',
         shift: 'none',
         memberQuantity: 1,
-        workDate: worksFrom || worksTo || '',
+        workDate: defaultDate,
       },
     ])
   }
@@ -121,6 +132,10 @@ export function useEventContractorsDialog({
           memberQuantity: e.memberQuantity,
           workDate: e.workDate,
         })),
+        {
+          workFrom: worksFrom || undefined,
+          workTo: worksTo || undefined,
+        },
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eventContractors', eventId] })

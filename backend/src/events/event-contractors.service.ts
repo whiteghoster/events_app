@@ -34,6 +34,10 @@ export class EventContractorsService {
       member_quantity?: number;
       work_date?: string;
     }>,
+    universalWorkDates?: {
+      workFrom?: string;
+      workTo?: string;
+    },
   ) {
     const { data: existing } = await this.supabase
       .from('event_contractors')
@@ -57,7 +61,7 @@ export class EventContractorsService {
       contractor_id: c.contractor_id,
       shift: c.shift || null,
       member_quantity: c.member_quantity || 0,
-      // work_date: c.work_date || null, // TODO: Uncomment after migration is applied
+      work_date: c.work_date || null,
     }));
 
     if (toUpsert.length > 0) {
@@ -70,6 +74,21 @@ export class EventContractorsService {
 
       if (error) {
         throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+      }
+    }
+
+    // Save universal contractor work dates to the events table
+    if (universalWorkDates) {
+      const { error: updateError } = await this.supabase
+        .from('events')
+        .update({
+          contractors_work_from: universalWorkDates.workFrom || null,
+          contractors_work_to: universalWorkDates.workTo || null,
+        })
+        .eq('id', eventId);
+
+      if (updateError) {
+        throw new BadRequestException(`Failed to save universal work dates: ${updateError.message}`);
       }
     }
 

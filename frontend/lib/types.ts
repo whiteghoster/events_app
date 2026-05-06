@@ -90,6 +90,8 @@ export interface Event {
   notes?: string
   deliveryFromDate?: string
   deliveryToDate?: string
+  contractorsWorkFrom?: string
+  contractorsWorkTo?: string
   status?: EventStatus
   createdBy?: string
   createdAt?: string

@@ -110,7 +110,7 @@ export function EventContractorsDialog({
             {entries.map((entry, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 border rounded-lg bg-muted/30"
+                className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 border rounded-lg bg-muted/30"
               >
                 <div className="sm:col-span-4">
                   <Label className="text-xs mb-1 block">Contractor</Label>

@@ -364,8 +364,8 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         open={contractorsDialogOpen}
         onOpenChange={setContractorsDialogOpen}
         existing={eventContractors}
-        defaultFromDate={event.deliveryFromDate}
-        defaultToDate={event.deliveryToDate}
+        defaultFromDate={event.contractorsWorkFrom || event.deliveryFromDate}
+        defaultToDate={event.contractorsWorkTo || event.deliveryToDate}
       />
     </div>
   )
@@ -391,6 +391,19 @@ function EventInfoPanel({ event, eventContractors, categorySummary, eventProduct
           {event.contactPhone && <InfoRow icon={<Phone className="w-4 h-4" />} label="Phone"><span>{event.contactPhone}</span></InfoRow>}
           {event.managerName && <InfoRow icon={<User className="w-4 h-4" />} label="Manager"><span>{event.managerName}</span></InfoRow>}
           {event.headKarigarName && <InfoRow icon={<Crown className="w-4 h-4" />} label="Head Karigar"><span>{event.headKarigarName}</span></InfoRow>}
+          {(event.contractorsWorkFrom || event.contractorsWorkTo) && (
+            <InfoRow icon={<Calendar className="w-4 h-4" />} label="Contractor Work Period">
+              <div className="text-sm">
+                {event.contractorsWorkFrom && (
+                  <span>From: {new Date(event.contractorsWorkFrom).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                )}
+                {event.contractorsWorkFrom && event.contractorsWorkTo && <span> • </span>}
+                {event.contractorsWorkTo && (
+                  <span>To: {new Date(event.contractorsWorkTo).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                )}
+              </div>
+            </InfoRow>
+          )}
           {eventContractors?.length > 0 && (
             <InfoRow icon={<Briefcase className="w-4 h-4" />} label="Contractors">
               <div className="space-y-1.5">

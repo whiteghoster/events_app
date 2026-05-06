@@ -128,6 +128,8 @@ function mapEventFromBackend(event: any): Event {
     notes: event.notes || undefined,
     deliveryFromDate: event.delivery_from_date || event.deliveryFromDate || undefined,
     deliveryToDate: event.delivery_to_date || event.deliveryToDate || undefined,
+    contractorsWorkFrom: event.contractors_work_from || undefined,
+    contractorsWorkTo: event.contractors_work_to || undefined,
     status: normalizeStatus(event.status),
     createdAt: event.created_at || event.createdAt || undefined,
     updatedAt: event.updated_at || event.updatedAt || null,
@@ -413,6 +415,10 @@ export const eventsApi = {
       memberQuantity: number
       workDate?: string
     }>,
+    universalWorkDates?: {
+      workFrom?: string
+      workTo?: string
+    },
   ): Promise<EventContractor[]> {
     const res = await apiRequest<any>(`/events/${eventId}/contractors`, {
       method: 'PUT',
@@ -423,6 +429,8 @@ export const eventsApi = {
           member_quantity: e.memberQuantity,
           work_date: e.workDate || null,
         })),
+        workFrom: universalWorkDates?.workFrom || null,
+        workTo: universalWorkDates?.workTo || null,
       }),
     })
     const list = Array.isArray(res) ? res : (res?.data || res || [])
