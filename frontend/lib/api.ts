@@ -1,4 +1,4 @@
-import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor } from './types'
+import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor, ContractorEventAssignment } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
@@ -676,5 +676,19 @@ export const ContractorsApi = {
     return await apiRequest<{ success: boolean }>(`/Contractors/${id}`, {
       method: 'DELETE',
     })
+  },
+
+  async getContractorEvents(contractorId: string): Promise<ContractorEventAssignment[]> {
+    const res = await apiRequest<any>(`/Contractors/${contractorId}/events`)
+    const rows: any[] = Array.isArray(res) ? res : (res.data || [])
+    return rows.map((r: any) => ({
+      eventId: r.eventId,
+      eventCode: r.eventCode || undefined,
+      eventName: r.eventName,
+      eventStatus: r.eventStatus || undefined,
+      shift: r.shift || undefined,
+      memberQuantity: r.memberQuantity ?? 0,
+      workDate: r.workDate || undefined,
+    }))
   },
 }

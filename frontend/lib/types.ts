@@ -49,6 +49,19 @@ export interface ContractorFormData {
 }
 
 /**
+ * Contractor Event Assignment (events a contractor has been assigned to)
+ */
+export interface ContractorEventAssignment {
+  eventId: string
+  eventCode?: string
+  eventName: string
+  eventStatus?: EventStatus
+  shift?: ShiftType
+  memberQuantity: number
+  workDate?: string
+}
+
+/**
  * Client Model (for dropdown)
  */
 export interface Client {
