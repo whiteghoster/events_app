@@ -192,4 +192,29 @@ A clean system where:
 * **Event Edit = only event data**
 * **Contractors = fully separate, managed independently via dialog**
 
+
+ASCii diagram of contractors dialog box for added
++-----------------------------------------------------------+
+|                    CONTRACTORS                            |
++-----------------------------------------------------------+
+
+  Manager: Contractor
+  Actions: [Add] [Edit] [Remove]
+
++-----------------------------------------------------------+
+|                 Universal Date Range                      |
+|                                                           |
+|   Works From: [ Start Date ]     Works End: [ End Date ]  |
++-----------------------------------------------------------+
+
++-----------------------------------------------------------+
+| Date       | Contractor Name | Shift      | Quantity       |
++-----------------------------------------------------------+
+| [Date]     | [Dropdown]      | [Day/Night]| [Qty]          |
+| [Date]     | [Dropdown]      | [Day/Night]| [Qty]          |
+| [Date]     | [Dropdown]      | [Day/Night]| [Qty]          |
++-----------------------------------------------------------+
+
+                                   [ + Add Contractor Row ]
+
 This improves UX, maintainability, and scalability.
