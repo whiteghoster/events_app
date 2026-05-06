@@ -268,6 +268,10 @@ function mapEventFromBackend(event: any): Event {
 
     eventEndDate: event.event_end_date || undefined,
 
+    contractorsWorkFrom: event.contractors_work_from || undefined,
+
+    contractorsWorkTo: event.contractors_work_to || undefined,
+
     contractors: event.contractors?.map((c: any) => ({
 
       id: c.id,
@@ -281,6 +285,8 @@ function mapEventFromBackend(event: any): Event {
       shift: c.shift,
 
       memberQuantity: c.member_quantity || 0,
+
+      workDate: c.date,
 
     })),
 
@@ -828,7 +834,7 @@ export const eventsApi = {
 
       contractorName: c.contractor?.name || '',
 
-      date: c.date,
+      workDate: c.work_date,
 
       shift: c.shift,
 
@@ -844,7 +850,7 @@ export const eventsApi = {
 
     contractorId: string
 
-    date?: string
+    workDate?: string
 
     shift?: string
 
@@ -860,7 +866,7 @@ export const eventsApi = {
 
         contractor_id: payload.contractorId,
 
-        date: payload.date,
+        work_date: payload.workDate,
 
         shift: payload.shift,
 
@@ -880,7 +886,7 @@ export const eventsApi = {
 
       contractorName: data.contractor?.name || '',
 
-      workDate: data.date,
+      workDate: data.work_date,
 
       shift: data.shift,
 
@@ -924,6 +930,8 @@ export const eventsApi = {
 
       contractorName: data.contractor?.name || '',
 
+      workDate: data.work_date,
+
       shift: data.shift,
 
       memberQuantity: data.member_quantity || 0,
@@ -942,6 +950,43 @@ export const eventsApi = {
 
     })
 
+  },
+
+  async syncEventContractors(eventId: string, contractors: Array<{
+    contractorId: string
+    shift?: string
+    memberQuantity: number
+    workDate?: string
+  }>, dateRange?: {
+    workFrom?: string
+    workTo?: string
+  }): Promise<EventContractor[]> {
+    
+    const data = await apiRequest<any>(`/events/${eventId}/contractors`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        contractors: contractors.map(c => ({
+          contractor_id: c.contractorId,
+          shift: c.shift,
+          member_quantity: c.memberQuantity,
+          work_date: c.workDate,
+        })),
+        workFrom: dateRange?.workFrom,
+        workTo: dateRange?.workTo,
+      }),
+    })
+
+    const syncedContractors = Array.isArray(data) ? data : (data.data || [])
+    
+    return syncedContractors.map((c: any) => ({
+      id: c.id,
+      eventId: c.event_id,
+      contractorId: c.contractor_id,
+      contractorName: c.contractor?.name || '',
+      workDate: c.work_date,
+      shift: c.shift,
+      memberQuantity: c.member_quantity || 0,
+    }))
   },
 
 }
