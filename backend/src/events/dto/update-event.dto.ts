@@ -105,4 +105,8 @@ export class EventContractorUpdateEntry {
   @IsInt()
   @Min(0)
   member_quantity?: number;
+
+  @IsOptional()
+  @IsDateString()
+  work_date?: string;
 }

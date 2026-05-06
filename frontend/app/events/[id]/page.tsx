@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Pencil, Trash2,
   MapPin, Calendar, RefreshCw, MoreVertical, Phone, User, Crown,
-  Pause, CheckCircle2, Building2, FileText, Info, History, Briefcase,
+  Pause, CheckCircle2, Building2, FileText, Info, History, Briefcase, UserPlus,
 } from 'lucide-react'
 import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canRevertFinishedEvent, canDeleteFinishedEvent } from '@/lib/auth-context'
 import { useEventDetail } from '@/hooks/use-event-detail'
 import { EventDetailSkeleton } from '@/components/skeletons'
 import { EventProductsTable } from '@/components/events/event-products-table'
 import { EventAuditDialog } from '@/components/events/event-audit-dialog'
+import { EventContractorsDialog } from '@/components/events/event-contractors-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +33,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false)
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false)
   const [auditDialogOpen, setAuditDialogOpen] = useState(false)
+  const [contractorsDialogOpen, setContractorsDialogOpen] = useState(false)
   const {
     event, isLoading, eventProductsList, eventContractors, categorySummary,
     allCategories, allProducts, filteredProducts, units,
@@ -86,7 +88,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             {event.clientName}
           </h1>
 
-          {/* Actions */}
+          {/* Utility actions */}
           <div className="flex items-center shrink-0 bg-muted/50 rounded-lg p-0.5 gap-0.5">
             <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 rounded-md" onClick={() => setInfoDrawerOpen(true)}>
               <Info className="w-4 h-4" />
@@ -94,11 +96,6 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             <Button variant="ghost" size="icon" onClick={reload} className="h-8 w-8 rounded-md">
               <RefreshCw className="w-4 h-4" />
             </Button>
-            {user && canEditEvent(user.role) && isEditable && (
-              <Button variant="ghost" size="icon" onClick={() => router.push(`/events/${id}/edit`)} className="h-8 w-8 rounded-md">
-                <Pencil className="w-4 h-4" />
-              </Button>
-            )}
             {user?.role === 'admin' && (
               <Button variant="ghost" size="icon" onClick={() => setAuditDialogOpen(true)} className="h-8 w-8 rounded-md">
                 <History className="w-4 h-4" />
@@ -116,7 +113,31 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
           </div>
         </div>
 
-        {/* Row 2: Status + ID on their own line */}
+        {/* Row 2: Primary actions */}
+        {user && canEditEvent(user.role) && isEditable && (
+          <div className="flex flex-wrap items-center gap-2 pl-10 sm:pl-11">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/events/${id}/edit`)}
+              className="gap-1.5"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Event
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setContractorsDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <UserPlus className="w-4 h-4" />
+              Manage Contractors
+            </Button>
+          </div>
+        )}
+
+        {/* Row 3: Status + ID on their own line */}
         <div className="flex items-center gap-2 pl-10 sm:pl-11">
           {event.status && <StatusBadge status={event.status} />}
           {event.displayId && (
@@ -336,6 +357,16 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         open={auditDialogOpen}
         onOpenChange={setAuditDialogOpen}
       />
+
+      {/* ─── Contractors Dialog ───────────────────────────────────── */}
+      <EventContractorsDialog
+        eventId={id}
+        open={contractorsDialogOpen}
+        onOpenChange={setContractorsDialogOpen}
+        existing={eventContractors}
+        defaultFromDate={event.deliveryFromDate}
+        defaultToDate={event.deliveryToDate}
+      />
     </div>
   )
 }
@@ -362,12 +393,17 @@ function EventInfoPanel({ event, eventContractors, categorySummary, eventProduct
           {event.headKarigarName && <InfoRow icon={<Crown className="w-4 h-4" />} label="Head Karigar"><span>{event.headKarigarName}</span></InfoRow>}
           {eventContractors?.length > 0 && (
             <InfoRow icon={<Briefcase className="w-4 h-4" />} label="Contractors">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {eventContractors.map((c) => (
                   <div key={c.id} className="text-sm">
                     <span className="font-medium">{c.contractorName || 'Unknown'}</span>
-                    {c.shift && <span className="text-muted-foreground text-xs"> ({c.shift})</span>}
-                    {c.memberQuantity > 0 && <span className="text-muted-foreground text-xs"> - {c.memberQuantity} members</span>}
+                    {c.shift && <span className="text-muted-foreground text-xs"> · {c.shift}</span>}
+                    {c.memberQuantity > 0 && <span className="text-muted-foreground text-xs"> · {c.memberQuantity} members</span>}
+                    {c.workDate && (
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(c.workDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -97,4 +97,8 @@ export class EventContractorEntry {
   @IsInt()
   @Min(0)
   member_quantity?: number;
+
+  @IsOptional()
+  @IsDateString()
+  work_date?: string;
 }

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { eventsApi, usersApi, ContractorsApi } from '@/lib/api'
-import type { User, Client, EventFormData, Contractor } from '@/lib/types'
+import { eventsApi, usersApi } from '@/lib/api'
+import type { EventFormData } from '@/lib/types'
 
 const DEFAULT_FORM_DATA: EventFormData = {
   clientName: '',
@@ -19,7 +19,6 @@ const DEFAULT_FORM_DATA: EventFormData = {
   deliveryToDate: '',
   eventFromDate: '',
   eventEndDate: '',
-  contractorEntries: [],
 }
 
 export function useEventForm(eventId?: string) {
@@ -31,11 +30,10 @@ export function useEventForm(eventId?: string) {
   const [formData, setFormData] = useState<EventFormData>(DEFAULT_FORM_DATA)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Use React Query for reactive data fetching with caching
   const { data: staffData } = useQuery({
     queryKey: ['staff'],
     queryFn: () => usersApi.getUsers(1, 100),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   })
   const staffList = staffData?.data || []
 
@@ -43,15 +41,6 @@ export function useEventForm(eventId?: string) {
     queryKey: ['clients'],
     queryFn: () => eventsApi.getClients(),
     staleTime: 1000 * 60 * 5,
-  })
-
-  const { data: contractors = [], isLoading: isLoadingContractors } = useQuery({
-    queryKey: ['contractors'],
-    queryFn: async () => {
-      const data = await ContractorsApi.getAll()
-      return data?.filter(c => c.isActive !== false) || []
-    },
-    staleTime: 1000 * 60 * 2, // 2 minutes
   })
 
   useEffect(() => {
@@ -64,9 +53,7 @@ export function useEventForm(eventId?: string) {
           router.push(`/events/${eventId}`)
           return
         }
-        // Fetch event contractors
-        const eventContractors = await eventsApi.getEventContractors(eventId)
-        
+
         setFormData({
           clientName: data.clientName,
           companyName: data.companyName || '',
@@ -81,12 +68,6 @@ export function useEventForm(eventId?: string) {
           deliveryToDate: data.deliveryToDate ? data.deliveryToDate.split('T')[0] : '',
           eventFromDate: data.eventFromDate ? data.eventFromDate.split('T')[0] : '',
           eventEndDate: data.eventEndDate ? data.eventEndDate.split('T')[0] : '',
-          contractorEntries: eventContractors.map(c => ({
-            id: c.id,
-            contractorId: c.contractorId,
-            shift: c.shift || 'none',
-            memberQuantity: c.memberQuantity || 0,
-          })),
         })
       } catch (err: any) {
         console.error('Failed to load event:', err)
@@ -138,14 +119,6 @@ export function useEventForm(eventId?: string) {
 
     setIsLoading(true)
     try {
-      const contractorsPayload = formData.contractorEntries
-        .filter(entry => entry.contractorId)
-        .map(entry => ({
-          contractorId: entry.contractorId!,
-          shift: entry.shift === 'none' ? undefined : entry.shift,
-          memberQuantity: entry.memberQuantity || 0,
-        }))
-
       const payload = {
         clientName: formData.clientName,
         companyName: formData.companyName || undefined,
@@ -160,7 +133,6 @@ export function useEventForm(eventId?: string) {
         deliveryToDate: formData.deliveryToDate,
         eventFromDate: formData.eventFromDate || undefined,
         eventEndDate: formData.eventEndDate || undefined,
-        contractors: contractorsPayload,
       }
 
       if (eventId) {
@@ -170,26 +142,12 @@ export function useEventForm(eventId?: string) {
           managerName: formData.managerName === 'unassigned' ? '' : formData.managerName,
         })
         toast.success('Event updated successfully')
-        // Invalidate event cache to refresh the detail page instantly
-        await queryClient.invalidateQueries({
-          queryKey: ['event', eventId],
-          exact: true,
-        })
-        // Invalidate event contractors to refresh contractor list instantly
-        await queryClient.invalidateQueries({
-          queryKey: ['eventContractors', eventId],
-          exact: true,
-        })
-        // Also invalidate the events list to show updated data in list view
-        await queryClient.invalidateQueries({
-          queryKey: ['events', 'list'],
-          exact: false,
-        })
+        await queryClient.invalidateQueries({ queryKey: ['event', eventId], exact: true })
+        await queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
         router.push(`/events/${eventId}`)
       } else {
         const newEvent = await eventsApi.createEvent(payload)
         toast.success('Event created successfully')
-        // Optimistically add new event to cache for instant UI update
         queryClient.setQueriesData({ queryKey: ['events', 'list'], exact: false }, (oldData: any) => {
           if (!oldData?.pages?.[0]) return oldData
           const newEventWithStatus = { ...newEvent, status: 'live' }
@@ -204,12 +162,7 @@ export function useEventForm(eventId?: string) {
             ],
           }
         })
-        // Non-blocking cache invalidation (don't wait for it)
-        // Invalidate all event list queries regardless of activeTab
-        queryClient.invalidateQueries({
-          queryKey: ['events', 'list'],
-          exact: false,
-        })
+        queryClient.invalidateQueries({ queryKey: ['events', 'list'], exact: false })
         router.push('/events')
       }
     } catch (err: any) {
@@ -222,49 +175,17 @@ export function useEventForm(eventId?: string) {
   const karigars = staffList.filter(s => s.role === 'karigar')
   const managers = staffList.filter(s => s.role === 'manager')
 
-  // Contractor entry management
-  const addContractorEntry = () => {
-    setFormData(prev => ({
-      ...prev,
-      contractorEntries: [
-        ...prev.contractorEntries,
-        { contractorId: undefined, shift: 'none', memberQuantity: 0 }
-      ]
-    }))
-  }
-
-  const removeContractorEntry = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      contractorEntries: prev.contractorEntries.filter((_, i) => i !== index)
-    }))
-  }
-
-  const updateContractorEntry = (index: number, field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      contractorEntries: prev.contractorEntries.map((entry, i) =>
-        i === index ? { ...entry, [field]: value } : entry
-      )
-    }))
-  }
-
   return {
     formData,
     errors,
     isLoading,
     isPageLoading,
     clients,
-    contractors,
-    isLoadingContractors,
     selectedDropdownClient,
     karigars,
     managers,
     handleChange,
     handleClientSelect,
     handleSubmit,
-    addContractorEntry,
-    removeContractorEntry,
-    updateContractorEntry,
   }
 }
