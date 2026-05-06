@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -19,6 +20,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CreateEventProductDto } from './dto/create-event-product.dto';
 import { UpdateEventProductDto } from './dto/update-event-product.dto';
+import { SyncEventContractorsDto } from './dto/event-contractor.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole, EventStatus } from '../common/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -150,6 +152,19 @@ export class EventsController {
   @Roles(UserRole.ADMIN, UserRole.KARIGAR, UserRole.MANAGER)
   async findContractors(@Param('id') eventId: string) {
     const data = await this.eventContractorsService.findAllByEvent(eventId);
+    return { data };
+  }
+
+  @Put(':id/contractors')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  async syncContractors(
+    @Param('id', ParseUUIDPipe) eventId: string,
+    @Body() dto: SyncEventContractorsDto,
+  ) {
+    const data = await this.eventContractorsService.syncEventContractors(
+      eventId,
+      dto.contractors,
+    );
     return { data };
   }
 }

@@ -32,9 +32,9 @@ export class EventContractorsService {
       contractor_id: string;
       shift?: string;
       member_quantity?: number;
+      work_date?: string;
     }>,
   ) {
-    // Get existing contractors for this event
     const { data: existing } = await this.supabase
       .from('event_contractors')
       .select('contractor_id')
@@ -43,7 +43,6 @@ export class EventContractorsService {
     const existingIds = new Set(existing?.map(e => e.contractor_id) || []);
     const newIds = new Set(contractors.map(c => c.contractor_id));
 
-    // Batch 1: Remove contractors that are no longer in the list
     const toRemove = [...existingIds].filter(id => !newIds.has(id));
     if (toRemove.length > 0) {
       await this.supabase
@@ -53,25 +52,27 @@ export class EventContractorsService {
         .in('contractor_id', toRemove);
     }
 
-    // Batch 2: Update existing contractors in a single query using upsert
     const toUpsert = contractors.map(c => ({
       event_id: eventId,
       contractor_id: c.contractor_id,
       shift: c.shift || null,
       member_quantity: c.member_quantity || 0,
+      work_date: c.work_date || null,
     }));
 
     if (toUpsert.length > 0) {
-      // Use upsert with onConflict to handle both insert and update in one query
-      await this.supabase
+      const { error } = await this.supabase
         .from('event_contractors')
-        .upsert(toUpsert, { 
+        .upsert(toUpsert, {
           onConflict: 'event_id,contractor_id',
-          ignoreDuplicates: false // Update on conflict
+          ignoreDuplicates: false,
         });
+
+      if (error) {
+        throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+      }
     }
 
-    // Return updated list
     return this.findAllByEvent(eventId);
   }
 }

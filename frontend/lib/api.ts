@@ -140,6 +140,7 @@ function mapEventFromBackend(event: any): Event {
       contractorName: c.contractor?.name || '',
       shift: c.shift,
       memberQuantity: c.member_quantity || 0,
+      workDate: c.work_date || undefined,
     })),
   }
 }
@@ -262,13 +263,8 @@ export const eventsApi = {
     deliveryToDate?: string
     eventFromDate?: string
     eventEndDate?: string
-    contractors?: Array<{
-      contractorId: string
-      shift?: string
-      memberQuantity: number
-    }>
   }): Promise<Event> {
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, eventFromDate, eventEndDate, contractors } = payload
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, eventFromDate, eventEndDate } = payload
     const data = await apiRequest<any>('/events', {
       method: 'POST',
       body: JSON.stringify({
@@ -285,11 +281,6 @@ export const eventsApi = {
         delivery_to_date: deliveryToDate,
         event_from_date: eventFromDate,
         event_end_date: eventEndDate,
-        contractors: contractors?.map(c => ({
-          contractor_id: c.contractorId,
-          shift: c.shift,
-          member_quantity: c.memberQuantity,
-        })),
       }),
     })
     return mapEventFromBackend(data)
@@ -317,8 +308,8 @@ export const eventsApi = {
     return res.data || res
   },
 
-  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string; contractors?: Array<{ contractorId: string; shift?: string; memberQuantity: number }> }): Promise<Event> {
-    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId, eventFromDate, eventEndDate, contractors } = payload
+  async updateEvent(id: string, payload: Partial<Event> & { displayId?: string }): Promise<Event> {
+    const { clientName, companyName, contactPhone, eventDate, venue, venueAddress, city, headKarigarName, managerName, deliveryFromDate, deliveryToDate, displayId, eventFromDate, eventEndDate } = payload
     const data = await apiRequest<any>(`/events/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -336,11 +327,6 @@ export const eventsApi = {
         display_id: displayId,
         event_from_date: eventFromDate,
         event_end_date: eventEndDate,
-        contractors: contractors?.map(c => ({
-          contractor_id: c.contractorId,
-          shift: c.shift,
-          member_quantity: c.memberQuantity,
-        })),
       }),
     })
     return mapEventFromBackend(data)
@@ -415,6 +401,39 @@ export const eventsApi = {
       contractorName: c.contractor?.name || '',
       shift: c.shift,
       memberQuantity: c.member_quantity || 0,
+      workDate: c.work_date || undefined,
+    }))
+  },
+
+  async syncEventContractors(
+    eventId: string,
+    entries: Array<{
+      contractorId: string
+      shift?: string
+      memberQuantity: number
+      workDate?: string
+    }>,
+  ): Promise<EventContractor[]> {
+    const res = await apiRequest<any>(`/events/${eventId}/contractors`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        contractors: entries.map(e => ({
+          contractor_id: e.contractorId,
+          shift: e.shift,
+          member_quantity: e.memberQuantity,
+          work_date: e.workDate || null,
+        })),
+      }),
+    })
+    const list = Array.isArray(res) ? res : (res?.data || res || [])
+    return list.map((c: any) => ({
+      id: c.id,
+      eventId: c.event_id,
+      contractorId: c.contractor_id,
+      contractorName: c.contractor?.name || '',
+      shift: c.shift,
+      memberQuantity: c.member_quantity || 0,
+      workDate: c.work_date || undefined,
     }))
   },
 }

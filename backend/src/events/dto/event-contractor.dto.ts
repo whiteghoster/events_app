@@ -1,4 +1,5 @@
-import { IsUUID, IsOptional, IsString, IsInt, Min, IsIn } from 'class-validator';
+import { IsUUID, IsOptional, IsString, IsInt, Min, IsIn, IsDateString, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class EventContractorEntryDto {
   @IsUUID()
@@ -13,4 +14,15 @@ export class EventContractorEntryDto {
   @IsInt()
   @Min(0)
   member_quantity?: number;
+
+  @IsOptional()
+  @IsDateString()
+  work_date?: string;
+}
+
+export class SyncEventContractorsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventContractorEntryDto)
+  contractors: EventContractorEntryDto[];
 }

@@ -72,6 +72,7 @@ export interface EventContractor {
   contractorName?: string
   shift?: ShiftType
   memberQuantity: number
+  workDate?: string
 }
 
 export interface Event {
@@ -166,6 +167,7 @@ export interface ContractorEntry {
   contractorId?: string
   shift: ShiftType | 'none'
   memberQuantity: number
+  workDate?: string
 }
 
 export interface EventFormData {
@@ -183,7 +185,6 @@ export interface EventFormData {
   displayId?: string
   eventFromDate?: string
   eventEndDate?: string
-  contractorEntries: ContractorEntry[]
 }
 
 export interface ProductFormData {
