@@ -77,44 +77,37 @@ export function ContractorEventsDialog({
               {assignments.map((a, idx) => (
                 <div
                   key={`${a.eventId}-${idx}`}
-                  className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-x-4 gap-y-1 p-3 border rounded-lg bg-muted/30"
+                  className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-3 border rounded-lg bg-muted/30"
                 >
-                  {/* Left: event code + name */}
-                  <div className="flex items-start gap-2 min-w-0">
-                    {a.eventCode && (
-                      <Badge variant="secondary" className="font-mono text-[11px] shrink-0 mt-0.5">
-                        {a.eventCode}
-                      </Badge>
-                    )}
-                    <span className="font-medium text-sm truncate">{a.eventName}</span>
-                  </div>
+                  {/* Event code + name */}
+                  {a.eventCode && (
+                    <Badge variant="secondary" className="font-mono text-[11px] shrink-0">
+                      {a.eventCode}
+                    </Badge>
+                  )}
+                  <span className="font-medium text-sm truncate">{a.eventName}</span>
 
-                  {/* Middle: status */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {a.eventStatus && (
-                      <StatusBadge status={a.eventStatus} className="text-[10px] py-0.5 px-2" />
-                    )}
-                    {a.shift && (
-                      <Badge variant="outline" className="text-[10px] capitalize">
-                        {a.shift}
-                      </Badge>
-                    )}
-                    {a.memberQuantity > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {a.memberQuantity} member{a.memberQuantity !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
+                  {/* Status + member count */}
+                  {a.shift && (
+                    <Badge variant="outline" className="text-[10px] capitalize">
+                      {a.shift}
+                    </Badge>
+                  )}
+                  {a.memberQuantity > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {a.memberQuantity} member{a.memberQuantity !== 1 ? 's' : ''}
+                    </span>
+                  )}
 
-                  {/* Right: work date */}
+                  {/* Work date */}
                   {a.workDate && (
-                    <div className="text-xs text-muted-foreground sm:text-right">
+                    <span className="text-xs text-muted-foreground sm:ml-auto">
                       {new Date(a.workDate).toLocaleDateString('en-IN', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
                       })}
-                    </div>
+                    </span>
                   )}
                 </div>
               ))}
