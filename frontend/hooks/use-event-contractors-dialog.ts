@@ -111,13 +111,14 @@ export function useEventContractorsDialog({
       const e = entries[i]
       const label = `Row ${i + 1}`
       if (!e.contractorId) return `${label}: select a contractor`
-      if (seen.has(e.contractorId)) return `${label}: contractor already added`
-      seen.add(e.contractorId)
       if (e.shift === 'none') return `${label}: select a shift`
       if (!e.memberQuantity || e.memberQuantity <= 0) return `${label}: quantity must be greater than 0`
       if (!e.workDate) return `${label}: set a work date`
       if (worksFrom && e.workDate < worksFrom) return `${label}: work date is before Works From`
       if (worksTo && e.workDate > worksTo) return `${label}: work date is after Works To`
+      const uniqueKey = `${e.contractorId}::${e.shift}::${e.workDate}`
+      if (seen.has(uniqueKey)) return `${label}: contractor already assigned for this shift and date`
+      seen.add(uniqueKey)
     }
     return null
   }

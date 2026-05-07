@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AddEventContractorDto } from './dto/event-contractor.dto';
 
 @Injectable()
 export class EventContractorsService {
@@ -26,6 +27,69 @@ export class EventContractorsService {
     return data || [];
   }
 
+  private normalizeWorkDate(workDate?: string | null) {
+    return workDate || null;
+  }
+
+  private normalizeShift(shift?: string | null) {
+    return shift || null;
+  }
+
+  private keyFor(contractorId: string, shift?: string | null, workDate?: string | null) {
+    return `${contractorId}::${shift ?? '__NULL__'}::${workDate ?? '__NULL__'}`;
+  }
+
+  private async upsertContractorsIndividually(
+    rows: Array<{
+      event_id: string;
+      contractor_id: string;
+      shift: string | null;
+      member_quantity: number;
+      work_date: string | null;
+    }>,
+  ) {
+    for (const row of rows) {
+      const { error } = await this.supabase
+        .from('event_contractors')
+        .upsert(row, {
+          onConflict: 'event_id,contractor_id,shift,work_date',
+          ignoreDuplicates: false,
+        });
+
+      if (error) {
+        throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+      }
+    }
+  }
+
+  async addEventContractor(eventId: string, dto: AddEventContractorDto) {
+    const payload = {
+      event_id: eventId,
+      contractor_id: dto.contractor_id,
+      shift: this.normalizeShift(dto.shift),
+      member_quantity: dto.member_quantity || 0,
+      work_date: this.normalizeWorkDate(dto.work_date),
+    };
+
+    const { data, error } = await this.supabase
+      .from('event_contractors')
+      .upsert(payload, {
+        onConflict: 'event_id,contractor_id,shift,work_date',
+        ignoreDuplicates: false,
+      })
+      .select(`
+        *,
+        contractor:contractors(id, name)
+      `)
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to save contractor: ${error.message}`);
+    }
+
+    return data;
+  }
+
   async syncEventContractors(
     eventId: string,
     contractors: Array<{
@@ -41,39 +105,70 @@ export class EventContractorsService {
   ) {
     const { data: existing } = await this.supabase
       .from('event_contractors')
-      .select('contractor_id')
+      .select('id, contractor_id, shift, work_date')
       .eq('event_id', eventId);
 
-    const existingIds = new Set(existing?.map(e => e.contractor_id) || []);
-    const newIds = new Set(contractors.map(c => c.contractor_id));
+    const existingKeys = (existing || []).map(entry => ({
+      id: entry.id,
+      key: this.keyFor(
+        entry.contractor_id,
+        this.normalizeShift(entry.shift),
+        this.normalizeWorkDate(entry.work_date),
+      ),
+    }));
+    const newKeys = new Set(
+      contractors.map(entry =>
+        this.keyFor(
+          entry.contractor_id,
+          this.normalizeShift(entry.shift),
+          this.normalizeWorkDate(entry.work_date),
+        ),
+      ),
+    );
 
-    const toRemove = [...existingIds].filter(id => !newIds.has(id));
-    if (toRemove.length > 0) {
+    const toRemoveIds = existingKeys
+      .filter(entry => !newKeys.has(entry.key))
+      .map(entry => entry.id);
+    if (toRemoveIds.length > 0) {
       await this.supabase
         .from('event_contractors')
         .delete()
         .eq('event_id', eventId)
-        .in('contractor_id', toRemove);
+        .in('id', toRemoveIds);
     }
 
-    const toUpsert = contractors.map(c => ({
+    const uniqueContractors = new Map(
+      contractors.map(entry => {
+        const shift = this.normalizeShift(entry.shift);
+        const workDate = this.normalizeWorkDate(entry.work_date);
+        return [
+          this.keyFor(entry.contractor_id, shift, workDate),
+          { ...entry, shift, work_date: workDate },
+        ];
+      }),
+    );
+    const toUpsert = [...uniqueContractors.values()].map(c => ({
       event_id: eventId,
       contractor_id: c.contractor_id,
-      shift: c.shift || null,
+      shift: this.normalizeShift(c.shift),
       member_quantity: c.member_quantity || 0,
-      work_date: c.work_date || null,
+      work_date: this.normalizeWorkDate(c.work_date),
     }));
 
     if (toUpsert.length > 0) {
       const { error } = await this.supabase
         .from('event_contractors')
         .upsert(toUpsert, {
-          onConflict: 'event_id,contractor_id',
+          onConflict: 'event_id,contractor_id,shift,work_date',
           ignoreDuplicates: false,
         });
 
       if (error) {
-        throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+        if (error.message?.includes('cannot affect row a second time')) {
+          await this.upsertContractorsIndividually(toUpsert);
+        } else {
+          throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+        }
       }
     }
 

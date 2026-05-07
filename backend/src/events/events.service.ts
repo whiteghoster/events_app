@@ -8,6 +8,7 @@ import { DatabaseService } from '../database/database.service';
 import { EventStatus, UserRole, AuditAction } from '../common/types';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { AddEventContractorDto } from './dto/event-contractor.dto';
 import { AuditService } from '../audit/audit.service';
 import { EventContractorsService } from './event-contractors.service';
 import { stripUndefined, paginate, paginationOffset } from '../common/utils';
@@ -235,6 +236,10 @@ export class EventsService {
 
     const { error } = await this.supabase.from('events').delete().eq('id', event.id);
     if (error) throw new BadRequestException(`Failed to delete event: ${error.message}`);
+  }
+
+  async addEventContractor(eventId: string, dto: AddEventContractorDto) {
+    return this.eventContractorsService.addEventContractor(eventId, dto);
   }
 
   private async generateDisplayId(clientName: string): Promise<string> {

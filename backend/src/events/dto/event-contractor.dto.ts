@@ -20,6 +20,11 @@ export class EventContractorEntryDto {
   work_date?: string;
 }
 
+/**
+ * DTO for POST /events/:id/contractors to add or upsert one contractor assignment.
+ */
+export class AddEventContractorDto extends EventContractorEntryDto {}
+
 export class SyncEventContractorsDto {
   @IsArray()
   @ValidateNested({ each: true })
