@@ -44,12 +44,16 @@ export class EventContractorsService {
       .select('id, contractor_id, work_date')
       .eq('event_id', eventId);
 
+    const normalizeWorkDate = (workDate?: string | null) => (workDate ? workDate : null);
+    const keyFor = (contractorId: string, workDate?: string | null) =>
+      `${contractorId}::${workDate ?? '__NULL__'}`;
+
     const existingKeys = (existing || []).map(entry => ({
       id: entry.id,
-      key: `${entry.contractor_id}::${entry.work_date ?? ''}`,
+      key: keyFor(entry.contractor_id, entry.work_date),
     }));
     const newKeys = new Set(
-      contractors.map(entry => `${entry.contractor_id}::${entry.work_date ?? ''}`),
+      contractors.map(entry => keyFor(entry.contractor_id, normalizeWorkDate(entry.work_date))),
     );
 
     const toRemoveIds = existingKeys
@@ -64,10 +68,10 @@ export class EventContractorsService {
     }
 
     const uniqueContractors = new Map(
-      contractors.map(entry => [
-        `${entry.contractor_id}::${entry.work_date ?? ''}`,
-        entry,
-      ]),
+      contractors.map(entry => {
+        const workDate = normalizeWorkDate(entry.work_date);
+        return [keyFor(entry.contractor_id, workDate), { ...entry, work_date: workDate }];
+      }),
     );
     const toUpsert = [...uniqueContractors.values()].map(c => ({
       event_id: eventId,
