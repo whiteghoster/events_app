@@ -41,22 +41,35 @@ export class EventContractorsService {
   ) {
     const { data: existing } = await this.supabase
       .from('event_contractors')
-      .select('contractor_id')
+      .select('id, contractor_id, work_date')
       .eq('event_id', eventId);
 
-    const existingIds = new Set(existing?.map(e => e.contractor_id) || []);
-    const newIds = new Set(contractors.map(c => c.contractor_id));
+    const existingKeys = (existing || []).map(entry => ({
+      id: entry.id,
+      key: `${entry.contractor_id}::${entry.work_date ?? ''}`,
+    }));
+    const newKeys = new Set(
+      contractors.map(entry => `${entry.contractor_id}::${entry.work_date ?? ''}`),
+    );
 
-    const toRemove = [...existingIds].filter(id => !newIds.has(id));
-    if (toRemove.length > 0) {
+    const toRemoveIds = existingKeys
+      .filter(entry => !newKeys.has(entry.key))
+      .map(entry => entry.id);
+    if (toRemoveIds.length > 0) {
       await this.supabase
         .from('event_contractors')
         .delete()
         .eq('event_id', eventId)
-        .in('contractor_id', toRemove);
+        .in('id', toRemoveIds);
     }
 
-    const toUpsert = contractors.map(c => ({
+    const uniqueContractors = new Map(
+      contractors.map(entry => [
+        `${entry.contractor_id}::${entry.work_date ?? ''}`,
+        entry,
+      ]),
+    );
+    const toUpsert = [...uniqueContractors.values()].map(c => ({
       event_id: eventId,
       contractor_id: c.contractor_id,
       shift: c.shift || null,
@@ -68,7 +81,7 @@ export class EventContractorsService {
       const { error } = await this.supabase
         .from('event_contractors')
         .upsert(toUpsert, {
-          onConflict: 'event_id,contractor_id',
+          onConflict: 'event_id,contractor_id,work_date',
           ignoreDuplicates: false,
         });
 
