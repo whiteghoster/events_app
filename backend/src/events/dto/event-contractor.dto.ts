@@ -20,6 +20,8 @@ export class EventContractorEntryDto {
   work_date?: string;
 }
 
+export class AddEventContractorDto extends EventContractorEntryDto {}
+
 export class SyncEventContractorsDto {
   @IsArray()
   @ValidateNested({ each: true })

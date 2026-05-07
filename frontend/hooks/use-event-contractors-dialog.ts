@@ -116,8 +116,8 @@ export function useEventContractorsDialog({
       if (!e.workDate) return `${label}: set a work date`
       if (worksFrom && e.workDate < worksFrom) return `${label}: work date is before Works From`
       if (worksTo && e.workDate > worksTo) return `${label}: work date is after Works To`
-      const uniqueKey = `${e.contractorId}::${e.workDate}`
-      if (seen.has(uniqueKey)) return `${label}: contractor already added for this date`
+      const uniqueKey = `${e.contractorId}::${e.shift}::${e.workDate}`
+      if (seen.has(uniqueKey)) return `${label}: contractor already assigned for this shift and date`
       seen.add(uniqueKey)
     }
     return null

@@ -961,32 +961,50 @@ export const eventsApi = {
     workFrom?: string
     workTo?: string
   }): Promise<EventContractor[]> {
-    
-    const data = await apiRequest<any>(`/events/${eventId}/contractors`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        contractors: contractors.map(c => ({
-          contractor_id: c.contractorId,
-          shift: c.shift,
-          member_quantity: c.memberQuantity,
-          work_date: c.workDate,
-        })),
-        workFrom: dateRange?.workFrom,
-        workTo: dateRange?.workTo,
+    const uniqueContractors = [...new Map(
+      contractors.map(c => {
+        const key = `${c.contractorId}::${c.shift || '__NULL__'}::${c.workDate || '__NULL__'}`
+        return [key, c]
       }),
-    })
+    ).values()]
 
-    const syncedContractors = Array.isArray(data) ? data : (data.data || [])
-    
-    return syncedContractors.map((c: any) => ({
-      id: c.id,
-      eventId: c.event_id,
-      contractorId: c.contractor_id,
-      contractorName: c.contractor?.name || '',
-      workDate: c.work_date,
-      shift: c.shift,
-      memberQuantity: c.member_quantity || 0,
-    }))
+    try {
+      const data = await apiRequest<any>(`/events/${eventId}/contractors`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          contractors: uniqueContractors.map(c => ({
+            contractor_id: c.contractorId,
+            shift: c.shift,
+            member_quantity: c.memberQuantity,
+            work_date: c.workDate,
+          })),
+          workFrom: dateRange?.workFrom,
+          workTo: dateRange?.workTo,
+        }),
+      })
+
+      const syncedContractors = Array.isArray(data) ? data : (data.data || [])
+
+      return syncedContractors.map((c: any) => ({
+        id: c.id,
+        eventId: c.event_id,
+        contractorId: c.contractor_id,
+        contractorName: c.contractor?.name || '',
+        workDate: c.work_date,
+        shift: c.shift,
+        memberQuantity: c.member_quantity || 0,
+      }))
+    } catch (error) {
+      await Promise.all(uniqueContractors.map((contractor) =>
+        this.addEventContractor(eventId, {
+          contractorId: contractor.contractorId,
+          workDate: contractor.workDate,
+          shift: contractor.shift,
+          memberQuantity: contractor.memberQuantity,
+        }),
+      ))
+      return this.getEventContractors(eventId)
+    }
   },
 
 }
