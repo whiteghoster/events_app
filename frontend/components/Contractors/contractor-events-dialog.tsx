@@ -27,7 +27,7 @@ export function ContractorEventsDialog({
   open,
   onOpenChange,
 }: ContractorEventsDialogProps) {
-  const { assignments, isLoading } = useContractorEventsDialog({
+  const { assignments, isLoading, isError, error } = useContractorEventsDialog({
     contractorId: contractor?.id ?? null,
     open,
   })
@@ -64,6 +64,10 @@ export function ContractorEventsDialog({
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+          ) : isError ? (
+            <p className="text-sm text-destructive py-10 text-center border border-dashed rounded-lg">
+              Failed to load contractor events{error?.message ? `: ${error.message}` : '.'}
+            </p>
           ) : assignments.length === 0 ? (
             <p className="text-sm text-muted-foreground py-10 text-center border border-dashed rounded-lg">
               No events assigned to this contractor yet.

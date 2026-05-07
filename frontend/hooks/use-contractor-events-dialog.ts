@@ -12,17 +12,19 @@ interface UseContractorEventsDialogArgs {
 export function useContractorEventsDialog({ contractorId, open }: UseContractorEventsDialogArgs): {
   assignments: ContractorEventAssignment[]
   isLoading: boolean
+  isError: boolean
   error: Error | null
 } {
-  const { data: assignments = [], isLoading, error } = useQuery({
+  const { data, isLoading, error, isError } = useQuery({
     queryKey: ['contractorEvents', contractorId],
     queryFn: () => ContractorsApi.getContractorEvents(contractorId!),
     enabled: open && !!contractorId,
   })
 
   return {
-    assignments,
+    assignments: data || [],
     isLoading,
+    isError,
     error: error as Error | null,
   }
 }
