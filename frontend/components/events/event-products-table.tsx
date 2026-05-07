@@ -50,6 +50,8 @@ interface EventProductsTableProps {
   onResetNewProduct: () => void
 }
 
+const QUANTITY_OPTIONS = Array.from({ length: 100 }, (_, index) => String(index + 1))
+
 export function EventProductsTable({
   products, canEdit, canEditQuantity, quantityOnly, isEditable,
   allCategories, allProducts, filteredProducts, units,
@@ -124,7 +126,21 @@ export function EventProductsTable({
         cell: ({ row }) => {
           if (editingRow === row.original.id) {
             return (
-              <Input type="number" min="1" value={editingData.quantity || ''} onChange={(e) => setEditingData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))} className="w-16 h-8 text-xs text-right ml-auto" />
+              <Select
+                value={editingData.quantity ? String(editingData.quantity) : ''}
+                onValueChange={(value) => setEditingData(prev => ({ ...prev, quantity: parseInt(value, 10) }))}
+              >
+                <SelectTrigger className="w-16 h-8 text-xs justify-end">
+                  <SelectValue placeholder="Qty" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUANTITY_OPTIONS.map(quantity => (
+                    <SelectItem key={quantity} value={quantity}>
+                      {quantity}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )
           }
           return <span className="text-sm font-semibold tabular-nums">{row.original.quantity}</span>
@@ -318,7 +334,21 @@ export function EventProductsTable({
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <Input type="number" min="1" value={editingData.quantity || ''} onChange={(e) => setEditingData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))} className="h-9 text-xs flex-1" placeholder="Qty" />
+                    <Select
+                      value={editingData.quantity ? String(editingData.quantity) : ''}
+                      onValueChange={(value) => setEditingData(prev => ({ ...prev, quantity: parseInt(value, 10) }))}
+                    >
+                      <SelectTrigger className="h-9 text-xs flex-1">
+                        <SelectValue placeholder="Qty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {QUANTITY_OPTIONS.map(quantity => (
+                          <SelectItem key={quantity} value={quantity}>
+                            {quantity}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {!quantityOnly && (
                       <Select value={editingData.unit} onValueChange={(v) => setEditingData(prev => ({ ...prev, unit: v }))}>
                         <SelectTrigger className="h-9 text-xs w-24"><SelectValue /></SelectTrigger>
@@ -383,7 +413,21 @@ export function EventProductsTable({
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Input type="number" min="1" value={newProductData.quantity} onChange={(e) => setNewProductData((prev: any) => ({ ...prev, quantity: e.target.value }))} className="h-9 text-xs flex-1" placeholder="Qty" />
+              <Select
+                value={newProductData.quantity}
+                onValueChange={(value) => setNewProductData((prev: any) => ({ ...prev, quantity: value }))}
+              >
+                <SelectTrigger className="h-9 text-xs flex-1">
+                  <SelectValue placeholder="Qty" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUANTITY_OPTIONS.map(quantity => (
+                    <SelectItem key={quantity} value={quantity}>
+                      {quantity}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={newProductData.unit} onValueChange={(v) => setNewProductData((prev: any) => ({ ...prev, unit: v }))}>
                 <SelectTrigger className="h-9 text-xs w-24"><SelectValue placeholder="Unit" /></SelectTrigger>
                 <SelectContent>{units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
@@ -472,7 +516,21 @@ export function EventProductsTable({
                   </Select>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Input type="number" min="1" value={newProductData.quantity} onChange={(e) => setNewProductData((prev: any) => ({ ...prev, quantity: e.target.value }))} className="w-16 h-8 text-xs text-right ml-auto" placeholder="Qty" />
+                  <Select
+                    value={newProductData.quantity}
+                    onValueChange={(value) => setNewProductData((prev: any) => ({ ...prev, quantity: value }))}
+                  >
+                    <SelectTrigger className="w-16 h-8 text-xs justify-end ml-auto">
+                      <SelectValue placeholder="Qty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {QUANTITY_OPTIONS.map(quantity => (
+                        <SelectItem key={quantity} value={quantity}>
+                          {quantity}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <Select value={newProductData.unit} onValueChange={(v) => setNewProductData((prev: any) => ({ ...prev, unit: v }))}>

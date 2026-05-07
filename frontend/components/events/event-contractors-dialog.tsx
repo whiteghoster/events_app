@@ -31,6 +31,8 @@ interface EventContractorsDialogProps {
   defaultToDate?: string
 }
 
+const QUANTITY_OPTIONS = Array.from({ length: 100 }, (_, index) => String(index + 1))
+
 export function EventContractorsDialog({
   eventId,
   open,
@@ -155,14 +157,23 @@ export function EventContractorsDialog({
 
                 <div className="sm:col-span-2">
                   <Label className="text-xs mb-1 block">Qty</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={entry.memberQuantity}
-                    onChange={(e) =>
-                      updateEntry(index, { memberQuantity: parseInt(e.target.value) || 0 })
+                  <Select
+                    value={entry.memberQuantity ? String(entry.memberQuantity) : ''}
+                    onValueChange={(value) =>
+                      updateEntry(index, { memberQuantity: parseInt(value, 10) })
                     }
-                  />
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Qty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {QUANTITY_OPTIONS.map(quantity => (
+                        <SelectItem key={quantity} value={quantity}>
+                          {quantity}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="sm:col-span-3">
