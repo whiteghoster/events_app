@@ -95,10 +95,6 @@ export function EventContractorsDialog({
 
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Assignments</p>
-          <Button type="button" variant="outline" size="sm" onClick={addEntry}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Contractor
-          </Button>
         </div>
 
         {entries.length === 0 ? (
@@ -202,6 +198,10 @@ export function EventContractorsDialog({
           </Button>
           <Button onClick={submit} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={addEntry}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add Contractor
           </Button>
         </DialogFooter>
       </DialogContent>
