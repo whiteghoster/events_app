@@ -1,4 +1,4 @@
-import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor, ContractorEventAssignment } from './types'
+import type { Event, EventsResponse, EventProduct, EventStatus, Category, Product, User, AuditEntry, Contractor, EventContractor, ContractorEventAssignment, ShiftType } from './types'
 
 
 
@@ -1405,7 +1405,29 @@ export const auditApi = {
 
 // -------------------------------------------------------------------
 
-
+type ContractorEventsApiRow = {
+  eventId?: string
+  event_id?: string
+  eventCode?: string
+  event_code?: string
+  eventName?: string
+  event_name?: string
+  eventStatus?: string
+  event_status?: string
+  shift?: string
+  memberQuantity?: number
+  member_quantity?: number
+  workDate?: string
+  work_date?: string
+  event?: {
+    id?: string
+    display_id?: string
+    displayId?: string
+    client_name?: string
+    clientName?: string
+    status?: string
+  }
+}
 
 export const ContractorsApi = {
 
@@ -1416,17 +1438,20 @@ export const ContractorsApi = {
   },
 
   async getContractorEvents(contractorId: string): Promise<ContractorEventAssignment[]> {
-    const res = await apiRequest<any>(`/Contractors/${contractorId}/events`)
+    const res = await apiRequest<ContractorEventsApiRow[] | { data?: ContractorEventsApiRow[] }>(
+      `/Contractors/${contractorId}/events`,
+    )
     const rows = Array.isArray(res) ? res : (res.data || [])
 
-    return rows.map((row: any) => {
+    return rows.map((row) => {
       const rawStatus = row.eventStatus ?? row.event_status ?? row.event?.status
+      const shiftValue = row.shift === 'day' || row.shift === 'night' ? row.shift : undefined
       return {
         eventId: row.eventId || row.event_id || row.event?.id || '',
         eventCode: row.eventCode ?? row.event_code ?? row.event?.display_id ?? row.event?.displayId ?? undefined,
         eventName: row.eventName || row.event_name || row.event?.client_name || row.event?.clientName || '',
         eventStatus: rawStatus ? normalizeStatus(rawStatus) : undefined,
-        shift: row.shift || undefined,
+        shift: shiftValue as ShiftType | undefined,
         memberQuantity: row.memberQuantity ?? row.member_quantity ?? 0,
         workDate: row.workDate || row.work_date || undefined,
       }
