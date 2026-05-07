@@ -995,6 +995,10 @@ export const eventsApi = {
         memberQuantity: c.member_quantity || 0,
       }))
     } catch (error) {
+      console.warn('[API] Bulk contractor sync failed; falling back to per-contractor save', {
+        eventId,
+        error,
+      })
       await Promise.all(uniqueContractors.map((contractor) =>
         this.addEventContractor(eventId, {
           contractorId: contractor.contractorId,
