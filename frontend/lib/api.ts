@@ -286,7 +286,7 @@ function mapEventFromBackend(event: any): Event {
 
       memberQuantity: c.member_quantity || 0,
 
-      workDate: c.date,
+      workDate: c.work_date || c.workDate || c.date,
 
     })),
 
@@ -1415,6 +1415,24 @@ export const ContractorsApi = {
 
   },
 
+  async getContractorEvents(contractorId: string): Promise<ContractorEventAssignment[]> {
+    const res = await apiRequest<any>(`/Contractors/${contractorId}/events`)
+    const rows = Array.isArray(res) ? res : (res.data || [])
+
+    return rows.map((row: any) => {
+      const rawStatus = row.eventStatus ?? row.event_status ?? row.event?.status
+      return {
+        eventId: row.eventId || row.event_id || row.event?.id || '',
+        eventCode: row.eventCode ?? row.event_code ?? row.event?.display_id ?? row.event?.displayId ?? undefined,
+        eventName: row.eventName || row.event_name || row.event?.client_name || row.event?.clientName || '',
+        eventStatus: rawStatus ? normalizeStatus(rawStatus) : undefined,
+        shift: row.shift || undefined,
+        memberQuantity: row.memberQuantity ?? row.member_quantity ?? 0,
+        workDate: row.workDate || row.work_date || undefined,
+      }
+    })
+  },
+
 
 
   async create(data: { name: string; isActive?: boolean }): Promise<Contractor> {
@@ -1456,4 +1474,3 @@ export const ContractorsApi = {
   },
 
 }
-
