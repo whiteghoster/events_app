@@ -39,6 +39,53 @@ export class EventContractorsService {
     return `${contractorId}::${shift ?? '__NULL__'}::${workDate ?? '__NULL__'}`;
   }
 
+  private readDbError(error: unknown) {
+    const dbError = (error || {}) as {
+      message?: string;
+      code?: string;
+      details?: string;
+      hint?: string;
+    };
+    return {
+      message: dbError.message || 'Unknown database error',
+      code: dbError.code,
+      details: dbError.details,
+      hint: dbError.hint,
+    };
+  }
+
+  private isLegacyConstraintMismatch(error: unknown) {
+    const dbError = this.readDbError(error);
+    const text = `${dbError.message} ${dbError.details || ''} ${dbError.hint || ''}`.toLowerCase();
+    return (
+      dbError.code === '42P10' ||
+      text.includes('no unique or exclusion constraint matching the on conflict specification') ||
+      text.includes('event_contractors_event_id_contractor_id_key') ||
+      text.includes('event_contractors_event_id_contractor_id_work_date_key')
+    );
+  }
+
+  private throwContractorSaveError(context: string, error: unknown, rootCause?: unknown): never {
+    const dbError = this.readDbError(error);
+    if (this.isLegacyConstraintMismatch(error) || (rootCause && this.isLegacyConstraintMismatch(rootCause))) {
+      throw new BadRequestException(
+        `${context} failed because database constraints are out of date. ` +
+          `Expected unique constraint: event_contractors_event_id_contractor_id_shift_work_date_key ` +
+          `on (event_id, contractor_id, shift, work_date). ` +
+          `Apply the latest migration and reload schema cache.`,
+      );
+    }
+
+    if (rootCause) {
+      const root = this.readDbError(rootCause);
+      throw new BadRequestException(
+        `${context} failed: ${dbError.message}. Original bulk sync error: ${root.message}`,
+      );
+    }
+
+    throw new BadRequestException(`${context} failed: ${dbError.message}`);
+  }
+
   private async upsertContractorsIndividually(
     rows: Array<{
       event_id: string;
@@ -57,7 +104,7 @@ export class EventContractorsService {
         });
 
       if (error) {
-        throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+        this.throwContractorSaveError('Failed to save contractors during individual retry', error);
       }
     }
   }
@@ -84,7 +131,7 @@ export class EventContractorsService {
       .single();
 
     if (error) {
-      throw new BadRequestException(`Failed to save contractor: ${error.message}`);
+      this.throwContractorSaveError('Failed to save contractor', error);
     }
 
     return data;
@@ -164,10 +211,22 @@ export class EventContractorsService {
         });
 
       if (error) {
+        if (this.isLegacyConstraintMismatch(error)) {
+          this.throwContractorSaveError('Failed to save contractors in bulk sync', error);
+        }
+
         if (error.message?.includes('cannot affect row a second time')) {
-          await this.upsertContractorsIndividually(toUpsert);
+          try {
+            await this.upsertContractorsIndividually(toUpsert);
+          } catch (retryError) {
+            this.throwContractorSaveError(
+              'Failed to save contractors after bulk sync retry',
+              retryError,
+              error,
+            );
+          }
         } else {
-          throw new BadRequestException(`Failed to save contractors: ${error.message}`);
+          this.throwContractorSaveError('Failed to save contractors in bulk sync', error);
         }
       }
     }

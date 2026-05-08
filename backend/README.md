@@ -25,6 +25,45 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Database migration process (required)
+
+To avoid environment drift, apply SQL migrations in **numeric order** from `/backend/migrations` on every environment (local/staging/production):
+
+1. Open Supabase SQL editor (or your DB migration runner).
+2. Apply pending files from `001_...sql` up to latest (currently includes `017_enforce_event_contractors_unique_shift_work_date.sql`).
+3. Confirm each migration succeeds before applying the next one.
+4. Ensure schema cache is reloaded (`NOTIFY pgrst, 'reload schema';` is included in migration 017).
+
+### Rollout order for contractor-sync fix
+
+1. Apply DB migration(s) first.
+2. Deploy backend.
+3. Deploy frontend.
+
+## Runbook: contractor save failures due to constraint drift
+
+Symptom: contractor sync/save fails with ON CONFLICT or duplicate-constraint errors.
+
+Verify active unique constraints on `event_contractors`:
+
+```sql
+SELECT
+  conname,
+  pg_get_constraintdef(c.oid) AS definition
+FROM pg_constraint c
+JOIN pg_class t ON t.oid = c.conrelid
+WHERE t.relname = 'event_contractors'
+  AND c.contype = 'u'
+ORDER BY conname;
+```
+
+Expected contractor uniqueness constraint:
+
+- `event_contractors_event_id_contractor_id_shift_work_date_key`
+- `UNIQUE (event_id, contractor_id, shift, work_date)`
+
+If legacy constraints exist (`...event_id_contractor_id_key` or `...event_id_contractor_id_work_date_key`), apply migration `017_enforce_event_contractors_unique_shift_work_date.sql` and reload schema cache.
+
 ## Project setup
 
 ```bash
