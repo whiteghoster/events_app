@@ -155,14 +155,48 @@ export function EventContractorsDialog({
 
                 <div className="sm:col-span-2">
                   <Label className="text-xs mb-1 block">Qty</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={entry.memberQuantity}
-                    onChange={(e) =>
-                      updateEntry(index, { memberQuantity: parseInt(e.target.value) || 0 })
-                    }
-                  />
+
+                  <div className="flex items-center border rounded-md overflow-hidden">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-none border-r h-10 w-10"
+                      onClick={() =>
+                        updateEntry(index, {
+                          memberQuantity: Math.max(1, (entry.memberQuantity || 1) - 1),
+                        })
+                      }
+                    >
+                      -
+                    </Button>
+
+                    <Input
+                      type="number"
+                      min={1}
+                      value={entry.memberQuantity}
+                      className="border-0 text-center focus-visible:ring-0"
+                      onChange={(e) =>
+                        updateEntry(index, {
+                          memberQuantity: parseInt(e.target.value) || 1,
+                        })
+                      }
+                    />
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-none border-l h-10 w-10"
+                      onClick={() =>
+                        updateEntry(index, {
+                          memberQuantity: (entry.memberQuantity || 1) + 1,
+                        })
+                      }
+                    >
+                      +
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="sm:col-span-3">
