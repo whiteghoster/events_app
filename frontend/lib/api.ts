@@ -961,11 +961,17 @@ export const eventsApi = {
     workFrom?: string
     workTo?: string
   }): Promise<EventContractor[]> {
-    
+    const uniqueContractors = [...new Map(
+      contractors.map(c => {
+        const key = `${c.contractorId}::${c.shift || '__NULL__'}::${c.workDate || '__NULL__'}`
+        return [key, c]
+      }),
+    ).values()]
+
     const data = await apiRequest<any>(`/events/${eventId}/contractors`, {
       method: 'PUT',
       body: JSON.stringify({
-        contractors: contractors.map(c => ({
+        contractors: uniqueContractors.map(c => ({
           contractor_id: c.contractorId,
           shift: c.shift,
           member_quantity: c.memberQuantity,
@@ -977,7 +983,7 @@ export const eventsApi = {
     })
 
     const syncedContractors = Array.isArray(data) ? data : (data.data || [])
-    
+
     return syncedContractors.map((c: any) => ({
       id: c.id,
       eventId: c.event_id,
