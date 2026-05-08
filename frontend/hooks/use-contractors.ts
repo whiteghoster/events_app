@@ -60,12 +60,35 @@ export function useContractors() {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: ContractorsApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['Contractors'] })
+    mutationFn: async (id: string) => {
+      console.log('[DELETE MUTATION START]', id)
+
+      const result = await ContractorsApi.delete(id)
+
+      console.log('[DELETE MUTATION RESULT]', result)
+
+      // Check if deletion was successful
+      if (result.success) {
+        return result
+      } else {
+        throw new Error('Delete operation failed')
+      }
+    },
+
+    onSuccess: async () => {
+      console.log('[DELETE SUCCESS]')
+
+      await queryClient.invalidateQueries({
+        queryKey: ['Contractors'],
+        refetchType: 'active',
+      })
+
       toast.success('Contractor deleted successfully')
     },
-    onError: () => {
+
+    onError: (error) => {
+      console.error('[DELETE ERROR]', error)
+
       toast.error('Failed to delete Contractor')
     },
   })
@@ -103,9 +126,11 @@ export function useContractors() {
     }
   }
 
-  const deleteContractor = async (id: string) => {
-    deleteMutation.mutate(id)
-  }
+  const deleteContractor = async (id: string): Promise<void> => {
+  console.log('[DELETE CONTRACTOR ID]:', id)
+
+  deleteMutation.mutate(id)
+}
 
   const toggleActive = async (Contractor: Contractor) => {
     updateMutation.mutate({
