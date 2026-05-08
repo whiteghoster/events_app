@@ -33,7 +33,7 @@ function deriveRange(existing: EventContractor[], fallbackFrom?: string, fallbac
       to: fallbackTo || '',
     }
   }
-  
+
   // Only use existing contractor dates if no fallback dates are provided
   const dates = existing
     .map(c => c.workDate)
@@ -111,8 +111,16 @@ export function useEventContractorsDialog({
       const e = entries[i]
       const label = `Row ${i + 1}`
       if (!e.contractorId) return `${label}: select a contractor`
-      if (seen.has(e.contractorId)) return `${label}: contractor already added`
-      seen.add(e.contractorId)
+
+      // Check for duplicate contractor with same work date
+      const contractorKey =
+        `${e.contractorId}-${e.shift}-${e.workDate || ''}`
+
+      if (seen.has(contractorKey)) {
+        return `${label}: contractor already assigned for this shift and date`
+      }
+
+      seen.add(contractorKey)
       if (e.shift === 'none') return `${label}: select a shift`
       if (!e.memberQuantity || e.memberQuantity <= 0) return `${label}: quantity must be greater than 0`
       if (!e.workDate) return `${label}: set a work date`
@@ -123,20 +131,117 @@ export function useEventContractorsDialog({
   }
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      eventsApi.syncEventContractors(
-        eventId,
-        entries.map(e => ({
-          contractorId: e.contractorId!,
-          shift: e.shift === 'none' ? undefined : e.shift,
-          memberQuantity: e.memberQuantity,
-          workDate: e.workDate,
-        })),
-        {
-          workFrom: worksFrom || undefined,
-          workTo: worksTo || undefined,
-        },
-      ),
+    mutationFn: async () => {
+      try {
+        // First try to use sync endpoint
+        return await eventsApi.syncEventContractors(
+          eventId,
+          entries.map(e => ({
+            contractorId: e.contractorId!,
+            shift: e.shift === 'none' ? undefined : e.shift,
+            memberQuantity: e.memberQuantity,
+            workDate: e.workDate,
+          })),
+          {
+            workFrom: worksFrom || undefined,
+            workTo: worksTo || undefined,
+          },
+        )
+      } catch (error: any) {
+        console.log('Sync error:', error)
+        // If sync fails due to conflict, fall back to individual operations
+        const errorMessage = error.message || error.response?.data?.message || error.toString()
+        if (errorMessage.includes('ON CONFLICT') || errorMessage.includes('duplicate')) {
+          toast.info('Processing contractors individually due to date conflicts...')
+
+          // Get existing contractors for this event
+          const existingContractors = await eventsApi.getEventContractors(eventId)
+
+          // Process each entry individually
+          for (const entry of entries) {
+            if (entry.contractorId) {
+              try {
+                // Try to add/update this contractor
+                console.log('Adding contractor:', entry)
+                console.log('Event ID for API call:', eventId)
+                let addResult: any = null
+                try {
+                  const payload = {
+                    contractorId: entry.contractorId,
+                    shift: entry.shift === 'none' ? undefined : entry.shift,
+                    memberQuantity: entry.memberQuantity,
+                    workDate: entry.workDate,
+                  }
+                  console.log('Payload being sent:', payload)
+                  addResult = await eventsApi.addEventContractor(eventId, payload)
+                  console.log('Add result:', addResult)
+                } catch (addError) {
+                  console.log('Add operation error:', addError)
+                  throw addError
+                }
+                // Update local state with the result
+                if (addResult) {
+                  setEntries(prev => {
+                    const existingIndex = prev.findIndex(e => e.contractorId === entry.contractorId && e.workDate === entry.workDate && e.shift === entry.shift
+                    )
+                    return existingIndex >= 0
+                      ? prev.map((e, i) => i === existingIndex ? addResult : e)
+                      : [...prev, addResult]
+                  })
+                } else {
+                  console.log('Add operation returned no result')
+                }
+              } catch (addError: any) {
+                console.log('Add failed:', addError.message)
+                // If add fails, it might be a duplicate - try update
+                if (addError.message?.includes('duplicate') || addError.message?.includes('conflict')) {
+                  const existing = existingContractors.find(c => c.contractorId === entry.contractorId && c.workDate === entry.workDate && c.shift === entry.shift
+                  )
+                  if (existing) {
+                    console.log('Updating existing contractor:', existing)
+                    const updateResult = await eventsApi.updateEventContractor(
+                      eventId,
+                      existing.id,
+                      {
+                        shift: entry.shift === 'none' ? undefined : entry.shift,
+                        memberQuantity: entry.memberQuantity,
+                      })
+                    console.log('Update result:', updateResult)
+                    // Update local state with the update result
+                    if (updateResult) {
+                      setEntries(prev => {
+                        const existingIndex = prev.findIndex(e =>
+                          e.contractorId === entry.contractorId &&
+                          e.workDate === entry.workDate &&
+                          e.shift === entry.shift
+                        )
+                        if (existingIndex >= 0) {
+                          const updated = [...prev]
+                          updated[existingIndex] = { ...prev[existingIndex], ...updateResult }
+                          return updated
+                        }
+                        return prev
+                      })
+                    } else {
+                      console.log('Update operation returned no result')
+                    }
+                  } else {
+                    console.log('No existing contractor found for update')
+                  }
+                } else {
+                  console.log('Add failed with unexpected error:', addError)
+                }
+              }
+            }
+          }
+
+          console.log('Individual operations completed, returning empty array')
+          return []
+        }
+
+        throw error
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eventContractors', eventId] })
       queryClient.invalidateQueries({ queryKey: ['event', eventId] })
