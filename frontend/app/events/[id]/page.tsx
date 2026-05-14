@@ -6,12 +6,20 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronLeft, Pencil, Trash2,
   MapPin, Calendar, RefreshCw, MoreVertical, Phone, User, Crown,
+<<<<<<< HEAD
   Pause, CheckCircle2, Building2, FileText, Info, Briefcase, UserPlus,
+=======
+  Pause, CheckCircle2, Building2, FileText, Info, History, Briefcase, UserPlus,
+>>>>>>> 1c975be4fda222c69681f21557cad461c2801de4
 } from 'lucide-react'
 import { useAuth, canEditEvent, canCloseEvent, canEditProductRow, canEditQuantityOnly, canRevertFinishedEvent, canDeleteFinishedEvent } from '@/lib/auth-context'
 import { useEventDetail } from '@/hooks/use-event-detail'
 import { EventDetailSkeleton } from '@/components/skeletons'
 import { EventProductsTable } from '@/components/events/event-products-table'
+<<<<<<< HEAD
+=======
+import { EventAuditDialog } from '@/components/events/event-audit-dialog'
+>>>>>>> 1c975be4fda222c69681f21557cad461c2801de4
 import { EventContractorsDialog } from '@/components/events/event-contractors-dialog'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +39,10 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   const { user } = useAuth()
   const [infoDrawerOpen, setInfoDrawerOpen] = useState(false)
   const [actionsDialogOpen, setActionsDialogOpen] = useState(false)
+<<<<<<< HEAD
+=======
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false)
+>>>>>>> 1c975be4fda222c69681f21557cad461c2801de4
   const [contractorsDialogOpen, setContractorsDialogOpen] = useState(false)
   const {
     event, isLoading, eventProductsList, eventContractors, categorySummary,
@@ -94,6 +106,14 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             <Button variant="ghost" size="icon" onClick={reload} className="h-8 w-8 rounded-md">
               <RefreshCw className="w-4 h-4" />
             </Button>
+<<<<<<< HEAD
+=======
+            {user?.role === 'admin' && (
+              <Button variant="ghost" size="icon" onClick={() => setAuditDialogOpen(true)} className="h-8 w-8 rounded-md">
+                <History className="w-4 h-4" />
+              </Button>
+            )}
+>>>>>>> 1c975be4fda222c69681f21557cad461c2801de4
             <Button
               variant="ghost"
               size="sm"
@@ -344,6 +364,16 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         </DialogContent>
       </Dialog>
 
+<<<<<<< HEAD
+=======
+      {/* ─── Audit Dialog ─────────────────────────────────────────── */}
+      <EventAuditDialog
+        eventId={id}
+        open={auditDialogOpen}
+        onOpenChange={setAuditDialogOpen}
+      />
+
+>>>>>>> 1c975be4fda222c69681f21557cad461c2801de4
       {/* ─── Contractors Dialog ───────────────────────────────────── */}
       <EventContractorsDialog
         eventId={id}

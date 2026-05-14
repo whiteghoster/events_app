@@ -66,8 +66,13 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
+<<<<<<< HEAD
     "eslint": "^10.3.0",
     "eslint-config-next": "^16.2.6",
+=======
+    "eslint": "^8.57.1",
+    "eslint-config-next": "16.2.4",
+>>>>>>> 1c975be4fda222c69681f21557cad461c2801de4
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.13",
