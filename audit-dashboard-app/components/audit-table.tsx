@@ -214,8 +214,8 @@ export default function AuditTable({
         </Card>
 
         {/* Pagination and Limit */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <span className="text-sm text-muted-foreground">Items per page:</span>
             <Select value={limit.toString()} onValueChange={(val) => onLimitChange(parseInt(val))}>
               <SelectTrigger className="w-20">
@@ -231,7 +231,7 @@ export default function AuditTable({
           </div>
 
           {data?.meta && data.meta.total_pages > 1 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"

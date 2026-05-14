@@ -44,7 +44,7 @@ export default function AuditFilterComponent({ onFiltersChange }: AuditFiltersPr
       <Button
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
-        className="gap-2"
+        className="gap-2 w-full sm:w-auto"
       >
         <Filter className="w-4 h-4" />
         Filters {hasActiveFilters && <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">{Object.values(filters).filter(Boolean).length}</span>}
@@ -52,7 +52,7 @@ export default function AuditFilterComponent({ onFiltersChange }: AuditFiltersPr
 
       {isOpen && (
         <Card className="p-6 mt-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium">Action</label>
               <Select
@@ -126,13 +126,13 @@ export default function AuditFilterComponent({ onFiltersChange }: AuditFiltersPr
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-4 border-t">
+          <div className="flex flex-col sm:flex-row gap-2 justify-end pt-4 border-t">
             {hasActiveFilters && (
-              <Button variant="outline" onClick={handleClear}>
+              <Button variant="outline" onClick={handleClear} className="w-full sm:w-auto">
                 Clear Filters
               </Button>
             )}
-            <Button onClick={handleApply}>Apply Filters</Button>
+            <Button onClick={handleApply} className="w-full sm:w-auto">Apply Filters</Button>
           </div>
         </Card>
       )}

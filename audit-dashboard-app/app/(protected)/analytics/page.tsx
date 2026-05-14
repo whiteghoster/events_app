@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
 
         {/* Date Range Selector */}
         <Card className="mb-8 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium block mb-2">Start Date</label>
               <Input
