@@ -71,9 +71,9 @@ export default function AnalyticsPage() {
 
   return (
     <div className="h-screen overflow-auto">
-      <div className="p-8 max-w-7xl">
+      <div className="p-4 sm:p-8 max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Analytics</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Analytics</h1>
           <p className="text-muted-foreground mt-2">Audit activity trends and insights</p>
         </div>
 
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Operations</CardTitle>
@@ -190,53 +190,55 @@ export default function AnalyticsPage() {
                 <CardTitle>Activity Trends</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <AreaChart data={trends}>
-                    <defs>
-                      <linearGradient id="colorCreates" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorUpdates" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorDeletes" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="creates"
-                      stroke="#10b981"
-                      fillOpacity={1}
-                      fill="url(#colorCreates)"
-                      name="Creates"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="updates"
-                      stroke="#f59e0b"
-                      fillOpacity={1}
-                      fill="url(#colorUpdates)"
-                      name="Updates"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="deletes"
-                      stroke="#ef4444"
-                      fillOpacity={1}
-                      fill="url(#colorDeletes)"
-                      name="Deletes"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div className="w-full h-[300px] sm:h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trends}>
+                      <defs>
+                        <linearGradient id="colorCreates" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorUpdates" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorDeletes" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="creates"
+                        stroke="#10b981"
+                        fillOpacity={1}
+                        fill="url(#colorCreates)"
+                        name="Creates"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="updates"
+                        stroke="#f59e0b"
+                        fillOpacity={1}
+                        fill="url(#colorUpdates)"
+                        name="Updates"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="deletes"
+                        stroke="#ef4444"
+                        fillOpacity={1}
+                        fill="url(#colorDeletes)"
+                        name="Deletes"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
@@ -245,18 +247,20 @@ export default function AnalyticsPage() {
                 <CardTitle>Operations Comparison</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={trends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="creates" fill="#10b981" name="Creates" />
-                    <Bar dataKey="updates" fill="#f59e0b" name="Updates" />
-                    <Bar dataKey="deletes" fill="#ef4444" name="Deletes" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="w-full h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trends}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="creates" fill="#10b981" name="Creates" />
+                      <Bar dataKey="updates" fill="#f59e0b" name="Updates" />
+                      <Bar dataKey="deletes" fill="#ef4444" name="Deletes" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </>

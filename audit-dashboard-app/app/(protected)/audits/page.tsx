@@ -21,9 +21,9 @@ export default function AuditsPage() {
 
   return (
     <div className="h-screen overflow-auto">
-      <div className="p-8 max-w-7xl">
+      <div className="p-4 sm:p-8 max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Audit Logs</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Audit Logs</h1>
           <p className="text-muted-foreground mt-2">View and manage system audit records</p>
         </div>
 
