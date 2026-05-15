@@ -47,6 +47,7 @@ async function bootstrap() {
   origin: [
     'http://localhost:3000',
     'https://events-app-zfh4.vercel.app',
+    'https://events-app-7r2c.vercel.app',
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

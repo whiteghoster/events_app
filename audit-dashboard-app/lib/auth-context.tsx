@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem('access_token');
         if (!token) {
           setIsLoading(false);
           return;
@@ -47,13 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           // Token is invalid, clear it
-          localStorage.removeItem('auth_token');
+          localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          localStorage.removeItem('expires_at');
         }
       } catch (error) {
         console.error('[Auth] Auth check error:', error);
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('expires_at');
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -69,11 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const response = await apiClient.post('/auth/login', { email, password });
-    const { access_token, refresh_token, user: userData } = response.data.data || response.data;
+    const { access_token, refresh_token, expires_at, user: userData } = response.data.data || response.data;
 
-    localStorage.setItem('auth_token', access_token);
+    localStorage.setItem('access_token', access_token);
     if (refresh_token) {
       localStorage.setItem('refresh_token', refresh_token);
+    }
+    if (expires_at) {
+      localStorage.setItem('expires_at', String(expires_at));
+    }
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
     }
 
     setUser(userData);
@@ -85,8 +93,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[Auth] Logout error:', error);
     } finally {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('expires_at');
+      localStorage.removeItem('user');
       setUser(null);
     }
   };
