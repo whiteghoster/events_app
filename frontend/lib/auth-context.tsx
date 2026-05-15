@@ -33,6 +33,7 @@ async function tryRefreshToken(): Promise<string | null> {
     const res = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ refresh_token: refreshToken }),
     })
     if (!res.ok) return null
@@ -118,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ email, password }),
         })
 
@@ -172,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ userId: user.id }),
         }).catch(() => {
           // Silent fail — always clear local state
