@@ -5,63 +5,63 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 265 75% 20%;
-    --card: 0 0% 100%;
-    --card-foreground: 265 75% 20%;
+    --foreground: 265 75% 15%;
+    --card: 0 0% 98%;
+    --card-foreground: 265 75% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 265 75% 20%;
-    --primary: 265 75% 41%;
+    --popover-foreground: 265 75% 15%;
+    --primary: 265 85% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 27 100% 96%;
-    --secondary-foreground: 27 100% 45%;
-    --muted: 27 100% 96%;
-    --muted-foreground: 265 30% 40%;
-    --accent: 27 100% 58%;
+    --secondary: 27 100% 94%;
+    --secondary-foreground: 27 90% 35%;
+    --muted: 265 30% 85%;
+    --muted-foreground: 265 30% 45%;
+    --accent: 27 100% 60%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
-    --border: 265 30% 90%;
-    --input: 265 30% 90%;
-    --ring: 265 75% 41%;
-    --radius: 0.5rem;
+    --border: 265 30% 92%;
+    --input: 265 30% 92%;
+    --ring: 265 85% 45%;
+    --radius: 0.75rem;
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 265 75% 20%;
-    --sidebar-primary: 265 75% 41%;
+    --sidebar-foreground: 265 75% 15%;
+    --sidebar-primary: 265 85% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 27 100% 96%;
-    --sidebar-accent-foreground: 27 100% 45%;
-    --sidebar-border: 265 30% 90%;
-    --sidebar-ring: 265 75% 41%;
+    --sidebar-accent: 27 100% 94%;
+    --sidebar-accent-foreground: 27 90% 35%;
+    --sidebar-border: 265 30% 92%;
+    --sidebar-ring: 265 85% 45%;
   }
 
   .dark {
-    --background: 240 10% 4%;
+    --background: 240 10% 5%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
+    --card: 240 10% 8%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 6%;
+    --popover: 240 10% 8%;
     --popover-foreground: 0 0% 98%;
-    --primary: 265 75% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 6% 12%;
+    --primary: 265 80% 55%;
+    --primary-foreground: 240 10% 5%;
+    --secondary: 240 6% 15%;
     --secondary-foreground: 0 0% 95%;
-    --muted: 240 6% 12%;
+    --muted: 240 6% 18%;
     --muted-foreground: 240 5% 70%;
-    --accent: 265 30% 20%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 27 100% 55%;
+    --accent-foreground: 240 10% 5%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 18%;
-    --input: 240 6% 18%;
-    --ring: 265 75% 55%;
-    --sidebar-background: 240 10% 4%;
+    --border: 240 6% 22%;
+    --input: 240 6% 22%;
+    --ring: 265 80% 55%;
+    --sidebar-background: 240 10% 5%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 265 75% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 6% 12%;
+    --sidebar-primary: 265 80% 55%;
+    --sidebar-primary-foreground: 240 10% 5%;
+    --sidebar-accent: 240 6% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 240 6% 18%;
-    --sidebar-ring: 265 75% 55%;
+    --sidebar-border: 240 6% 22%;
+    --sidebar-ring: 265 80% 55%;
   }
 }
 
@@ -121,4 +121,27 @@
 /* Loading spinner white in dark theme */
 .dark .animate-spin {
   color: hsl(0 0% 100%);
+}
+
+/* Smooth transitions and enhancements */
+button, input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+/* Gradient text effect */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card smooth hover effects */
+@layer components {
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5;
+  }
+  
+  .gradient-button {
+    @apply bg-gradient-to-r transition-all duration-300 hover:shadow-lg hover:shadow-primary/20;
+  }
 }

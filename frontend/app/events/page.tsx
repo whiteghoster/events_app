@@ -63,50 +63,60 @@ export default function EventsPage() {
 
   return (
     <PageTransition>
-      {/* Desktop: single row | Mobile: search full-width, tabs+buttons below */}
-      <div className="mb-6 space-y-3 sm:space-y-0">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-0">
-            <Icon icon={Search01Icon} size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by client, venue, or event code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9"
-            />
-          </div>
+      <div className="mb-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            Events
+          </h1>
+          <p className="text-muted-foreground">Manage and organize your events effortlessly</p>
+        </div>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 sm:flex-none">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="live" className="flex-1 sm:flex-none">Live</TabsTrigger>
-              <TabsTrigger value="hold" className="flex-1 sm:flex-none">Hold</TabsTrigger>
-              <TabsTrigger value="finished" className="flex-1 sm:flex-none">Finished</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {/* Desktop: single row | Mobile: search full-width, tabs+buttons below */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-0">
+              <Icon icon={Search01Icon} size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by client, venue, or event code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-10 rounded-lg border-border/70 bg-secondary/50 transition-colors focus:bg-background"
+              />
+            </div>
 
-          <div className="flex items-center gap-2">
-            {user && canCreateEvent(user.role) && (
-              <Link href={activeTab === 'live' ? '/events/new' : '#'} onClick={(e) => activeTab !== 'live' && e.preventDefault()}>
-                <Button size="sm" disabled={activeTab !== 'live'} className="hidden sm:flex">
-                  <Icon icon={Add01Icon} size={16} className="mr-1.5" />
-                  New Event
-                </Button>
-                <Button size="icon" disabled={activeTab !== 'live'} className="sm:hidden h-8 w-8">
-                  <Icon icon={Add01Icon} size={16} />
-                </Button>
-              </Link>
-            )}
-            {user?.role === 'admin' && (
-              <>
-                <Button variant="outline" size="sm" onClick={handleExportXLSX} disabled={activeTab !== 'finished'} className="hidden sm:flex">
-                  <Icon icon={Download01Icon} size={16} className="mr-1.5" />
-                  Export XLSX
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleExportXLSX} disabled={activeTab !== 'finished'} className="sm:hidden h-8 w-8">
-                  <Icon icon={Download01Icon} size={16} />
-                </Button>
-              </>
-            )}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 sm:flex-none">
+              <TabsList className="w-full sm:w-auto bg-secondary/50 border border-border/50">
+                <TabsTrigger value="live" className="flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Live</TabsTrigger>
+                <TabsTrigger value="hold" className="flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Hold</TabsTrigger>
+                <TabsTrigger value="finished" className="flex-1 sm:flex-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Finished</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex items-center gap-2">
+              {user && canCreateEvent(user.role) && (
+                <Link href={activeTab === 'live' ? '/events/new' : '#'} onClick={(e) => activeTab !== 'live' && e.preventDefault()}>
+                  <Button size="sm" disabled={activeTab !== 'live'} className="hidden sm:flex h-10 rounded-lg bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all">
+                    <Icon icon={Add01Icon} size={16} className="mr-2" />
+                    New Event
+                  </Button>
+                  <Button size="icon" disabled={activeTab !== 'live'} className="sm:hidden h-10 w-10 rounded-lg bg-gradient-to-r from-primary to-accent hover:shadow-lg">
+                    <Icon icon={Add01Icon} size={16} />
+                  </Button>
+                </Link>
+              )}
+              {user?.role === 'admin' && (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleExportXLSX} disabled={activeTab !== 'finished'} className="hidden sm:flex h-10 rounded-lg border-border/70 hover:bg-secondary/50">
+                    <Icon icon={Download01Icon} size={16} className="mr-2" />
+                    Export XLSX
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={handleExportXLSX} disabled={activeTab !== 'finished'} className="sm:hidden h-10 w-10 rounded-lg border-border/70">
+                    <Icon icon={Download01Icon} size={16} />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
